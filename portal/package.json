@@ -11,7 +11,7 @@
   },
   "dependencies": {
     "@radixdlt/babylon-gateway-api-sdk": "^1.10.1",
-    "@radixdlt/radix-dapp-toolkit": "^2.3.0",
+    "@radixdlt/radix-dapp-toolkit": "^2.2.1",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
     "react-router-dom": "^7.14.0"
