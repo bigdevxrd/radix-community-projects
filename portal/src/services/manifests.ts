@@ -10,7 +10,8 @@ CALL_METHOD
 ;
 CALL_METHOD
   Address("${account}")
-  "deposit_batch"
+  "try_deposit_batch_or_abort"
   Expression("ENTIRE_WORKTOP")
+  Enum<0u8>()
 ;`.trim()
 }
