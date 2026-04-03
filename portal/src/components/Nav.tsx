@@ -7,6 +7,7 @@ const TABS = [
   { path: 'explorer', label: 'Explorer' },
   { path: 'mint', label: 'Mint' },
   { path: 'ecosystem', label: 'Ecosystem' },
+  { path: 'status', label: 'Status' },
 ]
 
 export function Nav() {

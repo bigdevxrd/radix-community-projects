@@ -9,6 +9,7 @@ import { Bounties } from './pages/Bounties'
 import { Explorer } from './pages/Explorer'
 import { Mint } from './pages/Mint'
 import { Ecosystem } from './pages/Ecosystem'
+import { Status } from './pages/Status'
 import './index.css'
 
 export default function App() {
@@ -25,6 +26,7 @@ export default function App() {
             <Route path="/explorer" element={<Explorer />} />
             <Route path="/mint" element={<Mint />} />
             <Route path="/ecosystem" element={<Ecosystem />} />
+            <Route path="/status" element={<Status />} />
           </Routes>
         </main>
         <Footer />
