@@ -7,19 +7,28 @@ use scrypto::prelude::*;
 /// Universal badge data — works for any DAO, any use case.
 #[derive(ScryptoSbor, NonFungibleData, Clone)]
 pub struct UniversalBadgeData {
+    /// Who this badge was issued to
     pub issued_to: String,
+    /// Schema name (e.g. "rad_dao_player", "sats_trader")
     pub schema_name: String,
+    /// When minted (unix seconds)
     pub issued_at: i64,
+    /// Current tier
     #[mutable]
     pub tier: String,
+    /// Lifecycle status: active, revoked
     #[mutable]
     pub status: String,
+    /// Last update timestamp
     #[mutable]
     pub last_updated: i64,
+    /// Experience points (gamification)
     #[mutable]
     pub xp: u64,
+    /// Human-readable level name
     #[mutable]
     pub level: String,
+    /// JSON string for domain-specific data
     #[mutable]
     pub extra_data: String,
 }
@@ -75,12 +84,15 @@ mod badge_manager {
             admin => updatable_by: [OWNER];
         },
         methods {
+            // Public reads
             get_badge_info => PUBLIC;
             get_badge_resource => PUBLIC;
             get_schema_name => PUBLIC;
             get_valid_tiers => PUBLIC;
             get_stats => PUBLIC;
+            // Public mint (if enabled)
             public_mint => PUBLIC;
+            // Admin writes
             mint_badge => restrict_to: [admin, OWNER];
             revoke_badge => restrict_to: [admin, OWNER];
             update_tier => restrict_to: [admin, OWNER];
@@ -113,6 +125,7 @@ mod badge_manager {
             dapp_definition: GlobalAddress,
             owner_badge_address: ResourceAddress,
         ) -> Global<BadgeManager> {
+            // Internal minter badge
             let minter_badge = ResourceBuilder::new_fungible(OwnerRole::None)
                 .divisibility(DIVISIBILITY_NONE)
                 .metadata(metadata!(
@@ -124,6 +137,7 @@ mod badge_manager {
 
             let minter_address = minter_badge.resource_address();
 
+            // NonFungible badge resource
             let badge_resource = ResourceBuilder::new_string_non_fungible::<UniversalBadgeData>(
                 OwnerRole::Updatable(rule!(require(owner_badge_address))),
             )
@@ -161,12 +175,27 @@ mod badge_manager {
             }
             .instantiate()
             .prepare_to_globalize(OwnerRole::Fixed(rule!(require(owner_badge_address))))
+            .enable_component_royalties(component_royalties! {
+                init {
+                    public_mint => Free, locked;
+                    mint_badge => Xrd(1.into()), updatable;
+                    revoke_badge => Xrd(dec!("0.5")), updatable;
+                    update_tier => Xrd(dec!("0.25")), updatable;
+                    update_xp => Xrd(dec!("0.1")), updatable;
+                    update_extra_data => Xrd(dec!("0.1")), updatable;
+                    get_badge_info => Free, locked;
+                    get_badge_resource => Free, locked;
+                    get_schema_name => Free, locked;
+                    get_valid_tiers => Free, locked;
+                    get_stats => Free, locked;
+                }
+            })
             .globalize()
         }
 
-        /// Free mint — anyone can call. Mints with default tier.
+        /// Free mint — anyone can call. Mints with default tier + newcomer level.
         pub fn public_mint(&mut self, username: String) -> Bucket {
-            assert!(self.free_mint_enabled, "Free minting is disabled");
+            assert!(self.free_mint_enabled, "Free minting is disabled for this manager");
             self.internal_mint(username, self.default_tier.clone())
         }
 
@@ -228,25 +257,32 @@ mod badge_manager {
             });
         }
 
+        /// Get badge data by ID.
         pub fn get_badge_info(&self, badge_id: NonFungibleLocalId) -> UniversalBadgeData {
             self.badge_resource.get_non_fungible_data(&badge_id)
         }
 
+        /// Get the badge resource address.
         pub fn get_badge_resource(&self) -> ResourceAddress {
             self.badge_resource.address()
         }
 
+        /// Get schema name.
         pub fn get_schema_name(&self) -> String {
             self.schema_name.clone()
         }
 
+        /// Get valid tiers.
         pub fn get_valid_tiers(&self) -> Vec<String> {
             self.valid_tiers.clone()
         }
 
+        /// Get manager stats.
         pub fn get_stats(&self) -> (u64, u64) {
             (self.total_minted, self.total_revoked)
         }
+
+        // -- Internal --
 
         fn internal_mint(&mut self, username: String, tier: String) -> Bucket {
             let now = Clock::current_time_rounded_to_seconds().seconds_since_unix_epoch;
@@ -295,7 +331,6 @@ mod badge_manager {
 #[events(ManagerCreatedEvent)]
 mod badge_factory {
     use super::badge_manager::BadgeManager;
-
     enable_method_auth! {
         roles {
             factory_admin => updatable_by: [OWNER];
@@ -342,11 +377,22 @@ mod badge_factory {
                     "description" => "Permissionless badge infrastructure for Radix", locked;
                 }
             ))
+            .enable_component_royalties(component_royalties! {
+                init {
+                    create_manager => Xrd(5.into()), updatable;
+                    get_manager_count => Free, locked;
+                    get_factory_info => Free, locked;
+                    pause_factory => Free, locked;
+                    unpause_factory => Free, locked;
+                }
+            })
             .globalize();
 
             (component, owner_badge.into())
         }
 
+        /// Create a new badge manager. Returns (manager, admin_badge).
+        /// All params are primitive types — no custom structs cross the boundary.
         pub fn create_manager(
             &mut self,
             schema_name: String,
@@ -362,6 +408,7 @@ mod badge_factory {
             assert!(!valid_tiers.is_empty(), "Need at least one tier");
             assert!(valid_tiers.contains(&default_tier), "Default tier must be in valid_tiers");
 
+            // Create admin badge for the caller
             let admin_badge = ResourceBuilder::new_fungible(OwnerRole::None)
                 .divisibility(DIVISIBILITY_NONE)
                 .metadata(metadata!(
@@ -373,6 +420,7 @@ mod badge_factory {
 
             let admin_address = admin_badge.resource_address();
 
+            // Instantiate manager with primitives only
             let manager = BadgeManager::instantiate(
                 schema_name.clone(),
                 valid_tiers,
