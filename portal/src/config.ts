@@ -15,20 +15,20 @@ export const CONFIG = {
 
   // Components
   factoryComponent: 'component_rdx1cz0494dztlww72czpynshpcjvxu3hfnhvemet3ndfunum65z3ewp2h',
-  managerComponent: 'component_rdx1cr6u85scdgp3ws8xfxaw5e8upz9gun6r43fldchmkqhmzjt32vvhg6',
+  managerComponent: 'component_rdx1cqarn8x6gk0806qyc9eee4nh6arzkm90xvnk0edqgtcfgghx5m2v2w',
 
   // Resources
-  badgeNftResource: 'resource_rdx1ntw34axdj0thqynn6lwl97q7uedkgj964el9ut9tu65sdmpx4lfd6x',
+  badgeNftResource: 'resource_rdx1ntlzdss8nhd353h2lmu7d9cxhdajyzvstwp8kdnh53mk5vckfz9mj6',
 
   // XRD
   xrdResource: 'resource_rdx1tknxxxxxxxxxradxrdxxxxxxxxx009923554798xxxxxxxxxradxrd',
 
   // Levels
   levels: [
-    { name: 'newcomer', minXp: 0, color: '#8888a0' },
+    { name: 'member', minXp: 0, color: '#8888a0' },
     { name: 'contributor', minXp: 100, color: '#4ea8de' },
     { name: 'builder', minXp: 500, color: '#a78bfa' },
-    { name: 'trusted', minXp: 2000, color: '#f59e0b' },
+    { name: 'steward', minXp: 2000, color: '#f59e0b' },
     { name: 'elder', minXp: 10000, color: '#00e49f' },
   ],
 } as const

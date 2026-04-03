@@ -1,8 +1,10 @@
 export function tierColor(tier: string): string {
   const colors: Record<string, string> = {
+    member: '#8888a0',
     newcomer: '#8888a0',
     contributor: '#4ea8de',
     builder: '#a78bfa',
+    steward: '#f59e0b',
     trusted: '#f59e0b',
     elder: '#00e49f',
     member: '#4ea8de',

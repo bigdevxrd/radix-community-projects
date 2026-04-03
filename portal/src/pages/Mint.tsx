@@ -40,15 +40,15 @@ export function Mint() {
   return (
     <div className="card">
       <div className="card-header">
-        <h2>Get Your Badge</h2>
+        <h2>Become a Member</h2>
         <span className="card-badge">Free</span>
       </div>
       <p style={{ color: 'var(--text-secondary)', marginBottom: 16 }}>
-        Mint a free Radix Guild participation badge. Your badge tracks your XP, level, and contributions across all DAOs.
+        Join the Radix Guild. Your member badge tracks your XP, level, and contributions across all DAOs.
       </p>
       <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
         <button className="btn" onClick={handleMint} disabled={!connected}>
-          {connected ? 'Mint Free Badge' : 'Connect Wallet First'}
+          {connected ? 'Join the Guild' : 'Connect Wallet First'}
         </button>
         {connected && (
           <span style={{ font: '400 11px var(--font-mono)', color: 'var(--text-muted)' }}>
