@@ -1,6 +1,8 @@
 import { CONFIG } from '../config'
 
-export function buildMintManifest(account: string): string {
+export function buildMintManifest(account: string, username?: string): string {
+  // Use provided username or last 8 chars of account as default
+  const name = username || `guild_${account.slice(-8)}`
   return `
 CALL_METHOD
   Address("${account}")
@@ -10,7 +12,7 @@ CALL_METHOD
 CALL_METHOD
   Address("${CONFIG.managerComponent}")
   "public_mint"
-  "${account.slice(0, 20)}"
+  "${name}"
 ;
 CALL_METHOD
   Address("${account}")
