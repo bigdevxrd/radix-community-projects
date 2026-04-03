@@ -2,6 +2,18 @@ import { CONFIG } from '../config'
 
 export function buildMintManifest(account: string, username?: string): string {
   const name = username || `guild_${account.slice(-8)}`
-  // Minimal manifest — only the component call. Wallet adds lock_fee + deposit.
-  return `CALL_METHOD Address("${CONFIG.managerComponent}") "public_mint" "${name}";`
+  // Official Radix Gumball Machine tutorial pattern:
+  // - NO lock_fee (wallet adds it)
+  // - Multi-line format (critical!)
+  // - deposit_batch with ENTIRE_WORKTOP
+  return `CALL_METHOD
+  Address("${CONFIG.managerComponent}")
+  "public_mint"
+  "${name}"
+;
+CALL_METHOD
+  Address("${account}")
+  "deposit_batch"
+  Expression("ENTIRE_WORKTOP")
+;`
 }

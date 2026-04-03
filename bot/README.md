@@ -1,19 +1,21 @@
 # Radix Guild Telegram Bot
 
-Governance bot for the Radix Guild. Users interact with the Guild from Telegram.
+Primary interface for the Radix Guild. Badge management + governance from Telegram.
 
 ## Commands
 
 | Command | What It Does |
 |---------|-------------|
-| /start | Welcome message |
-| /register <address> | Link Radix wallet address |
-| /mint | Get a free Guild badge |
-| /badge | View badge info (XP, level, tier) |
-| /proposals | Active governance proposals |
+| /start | Welcome + quick links |
+| /register \<address\> | Link Radix wallet |
+| /mint | Mint free Guild badge (opens signing page) |
+| /badge | View your badge (XP, tier, level) |
+| /lookup \<nft_id\> | Look up any badge by ID |
+| /proposals | Active proposals + vote buttons |
 | /bounties | Open bounties with XRD rewards |
-| /portal | Open Guild dashboard |
-| /dao | Open CrumbsUp DAO |
+| /stats | Network stats (total badges, users) |
+| /portal | Guild dashboard |
+| /dao | CrumbsUp DAO |
 | /source | GitHub repo |
 
 ## Setup
@@ -27,7 +29,8 @@ node index.js
 
 ## Architecture
 
-- Grammy framework for Telegram API
-- Reads Gateway API for badge data
-- Links to portal for wallet-connected actions
-- User registry (in-memory MVP, DB later)
+- **Grammy** framework for Telegram API
+- **Gateway API** for on-chain badge reads
+- **Inline buttons** link to signing page for wallet transactions
+- **JSON file** persistence for user registry (survives restarts)
+- Signing page handles Radix Wallet connection + TX submission

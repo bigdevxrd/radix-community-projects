@@ -2,39 +2,61 @@
 
 Community governance infrastructure for Radix. Open source, modular, composable.
 
-**One badge. All DAOs. One dashboard.**
+**One badge. All DAOs. Manage from Telegram.**
+
+## Architecture
+
+```
+Telegram Bot (primary UX)
+  ├── READ: badge info, proposals, stats via Gateway API
+  ├── WRITE: inline buttons → signing page → Radix Wallet
+  └── CONFIRM: polls Gateway for TX result
+
+Signing Page (transaction bridge)
+  ├── Single HTML, no build step
+  ├── Radix Dapp Toolkit
+  └── Pre-built manifests (mint, vote, XP update)
+
+Badge Manager (on-chain, Scrypto)
+  ├── Live on Radix mainnet
+  ├── Identity, XP, tiers, levels
+  └── Component royalties enabled
+```
 
 ## Projects
 
 | Project | Status | Description |
 |---------|--------|-------------|
-| [badge-manager](./badge-manager) | **Live on Mainnet** | Identity layer. Mint, manage, and track badges across DAOs |
-| [dao-manager](./dao-manager) | Design | Multi-DAO registry. Join, view, and manage DAOs from one place |
-| [grid-game](./grid-game) | Design | Gamified onboarding. Complete tasks, roll dice, earn XP, level up |
-| [portal](./portal) | Design | Web3 dashboard. Connect wallet, see everything, contribute anywhere |
-| [manager-spec](./manager-spec) | Draft | Shared interface spec. How managers discover and compose |
+| [badge-manager](./badge-manager) | **Live on Mainnet** | Scrypto identity layer. Mint, manage, track badges |
+| [bot](./bot) | **Active** | Telegram bot. Badge management + governance from chat |
+| [sign](./sign) | **Active** | Transaction signing page. Bridge between TG and Radix Wallet |
+| [portal](./portal) | Minimal | Web3 dashboard. Explorer + signing support |
+| [manager-spec](./manager-spec) | Draft | Shared interface spec for composable managers |
+| [docs](./docs) | Reference | Architecture docs, guild proposal, business case |
 
-## Architecture
+## Quick Start
 
+```bash
+# Bot
+cd bot && npm install
+echo "TG_BOT_TOKEN=your_token" > .env
+npm start
+
+# Signing page — just serve the HTML
+cd sign && python3 -m http.server 8080
 ```
-badge-manager (identity layer — LIVE on mainnet)
-    |
-    +-- dao-manager (multi-DAO aggregation)
-    +-- grid-game (gamified engagement)
-    +-- portal (unified web3 dashboard)
-    +-- manager-spec (shared interfaces)
-    |
-    +-- [future] task-manager, rewards-manager, verification-manager
-    +-- [future] security-manager, audit-manager, agent-manager
-```
 
-## Mainnet
+## Mainnet Addresses
 
-Badge Manager is deployed on Radix mainnet. See [badge-manager/README.md](./badge-manager/README.md) for addresses.
+| Resource | Address |
+|----------|---------|
+| Package | `package_rdx1p4hx8r99n3fdf60sa7868tw2p8grq7nar4uycr8nup4f3c7xwy2q90` |
+| Manager | `component_rdx1cqarn8x6gk0806qyc9eee4nh6arzkm90xvnk0edqgtcfgghx5m2v2w` |
+| Badge NFT | `resource_rdx1ntlzdss8nhd353h2lmu7d9cxhdajyzvstwp8kdnh53mk5vckfz9mj6` |
 
 ## Contributing
 
-Every project is open for contributions. Check the [issues board](https://github.com/bigdevxrd/radix-community-projects/issues) for tasks.
+Check the [issues board](https://github.com/bigdevxrd/radix-community-projects/issues) for tasks.
 
 ## License
 

@@ -47,7 +47,7 @@ export function RadixProvider({ children }: { children: ReactNode }) {
     try {
       console.log('[RDT] Sending transaction...')
       console.log('[RDT] Manifest:', manifest)
-      const result = await rdtRef.current.walletApi.sendTransaction({ transactionManifest: manifest })
+      const result = await rdtRef.current.walletApi.sendTransaction({ transactionManifest: manifest, version: 1 })
       console.log('[RDT] Result:', JSON.stringify(result))
       if (result.isOk()) {
         return { ok: true, txId: result.value.transactionIntentHash }

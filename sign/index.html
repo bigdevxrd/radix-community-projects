@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Radix Guild — Sign Transaction</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #0a0a0f; --surface: #12121a; --border: #2a2a3d;
+      --text: #e8e8f0; --muted: #8888a0; --accent: #00e49f;
+      --error: #ef4444; --font: 'Inter', -apple-system, sans-serif;
+      --mono: 'SF Mono', 'Fira Code', monospace;
+    }
+    html { background: var(--bg); color: var(--text); }
+    body { font-family: var(--font); min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px; }
+    .card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 12px; padding: 32px; max-width: 420px; width: 100%;
+    }
+    h1 { font-size: 20px; font-weight: 600; margin-bottom: 8px; }
+    .subtitle { color: var(--muted); font-size: 14px; margin-bottom: 24px; }
+    .field { margin-bottom: 16px; }
+    .field label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.05em; }
+    .field .value { font-family: var(--mono); font-size: 14px; padding: 8px 12px; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; word-break: break-all; }
+    #status {
+      margin-top: 20px; padding: 12px 16px; border-radius: 8px;
+      font-size: 14px; display: none;
+    }
+    #status.waiting { display: block; background: rgba(0,228,159,0.1); border: 1px solid var(--accent); color: var(--accent); }
+    #status.success { display: block; background: rgba(0,228,159,0.1); border: 1px solid var(--accent); color: var(--accent); }
+    #status.error { display: block; background: rgba(239,68,68,0.1); border: 1px solid var(--error); color: var(--error); }
+    #status.info { display: block; background: rgba(136,136,160,0.1); border: 1px solid var(--muted); color: var(--muted); }
+    .tx-link { color: var(--accent); text-decoration: none; word-break: break-all; }
+    .tx-link:hover { text-decoration: underline; }
+    radix-connect-button { margin-bottom: 20px; display: block; }
+    .powered { text-align: center; margin-top: 24px; font-size: 11px; color: var(--muted); }
+    .powered a { color: var(--muted); }
+  </style>
+</head>
+<body>
+
+<div class="card">
+  <h1 id="title">Radix Guild</h1>
+  <p class="subtitle" id="subtitle">Connect wallet to sign transaction</p>
+
+  <radix-connect-button></radix-connect-button>
+
+  <div id="details"></div>
+  <div id="status"></div>
+
+  <p class="powered">Powered by <a href="https://github.com/bigdevxrd/radix-community-projects">Radix Guild</a></p>
+</div>
+
+<script type="module">
+  import { RadixDappToolkit, DataRequestBuilder } from 'https://esm.sh/@radixdlt/radix-dapp-toolkit@2.2.1';
+
+  // --- Config ---
+  const MANAGER = 'component_rdx1cqarn8x6gk0806qyc9eee4nh6arzkm90xvnk0edqgtcfgghx5m2v2w';
+  const BADGE_NFT = 'resource_rdx1ntlzdss8nhd353h2lmu7d9cxhdajyzvstwp8kdnh53mk5vckfz9mj6';
+  const DAPP_DEF = 'account_rdx128lggt503h7m2dhzqnrkkqv4zklxcjmdggr8xxtqy8e47p7fkmd8cx';
+  const GATEWAY = 'https://mainnet.radixdlt.com';
+  const DASHBOARD = 'https://dashboard.radixdlt.com';
+
+  // --- Parse URL params ---
+  const params = new URLSearchParams(window.location.search);
+  const action = params.get('action');
+  const username = params.get('username') || '';
+  const proposalId = params.get('proposal') || '';
+  const choice = params.get('choice') || '';
+  const badgeId = params.get('badge_id') || '';
+  const xpAmount = params.get('xp') || '';
+  const tier = params.get('tier') || '';
+  const callback = params.get('callback') || ''; // TG bot callback URL
+
+  // --- UI refs ---
+  const titleEl = document.getElementById('title');
+  const subtitleEl = document.getElementById('subtitle');
+  const detailsEl = document.getElementById('details');
+  const statusEl = document.getElementById('status');
+
+  function setStatus(msg, cls) {
+    statusEl.textContent = msg;
+    statusEl.className = cls;
+  }
+
+  function setStatusHTML(html, cls) {
+    statusEl.innerHTML = html;
+    statusEl.className = cls;
+  }
+
+  function field(label, value) {
+    return `<div class="field"><label>${label}</label><div class="value">${value}</div></div>`;
+  }
+
+  // --- Manifest builders ---
+  function buildManifest(account) {
+    switch (action) {
+      case 'mint':
+        return {
+          title: 'Mint Guild Badge',
+          subtitle: `Minting badge for ${username || 'guild member'}`,
+          details: field('Action', 'Mint Badge') + field('Username', username || `guild_${account.slice(-8)}`),
+          manifest: `CALL_METHOD Address("${MANAGER}") "public_mint" "${username || `guild_${account.slice(-8)}`}";`
+        };
+
+      case 'vote':
+        return {
+          title: 'Vote on Proposal',
+          subtitle: `Casting vote: ${choice}`,
+          details: field('Proposal', proposalId) + field('Vote', choice),
+          manifest: null // Will integrate with CrumbsUp/Consultation API
+        };
+
+      case 'update_xp':
+        return {
+          title: 'Update Badge XP',
+          subtitle: `Setting XP to ${xpAmount}`,
+          details: field('Badge ID', badgeId) + field('New XP', xpAmount),
+          manifest: `CALL_METHOD Address("${MANAGER}") "update_xp" NonFungibleLocalId("${badgeId}") ${xpAmount}u64;`
+        };
+
+      case 'update_tier':
+        return {
+          title: 'Update Badge Tier',
+          subtitle: `Setting tier to ${tier}`,
+          details: field('Badge ID', badgeId) + field('New Tier', tier),
+          manifest: `CALL_METHOD Address("${MANAGER}") "update_tier" NonFungibleLocalId("${badgeId}") "${tier}";`
+        };
+
+      default:
+        return {
+          title: 'Unknown Action',
+          subtitle: 'No valid action specified',
+          details: field('Error', `Unknown action: ${action}`),
+          manifest: null
+        };
+    }
+  }
+
+  // --- Init RDT ---
+  const rdt = RadixDappToolkit({
+    dAppDefinitionAddress: DAPP_DEF,
+    networkId: 1,
+    applicationName: 'Radix Guild',
+    applicationVersion: '1.0.0',
+  });
+  rdt.walletApi.setRequestData(DataRequestBuilder.accounts().exactly(1));
+
+  // --- React to wallet connection ---
+  rdt.walletApi.walletData$.subscribe(async (data) => {
+    if (!data.accounts?.length) {
+      titleEl.textContent = 'Radix Guild';
+      subtitleEl.textContent = 'Connect wallet to sign transaction';
+      detailsEl.innerHTML = '';
+      statusEl.className = '';
+      return;
+    }
+
+    const account = data.accounts[0].address;
+    const tx = buildManifest(account);
+
+    titleEl.textContent = tx.title;
+    subtitleEl.textContent = tx.subtitle;
+    detailsEl.innerHTML = tx.details;
+
+    if (!tx.manifest) {
+      setStatus('This action is not yet supported. Check back soon.', 'info');
+      return;
+    }
+
+    // Auto-send the transaction
+    setStatus('Waiting for wallet approval...', 'waiting');
+
+    try {
+      const result = await rdt.walletApi.sendTransaction({ transactionManifest: tx.manifest });
+
+      if (result.isOk()) {
+        const txId = result.value.transactionIntentHash;
+        setStatusHTML(
+          `Transaction submitted!<br><a class="tx-link" href="${DASHBOARD}/transaction/${txId}" target="_blank">${txId.slice(0, 20)}...</a>`,
+          'success'
+        );
+
+        // Notify bot callback if provided
+        if (callback) {
+          try {
+            await fetch(callback, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ action, txId, account, status: 'success' }),
+            });
+          } catch (e) {
+            // Callback failure is non-critical
+            console.warn('Callback failed:', e);
+          }
+        }
+      } else {
+        const errMsg = result.error?.message || result.error?.error || JSON.stringify(result.error) || 'Transaction rejected';
+        setStatus(`Failed: ${errMsg}`, 'error');
+      }
+    } catch (e) {
+      setStatus(`Error: ${e.message}`, 'error');
+    }
+  });
+</script>
+
+</body>
+</html>
