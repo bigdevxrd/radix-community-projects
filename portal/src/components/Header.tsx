@@ -17,7 +17,7 @@ export function Header() {
     <header className="header">
       <div className="header-inner">
         <div className="logo">
-          <div className="logo-icon"><div className="logo-icon-inner" /></div>
+          <img src="/guild/rg-logo.png" alt="RG" style={{ width: 32, height: 32, borderRadius: 8 }} />
           <h1>Radix Guild</h1>
         </div>
         <div className="header-controls">
