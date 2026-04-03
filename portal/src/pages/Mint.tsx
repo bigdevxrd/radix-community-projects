@@ -9,23 +9,31 @@ export function Mint() {
   const [txId, setTxId] = useState('')
 
   async function handleMint() {
-    if (!account) return
-    setStatus('Opening wallet...')
+    if (!account) {
+      setStatus('Error: No account connected')
+      return
+    }
+    setStatus('Opening Radix Wallet...')
     setTxId('')
 
-    const manifest = buildMintManifest(account)
-    console.log('[Mint] Manifest:', manifest)
-    console.log('[Mint] Account:', account)
-    console.log('[Mint] Manager:', CONFIG.managerComponent)
+    try {
+      const manifest = buildMintManifest(account)
+      console.log('[Mint] Account:', account)
+      console.log('[Mint] Manager:', CONFIG.managerComponent)
+      console.log('[Mint] Manifest:', manifest)
 
-    const result = await sendTransaction(manifest)
-    console.log('[Mint] Result:', result)
+      const result = await sendTransaction(manifest)
+      console.log('[Mint] Result:', result)
 
-    if (result.ok) {
-      setStatus('Badge minted! Check your wallet.')
-      setTxId(result.txId || '')
-    } else {
-      setStatus(`Error: ${result.error || 'Unknown error — check console'}`)
+      if (result.ok) {
+        setStatus('Badge minted! Check your wallet.')
+        setTxId(result.txId || '')
+      } else {
+        setStatus(`Error: ${result.error}`)
+      }
+    } catch (e: any) {
+      console.error('[Mint] Exception:', e)
+      setStatus(`Error: ${e.message || 'Unexpected error'}`)
     }
   }
 
