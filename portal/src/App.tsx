@@ -4,7 +4,7 @@ import { RadixDappToolkit, DataRequestBuilder } from '@radixdlt/radix-dapp-toolk
 import { CONFIG } from './config'
 import './index.css'
 
-type Page = 'dashboard' | 'explorer' | 'mint' | 'ecosystem'
+type Page = 'dashboard' | 'explorer' | 'mint' | 'governance' | 'ecosystem'
 
 interface BadgeData {
   id: string
@@ -217,7 +217,7 @@ CALL_METHOD
       </header>
 
       <nav className="nav">
-        {(['dashboard', 'explorer', 'mint', 'ecosystem'] as Page[]).map((p) => (
+        {(['dashboard', 'governance', 'explorer', 'mint', 'ecosystem'] as Page[]).map((p) => (
           <button key={p} className={page === p ? 'active' : ''} onClick={() => setPage(p)}>
             {p.charAt(0).toUpperCase() + p.slice(1)}
           </button>
@@ -351,6 +351,59 @@ CALL_METHOD
               </div>
             )}
           </div>
+        )}
+
+        {page === 'governance' && (
+          <>
+            <div className="card">
+              <div className="card-header">
+                <h2>Governance Hub</h2>
+                <span className="card-badge">All DAOs</span>
+              </div>
+              <p style={{ color: 'var(--text-secondary)', marginBottom: 16 }}>
+                View proposals and vote across all Radix DAOs from one place.
+              </p>
+            </div>
+
+            <div className="card">
+              <div className="card-header">
+                <h2>Radix Guild — CrumbsUp</h2>
+                <a href="https://www.crumbsup.io/#dao?id=4db790d7-4d75-49ed-a2e0-3514743809e0" target="_blank" className="card-badge" style={{ color: 'var(--accent)', textDecoration: 'none' }}>Open ↗</a>
+              </div>
+              <iframe
+                src="https://www.crumbsup.io/#dao?id=4db790d7-4d75-49ed-a2e0-3514743809e0"
+                style={{ width: '100%', height: 500, border: '1px solid var(--border)', borderRadius: 'var(--radius-md)', background: 'var(--bg-surface-2)' }}
+                title="Radix Guild DAO"
+              />
+            </div>
+
+            <div className="card">
+              <div className="card-header">
+                <h2>Radix Consultation</h2>
+                <a href="https://consultation.radixdlt.com" target="_blank" className="card-badge" style={{ color: 'var(--accent)', textDecoration: 'none' }}>Open ↗</a>
+              </div>
+              <iframe
+                src="https://consultation.radixdlt.com"
+                style={{ width: '100%', height: 500, border: '1px solid var(--border)', borderRadius: 'var(--radius-md)', background: 'var(--bg-surface-2)' }}
+                title="Radix Consultation"
+              />
+            </div>
+
+            <div className="card">
+              <div className="card-header">
+                <h2>Other DAOs on CrumbsUp</h2>
+                <a href="https://www.crumbsup.io" target="_blank" className="card-badge" style={{ color: 'var(--accent)', textDecoration: 'none' }}>Browse All ↗</a>
+              </div>
+              <div className="ecosystem-links">
+                <a href="https://www.crumbsup.io" target="_blank" className="eco-link">HoneyDAO</a>
+                <a href="https://www.crumbsup.io" target="_blank" className="eco-link">DeXter</a>
+                <a href="https://www.crumbsup.io" target="_blank" className="eco-link">Radix Kingdoms</a>
+                <a href="https://www.crumbsup.io" target="_blank" className="eco-link">RadixCharts</a>
+                <a href="https://www.crumbsup.io" target="_blank" className="eco-link">Radix Name Service</a>
+                <a href="https://www.crumbsup.io" target="_blank" className="eco-link">Radorables</a>
+              </div>
+            </div>
+          </>
         )}
 
         {page === 'ecosystem' && (
