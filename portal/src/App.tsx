@@ -363,6 +363,7 @@ CALL_METHOD
               Connect with the Radix community. These tools plug into the Guild.
             </p>
             <div className="ecosystem-links">
+              <a href="https://www.crumbsup.io/#dao?id=4db790d7-4d75-49ed-a2e0-3514743809e0" target="_blank" className="eco-link">Radix Guild DAO — Governance</a>
               <a href="https://quack.space/app/" target="_blank" className="eco-link">QuackSpace — Social Identity</a>
               <a href="https://miow.me/" target="_blank" className="eco-link">Miow — Web3 Website Builder</a>
               <a href="https://dashboard.radixdlt.com" target="_blank" className="eco-link">Radix Dashboard</a>
