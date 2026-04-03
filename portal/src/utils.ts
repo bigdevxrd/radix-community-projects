@@ -7,7 +7,6 @@ export function tierColor(tier: string): string {
     steward: '#f59e0b',
     trusted: '#f59e0b',
     elder: '#00e49f',
-    member: '#4ea8de',
     lead: '#f59e0b',
     senior: '#00e49f',
   }
