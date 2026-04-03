@@ -4,7 +4,7 @@ import { RadixDappToolkit, DataRequestBuilder } from '@radixdlt/radix-dapp-toolk
 import { CONFIG } from './config'
 import './index.css'
 
-type Page = 'dashboard' | 'explorer' | 'mint' | 'governance' | 'ecosystem'
+type Page = 'dashboard' | 'governance' | 'bounties' | 'explorer' | 'mint' | 'ecosystem'
 
 interface BadgeData {
   id: string
@@ -217,7 +217,7 @@ CALL_METHOD
       </header>
 
       <nav className="nav">
-        {(['dashboard', 'governance', 'explorer', 'mint', 'ecosystem'] as Page[]).map((p) => (
+        {(['dashboard', 'governance', 'bounties', 'explorer', 'mint', 'ecosystem'] as Page[]).map((p) => (
           <button key={p} className={page === p ? 'active' : ''} onClick={() => setPage(p)}>
             {p.charAt(0).toUpperCase() + p.slice(1)}
           </button>
@@ -319,6 +319,63 @@ CALL_METHOD
               </p>
             )}
           </div>
+        )}
+
+        {page === 'bounties' && (
+          <>
+            <div className="card">
+              <div className="card-header">
+                <h2>Bounty Board</h2>
+                <span className="card-badge">Earn XRD</span>
+              </div>
+              <p style={{ color: 'var(--text-secondary)', marginBottom: 20 }}>
+                Complete tasks, earn XRD. Badge holders can claim bounties. Submit your work, get verified, get paid.
+              </p>
+              <div className="badge-list">
+                {[
+                  { title: 'Write a "Getting Started with Radix Guild" tutorial', reward: 50, proof: 'Published doc or blog post', status: 'open' },
+                  { title: 'Design Guild banner/header for website', reward: 25, proof: 'Image file submitted', status: 'open' },
+                  { title: 'Create 3 social media posts about the Guild', reward: 25, proof: 'Posted on X/Twitter with links', status: 'open' },
+                  { title: 'Report and document a bug in the portal', reward: 10, proof: 'GitHub issue with repro steps', status: 'open' },
+                  { title: 'Translate Guild README to another language', reward: 30, proof: 'Pull request with translated file', status: 'open' },
+                ].map((b, i) => (
+                  <div className="badge-item" key={i}>
+                    <div className="badge-item-info">
+                      <span className="badge-item-name">{b.title}</span>
+                      <span className="badge-item-schema">Proof: {b.proof}</span>
+                    </div>
+                    <span className="tier-pill" style={{ background: 'var(--accent-dim)', color: 'var(--accent)' }}>
+                      {b.reward} XRD
+                    </span>
+                  </div>
+                ))}
+              </div>
+              <div style={{ marginTop: 20, padding: 16, background: 'var(--bg-surface-2)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)' }}>
+                <p style={{ font: '500 13px var(--font-sans)', color: 'var(--text-primary)', marginBottom: 8 }}>How to claim a bounty:</p>
+                <ol style={{ font: '400 13px var(--font-sans)', color: 'var(--text-secondary)', paddingLeft: 20 }}>
+                  <li>Mint a Guild badge (free)</li>
+                  <li>Do the work</li>
+                  <li>Submit proof on the <a href="https://www.crumbsup.io/#dao?id=4db790d7-4d75-49ed-a2e0-3514743809e0" target="_blank">CrumbsUp DAO</a> or <a href="https://github.com/bigdevxrd/radix-community-projects/issues" target="_blank">GitHub Issues</a></li>
+                  <li>Get verified → receive XRD</li>
+                </ol>
+              </div>
+            </div>
+
+            <div className="card">
+              <div className="card-header">
+                <h2>Working Groups</h2>
+                <span className="card-badge">Join a team</span>
+              </div>
+              <p style={{ color: 'var(--text-secondary)', marginBottom: 16 }}>
+                Working groups focus on specific areas. Join one to access group-specific tasks and earn group XP.
+              </p>
+              <div className="ecosystem-links">
+                <div className="eco-link">Dev — Build managers, review PRs, maintain code</div>
+                <div className="eco-link">Content — Write docs, tutorials, manage website</div>
+                <div className="eco-link">Governance — Draft proposals, run consultations</div>
+              </div>
+            </div>
+          </>
         )}
 
         {page === 'explorer' && (
