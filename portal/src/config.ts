@@ -8,7 +8,8 @@ export const CONFIG = {
   dashboardUrl: 'https://dashboard.radixdlt.com',
 
   // dApp Definition
-  dAppDefinitionAddress: 'account_rdx12yh4fwevmvnqgd3ppzau66cm9xu874srmrt9g2cye3fa8j8y78z9sq',
+  // Using agent wallet as dApp def (same as Sats dashboard — deployer account)
+  dAppDefinitionAddress: 'account_rdx128lggt503h7m2dhzqnrkkqv4zklxcjmdggr8xxtqy8e47p7fkmd8cx',
 
   // Package
   packageAddress: 'package_rdx1p4hx8r99n3fdf60sa7868tw2p8grq7nar4uycr8nup4f3c7xwy2q90',
