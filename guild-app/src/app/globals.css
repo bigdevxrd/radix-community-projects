@@ -1,101 +1,152 @@
 @import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap");
 @import "tailwindcss";
 
-/* ── Tailwind v4 Theme ──
-   Colors use currentColor-style references to CSS custom properties.
-   This lets dark/light themes switch the underlying values while
-   Tailwind generates the utility classes at build time. */
-
 @theme {
-  /* Surface colors — referenced via bg-base, bg-surface, bg-surface-2 */
-  --color-base: oklch(from var(--c-base) l c h);
-  --color-surface: oklch(from var(--c-surface) l c h);
-  --color-surface-2: oklch(from var(--c-surface-2) l c h);
-
-  /* Text */
-  --color-text-primary: oklch(from var(--c-text-primary) l c h);
-  --color-text-secondary: oklch(from var(--c-text-secondary) l c h);
-  --color-text-muted: oklch(from var(--c-text-muted) l c h);
-
-  /* Accent */
-  --color-accent: oklch(from var(--c-accent) l c h);
-  --color-accent-hover: oklch(from var(--c-accent-hover) l c h);
-
-  /* Border */
-  --color-border: oklch(from var(--c-border) l c h);
-  --color-border-focus: oklch(from var(--c-border-focus) l c h);
-
-  /* Status */
-  --color-status-active: oklch(from var(--c-status-active) l c h);
-  --color-status-revoked: oklch(from var(--c-status-revoked) l c h);
-  --color-status-pending: oklch(from var(--c-status-pending) l c h);
-  --color-status-planned: oklch(from var(--c-status-planned) l c h);
-
-  /* Tiers */
-  --color-tier-member: oklch(from var(--c-tier-member) l c h);
-  --color-tier-contributor: oklch(from var(--c-tier-contributor) l c h);
-  --color-tier-builder: oklch(from var(--c-tier-builder) l c h);
-  --color-tier-steward: oklch(from var(--c-tier-steward) l c h);
-  --color-tier-elder: oklch(from var(--c-tier-elder) l c h);
-
-  /* Typography */
   --font-sans: "Inter", system-ui, sans-serif;
   --font-mono: "JetBrains Mono", "SF Mono", monospace;
-
-  /* Radius */
-  --radius-sm: 6px;
-  --radius-md: 10px;
-  --radius-lg: 12px;
 }
 
 /* ── Dark Theme (default) ── */
 :root, [data-theme="dark"] {
-  --c-base: #0a0a0f;
-  --c-surface: #12121a;
-  --c-surface-2: #1a1a26;
-  --c-border: #2a2a3d;
-  --c-border-focus: #4a4a6a;
-  --c-text-primary: #e8e8f0;
-  --c-text-secondary: #8888a0;
-  --c-text-muted: #55556a;
-  --c-accent: #00e49f;
-  --c-accent-hover: #00c88a;
-  --c-status-active: #00e49f;
-  --c-status-revoked: #ef4444;
-  --c-status-pending: #f59e0b;
-  --c-status-planned: #a78bfa;
-  --c-tier-member: #8888a0;
-  --c-tier-contributor: #4ea8de;
-  --c-tier-builder: #a78bfa;
-  --c-tier-steward: #f59e0b;
-  --c-tier-elder: #00e49f;
+  --g-base: #0a0a0f;
+  --g-surface: #12121a;
+  --g-surface-2: #1a1a26;
+  --g-border: #2a2a3d;
+  --g-border-focus: #4a4a6a;
+  --g-text: #e8e8f0;
+  --g-text-2: #8888a0;
+  --g-text-3: #55556a;
+  --g-accent: #00e49f;
+  --g-accent-hover: #00c88a;
+  --g-accent-dim: rgba(0, 228, 159, 0.1);
+  --g-red: #ef4444;
+  --g-yellow: #f59e0b;
+  --g-purple: #a78bfa;
+  --g-blue: #4ea8de;
+  --g-tier-member: #8888a0;
+  --g-tier-contributor: #4ea8de;
+  --g-tier-builder: #a78bfa;
+  --g-tier-steward: #f59e0b;
+  --g-tier-elder: #00e49f;
 }
 
-/* ── Light Theme ── */
 [data-theme="light"] {
-  --c-base: #f5f5f7;
-  --c-surface: #ffffff;
-  --c-surface-2: #f0f0f3;
-  --c-border: #d4d4d8;
-  --c-border-focus: #a1a1aa;
-  --c-text-primary: #18181b;
-  --c-text-secondary: #52525b;
-  --c-text-muted: #a1a1aa;
-  --c-accent: #059669;
-  --c-accent-hover: #047857;
-  --c-status-active: #059669;
-  --c-status-revoked: #ef4444;
-  --c-status-pending: #d97706;
-  --c-status-planned: #7c3aed;
-  --c-tier-member: #71717a;
-  --c-tier-contributor: #2563eb;
-  --c-tier-builder: #7c3aed;
-  --c-tier-steward: #d97706;
-  --c-tier-elder: #059669;
+  --g-base: #f5f5f7;
+  --g-surface: #ffffff;
+  --g-surface-2: #f0f0f3;
+  --g-border: #d4d4d8;
+  --g-border-focus: #a1a1aa;
+  --g-text: #18181b;
+  --g-text-2: #52525b;
+  --g-text-3: #a1a1aa;
+  --g-accent: #059669;
+  --g-accent-hover: #047857;
+  --g-accent-dim: rgba(5, 150, 105, 0.1);
+  --g-red: #ef4444;
+  --g-yellow: #d97706;
+  --g-purple: #7c3aed;
+  --g-blue: #2563eb;
+  --g-tier-member: #71717a;
+  --g-tier-contributor: #2563eb;
+  --g-tier-builder: #7c3aed;
+  --g-tier-steward: #d97706;
+  --g-tier-elder: #059669;
 }
 
+/* ── Base ── */
 * { box-sizing: border-box; margin: 0; padding: 0; }
-html { background: var(--c-base); color: var(--c-text-primary); }
+html { background: var(--g-base); color: var(--g-text); }
 body { font-family: var(--font-sans); min-height: 100vh; line-height: 1.5; }
-a { color: var(--c-accent); text-decoration: none; }
-a:hover { color: var(--c-accent-hover); }
+a { color: var(--g-accent); text-decoration: none; }
+a:hover { color: var(--g-accent-hover); }
+
+/* ── Themed Utility Classes ── */
+.g-base { background: var(--g-base); }
+.g-surface { background: var(--g-surface); }
+.g-surface-2 { background: var(--g-surface-2); }
+.g-border { border-color: var(--g-border); }
+.g-border-focus { border-color: var(--g-border-focus); }
+.g-text { color: var(--g-text); }
+.g-text-2 { color: var(--g-text-2); }
+.g-text-3 { color: var(--g-text-3); }
+.g-accent { color: var(--g-accent); }
+.g-accent-bg { background: var(--g-accent); }
+.g-accent-dim { background: var(--g-accent-dim); }
+.g-red { color: var(--g-red); }
+.g-yellow { color: var(--g-yellow); }
+.g-purple { color: var(--g-purple); }
+.g-blue { color: var(--g-blue); }
+
+/* Cards */
+.g-card {
+  background: var(--g-surface);
+  border: 1px solid var(--g-border);
+  border-radius: 10px;
+}
+.g-card-inner {
+  background: var(--g-surface-2);
+  border-radius: 6px;
+}
+
+/* Inputs */
+.g-input {
+  background: var(--g-surface-2);
+  border: 1px solid var(--g-border);
+  border-radius: 6px;
+  color: var(--g-text);
+  font-family: var(--font-mono);
+  outline: none;
+}
+.g-input:focus { border-color: var(--g-border-focus); }
+
+/* Buttons */
+.g-btn {
+  background: var(--g-accent);
+  color: #000;
+  border: none;
+  border-radius: 6px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.g-btn:hover { background: var(--g-accent-hover); }
+.g-btn:disabled { background: var(--g-surface-2); color: var(--g-text-3); cursor: not-allowed; }
+.g-btn-yellow { background: var(--g-yellow); }
+.g-btn-red { background: var(--g-red); }
+
+/* Status pills */
+.g-pill {
+  display: inline-block;
+  padding: 1px 8px;
+  border-radius: 99px;
+  font-size: 10px;
+  font-weight: 700;
+}
+.g-pill-accent { background: var(--g-accent-dim); color: var(--g-accent); }
+.g-pill-green { background: rgba(0,228,159,0.1); color: var(--g-accent); }
+.g-pill-red { background: rgba(239,68,68,0.1); color: var(--g-red); }
+.g-pill-yellow { background: rgba(245,158,11,0.1); color: var(--g-yellow); }
+.g-pill-purple { background: rgba(167,139,250,0.1); color: var(--g-purple); }
+.g-pill-blue { background: rgba(78,168,222,0.1); color: var(--g-blue); }
+.g-pill-muted { background: var(--g-surface-2); color: var(--g-text-3); }
+
+/* Header border */
+.g-header {
+  border-bottom: 1px solid var(--g-border);
+  background: var(--g-base);
+}
+
+/* Nav link */
+.g-nav-active { color: var(--g-accent); border-bottom: 2px solid var(--g-accent); }
+.g-nav-idle { color: var(--g-text-2); border-bottom: 2px solid transparent; }
+.g-nav-idle:hover { color: var(--g-text); }
+
+/* Dividers */
+.g-divider { border-bottom: 1px solid var(--g-border); }
+
+/* XP bar */
+.g-xp-track { background: var(--g-surface-2); }
+.g-xp-fill { background: var(--g-accent); }
+
+/* Alert */
+.g-alert-ok { background: var(--g-accent-dim); color: var(--g-accent); border: 1px solid rgba(0,228,159,0.2); }
+.g-alert-err { background: rgba(239,68,68,0.08); color: var(--g-red); border: 1px solid rgba(239,68,68,0.2); }

@@ -4,7 +4,6 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useWallet } from "@/hooks/useWallet";
 import { useTheme } from "@/hooks/useTheme";
-import { TIER_COLORS } from "@/lib/constants";
 
 const NAV = [
   { path: "/guild", label: "Dashboard" },
@@ -12,6 +11,14 @@ const NAV = [
   { path: "/guild/proposals", label: "Proposals" },
   { path: "/guild/admin", label: "Admin" },
 ];
+
+const TIER_CSS: Record<string, string> = {
+  member: "g-pill-muted",
+  contributor: "g-pill-blue",
+  builder: "g-pill-purple",
+  steward: "g-pill-yellow",
+  elder: "g-pill-green",
+};
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const { badge } = useWallet();
@@ -21,25 +28,16 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   useEffect(() => setMounted(true), []);
 
-  const tierColor = badge ? TIER_COLORS[badge.tier] || "var(--c-text-muted)" : "";
-
   return (
     <>
-      {/* Header */}
-      <header className="sticky top-0 z-50 border-b border-border bg-base">
+      <header className="g-header sticky top-0 z-50">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 flex items-center justify-between h-14">
           <div className="flex items-center gap-2 sm:gap-3">
-            <Link
-              href="/guild"
-              className="font-bold text-base text-text-primary no-underline"
-            >
+            <Link href="/guild" className="font-bold text-base g-text no-underline">
               Radix Guild
             </Link>
             {badge && (
-              <span
-                className="hidden sm:inline px-2.5 py-0.5 rounded-full text-[11px] font-bold font-mono"
-                style={{ background: `${tierColor}1a`, color: tierColor }}
-              >
+              <span className={`hidden sm:inline g-pill font-mono ${TIER_CSS[badge.tier] || "g-pill-muted"}`}>
                 {badge.tier.toUpperCase()} | {badge.xp} XP
               </span>
             )}
@@ -47,12 +45,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <div className="flex items-center gap-2 sm:gap-3">
             <button
               onClick={toggleTheme}
-              className="bg-transparent border border-border rounded-md px-2 py-1 cursor-pointer text-text-secondary text-sm hover:border-border-focus"
+              className="g-input px-2 py-1 cursor-pointer text-sm"
               title="Toggle theme"
             >
               {theme === "dark" ? "\u2600\ufe0f" : "\ud83c\udf19"}
             </button>
-            <span className="hidden sm:inline bg-surface-2 border border-border rounded-full px-3 py-1 text-xs text-accent font-mono">
+            <span className="hidden sm:inline g-pill g-pill-accent font-mono text-xs">
               Mainnet
             </span>
             {mounted && <radix-connect-button />}
@@ -60,16 +58,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </div>
       </header>
 
-      {/* Nav */}
-      <nav className="max-w-4xl mx-auto px-4 sm:px-6 flex gap-0.5 sm:gap-1 border-b border-border overflow-x-auto">
+      <nav className="max-w-4xl mx-auto px-4 sm:px-6 flex gap-0.5 sm:gap-1 g-divider overflow-x-auto">
         {NAV.map((n) => (
           <Link
             key={n.path}
             href={n.path}
-            className={`px-3 sm:px-4 py-3 text-[13px] font-medium no-underline border-b-2 transition-colors whitespace-nowrap ${
-              pathname === n.path
-                ? "text-accent border-accent"
-                : "text-text-secondary border-transparent hover:text-text-primary"
+            className={`px-3 sm:px-4 py-3 text-[13px] font-medium no-underline whitespace-nowrap ${
+              pathname === n.path ? "g-nav-active" : "g-nav-idle"
             }`}
           >
             {n.label}
@@ -77,16 +72,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         ))}
       </nav>
 
-      {/* Main */}
       <main className="max-w-4xl mx-auto px-4 sm:px-6 py-4 sm:py-6">{children}</main>
 
-      {/* Footer */}
-      <footer className="max-w-4xl mx-auto mt-8 sm:mt-12 px-4 sm:px-6 py-6 border-t border-border text-center flex justify-center gap-6 text-[13px] text-text-secondary">
-        <a
-          href="https://github.com/bigdevxrd/radix-community-projects"
-          target="_blank"
-          className="text-accent no-underline hover:text-accent-hover"
-        >
+      <footer className="max-w-4xl mx-auto mt-8 sm:mt-12 px-4 sm:px-6 py-6 g-divider text-center flex justify-center gap-6 text-[13px] g-text-2">
+        <a href="https://github.com/bigdevxrd/radix-community-projects" target="_blank" className="g-accent no-underline">
           GitHub
         </a>
         <span>|</span>
