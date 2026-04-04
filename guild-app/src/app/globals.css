@@ -8,17 +8,17 @@
 
 /* ── Dark Theme (default) ── */
 :root, [data-theme="dark"] {
-  --g-base: #0a0a0f;
-  --g-surface: #12121a;
-  --g-surface-2: #1a1a26;
-  --g-border: #2a2a3d;
-  --g-border-focus: #4a4a6a;
-  --g-text: #e8e8f0;
-  --g-text-2: #8888a0;
-  --g-text-3: #55556a;
+  --g-base: #09090b;
+  --g-surface: #18181b;
+  --g-surface-2: #27272a;
+  --g-border: #3f3f46;
+  --g-border-focus: #52525b;
+  --g-text: #f4f4f5;
+  --g-text-2: #a1a1aa;
+  --g-text-3: #71717a;
   --g-accent: #00e49f;
   --g-accent-hover: #00c88a;
-  --g-accent-dim: rgba(0, 228, 159, 0.1);
+  --g-accent-dim: rgba(0, 228, 159, 0.12);
   --g-red: #ef4444;
   --g-yellow: #f59e0b;
   --g-purple: #a78bfa;
