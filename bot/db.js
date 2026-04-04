@@ -52,6 +52,9 @@ function init() {
   try { db.exec("ALTER TABLE proposals ADD COLUMN options TEXT"); } catch(e) {}
   try { db.exec("ALTER TABLE proposals ADD COLUMN parent_id INTEGER"); } catch(e) {}
   try { db.exec("ALTER TABLE proposals ADD COLUMN round INTEGER DEFAULT 1"); } catch(e) {}
+  try { db.exec("ALTER TABLE proposals ADD COLUMN recorded_on_chain INTEGER DEFAULT 0"); } catch(e) {}
+  try { db.exec("ALTER TABLE proposals ADD COLUMN on_chain_tx TEXT"); } catch(e) {}
+  try { db.exec("ALTER TABLE proposals ADD COLUMN on_chain_outcome_json TEXT"); } catch(e) {}
 
   // Indexes for 20k+ scale
   db.exec(`
@@ -129,6 +132,18 @@ function getAmendments(parentId) {
   return db.prepare("SELECT * FROM proposals WHERE parent_id = ? ORDER BY round").all(parentId);
 }
 
+function getProposalsPendingOutcomeRecording() {
+  return db.prepare(
+    "SELECT id, title, status FROM proposals WHERE recorded_on_chain = 0 AND status IN ('passed', 'failed', 'needs_amendment', 'completed', 'expired') ORDER BY ends_at ASC LIMIT 100"
+  ).all();
+}
+
+function markOutcomeRecorded(proposalId, txHash, outcomeJson) {
+  return db.prepare(
+    "UPDATE proposals SET recorded_on_chain = 1, on_chain_tx = ?, on_chain_outcome_json = ? WHERE id = ?"
+  ).run(txHash, JSON.stringify(outcomeJson), proposalId);
+}
+
 // Votes
 function recordVote(proposalId, tgId, radixAddress, vote) {
   try {
@@ -174,6 +189,7 @@ module.exports = {
   getUser, registerUser,
   createProposal, updateProposalMessage, getProposal,
   getActiveProposals, closeExpiredProposals, closeProposal, getAmendments,
+  getProposalsPendingOutcomeRecording, markOutcomeRecorded,
   recordVote, getVoteCounts, hasVoted,
   getTotalVoters, getTotalProposals,
 };

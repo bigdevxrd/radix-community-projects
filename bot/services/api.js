@@ -35,7 +35,7 @@ function startApi() {
     } else {
       res.setHeader("Access-Control-Allow-Origin", "*"); // dev fallback
     }
-    res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
+    res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
     res.setHeader("Access-Control-Allow-Headers", "Content-Type");
 
     if (req.method === "OPTIONS") {
@@ -98,6 +98,46 @@ function startApi() {
       const { getXpQueue } = require("./xp");
       res.writeHead(200);
       return res.end(JSON.stringify({ ok: true, data: getXpQueue() }));
+    }
+
+    // GET /api/outcomes-pending — closed proposals not yet recorded on-chain
+    if (url.pathname === "/api/outcomes-pending") {
+      const pending = db.getProposalsPendingOutcomeRecording();
+      const result = pending.map(p => {
+        const counts = db.getVoteCounts(p.id);
+        const total = Object.values(counts).reduce((a, b) => a + b, 0);
+        return {
+          id: p.id,
+          title: p.title,
+          status: p.status,
+          counts,
+          total_votes: total,
+        };
+      });
+      res.writeHead(200);
+      return res.end(JSON.stringify({ ok: true, data: result }));
+    }
+
+    // POST /api/outcomes/:id/recorded — mark a proposal outcome as recorded on-chain
+    const outcomeRecordedMatch = url.pathname.match(/^\/api\/outcomes\/(\d+)\/recorded$/);
+    if (outcomeRecordedMatch && req.method === "POST") {
+      const id = parseInt(outcomeRecordedMatch[1]);
+      let body = "";
+      const MAX_BODY = 8192;
+      req.on("data", chunk => {
+        if (body.length + chunk.length > MAX_BODY) { body = null; }
+        else { body += chunk; }
+      });
+      await new Promise(resolve => req.on("end", resolve));
+      if (body === null) {
+        res.writeHead(413);
+        return res.end(JSON.stringify({ ok: false, error: "payload_too_large" }));
+      }
+      let payload;
+      try { payload = JSON.parse(body); } catch (e) { payload = {}; }
+      db.markOutcomeRecorded(id, payload.tx_hash || null, payload.outcome || {});
+      res.writeHead(200);
+      return res.end(JSON.stringify({ ok: true }));
     }
 
     // GET /api/stats
