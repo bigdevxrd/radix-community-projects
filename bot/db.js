@@ -21,14 +21,19 @@ function init() {
     CREATE TABLE IF NOT EXISTS proposals (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       title TEXT NOT NULL,
+      type TEXT DEFAULT 'yesno',
+      options TEXT,
       creator_tg_id INTEGER NOT NULL,
       status TEXT DEFAULT 'active',
+      parent_id INTEGER,
+      round INTEGER DEFAULT 1,
       created_at INTEGER DEFAULT (strftime('%s','now')),
       ends_at INTEGER NOT NULL,
       min_votes INTEGER DEFAULT 3,
       tg_message_id INTEGER,
       tg_chat_id INTEGER,
-      FOREIGN KEY (creator_tg_id) REFERENCES users(tg_id)
+      FOREIGN KEY (creator_tg_id) REFERENCES users(tg_id),
+      FOREIGN KEY (parent_id) REFERENCES proposals(id)
     );
 
     CREATE TABLE IF NOT EXISTS votes (
@@ -41,6 +46,12 @@ function init() {
       FOREIGN KEY (proposal_id) REFERENCES proposals(id)
     );
   `);
+
+  // Migration: add columns if they don't exist (safe for existing DBs)
+  try { db.exec("ALTER TABLE proposals ADD COLUMN type TEXT DEFAULT 'yesno'"); } catch(e) {}
+  try { db.exec("ALTER TABLE proposals ADD COLUMN options TEXT"); } catch(e) {}
+  try { db.exec("ALTER TABLE proposals ADD COLUMN parent_id INTEGER"); } catch(e) {}
+  try { db.exec("ALTER TABLE proposals ADD COLUMN round INTEGER DEFAULT 1"); } catch(e) {}
 
   return db;
 }
@@ -57,11 +68,19 @@ function registerUser(tgId, radixAddress, username) {
 }
 
 // Proposals
-function createProposal(title, creatorTgId, daysActive = 7, minVotes = 3) {
+function createProposal(title, creatorTgId, opts = {}) {
+  const {
+    type = "yesno",
+    options = null,
+    daysActive = 3,
+    minVotes = 3,
+    parentId = null,
+    round = 1,
+  } = opts;
   const endsAt = Math.floor(Date.now() / 1000) + daysActive * 86400;
   const result = db.prepare(
-    "INSERT INTO proposals (title, creator_tg_id, ends_at, min_votes) VALUES (?, ?, ?, ?)"
-  ).run(title, creatorTgId, endsAt, minVotes);
+    "INSERT INTO proposals (title, type, options, creator_tg_id, ends_at, min_votes, parent_id, round) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
+  ).run(title, type, options ? JSON.stringify(options) : null, creatorTgId, endsAt, minVotes, parentId, round);
   return result.lastInsertRowid;
 }
 
@@ -72,14 +91,20 @@ function updateProposalMessage(proposalId, messageId, chatId) {
 }
 
 function getProposal(id) {
-  return db.prepare("SELECT * FROM proposals WHERE id = ?").get(id);
+  const p = db.prepare("SELECT * FROM proposals WHERE id = ?").get(id);
+  if (p && p.options) p.options = JSON.parse(p.options);
+  return p;
 }
 
 function getActiveProposals() {
   const now = Math.floor(Date.now() / 1000);
-  return db.prepare(
+  const rows = db.prepare(
     "SELECT * FROM proposals WHERE status = 'active' AND ends_at > ? ORDER BY created_at DESC"
   ).all(now);
+  return rows.map(p => {
+    if (p.options) p.options = JSON.parse(p.options);
+    return p;
+  });
 }
 
 function closeExpiredProposals() {
@@ -91,6 +116,10 @@ function closeExpiredProposals() {
 
 function closeProposal(id, status) {
   db.prepare("UPDATE proposals SET status = ? WHERE id = ?").run(status, id);
+}
+
+function getAmendments(parentId) {
+  return db.prepare("SELECT * FROM proposals WHERE parent_id = ? ORDER BY round").all(parentId);
 }
 
 // Votes
@@ -112,7 +141,7 @@ function getVoteCounts(proposalId) {
   const rows = db.prepare(
     "SELECT vote, COUNT(*) as count FROM votes WHERE proposal_id = ? GROUP BY vote"
   ).all(proposalId);
-  const counts = { for: 0, against: 0 };
+  const counts = {};
   rows.forEach((r) => { counts[r.vote] = r.count; });
   return counts;
 }
@@ -123,17 +152,21 @@ function hasVoted(proposalId, tgId) {
   ).get(proposalId, tgId);
 }
 
+function getTotalVoters() {
+  const r = db.prepare("SELECT COUNT(DISTINCT tg_id) as c FROM votes").get();
+  return r ? r.c : 0;
+}
+
+function getTotalProposals() {
+  const r = db.prepare("SELECT COUNT(*) as c FROM proposals").get();
+  return r ? r.c : 0;
+}
+
 module.exports = {
   init,
-  getUser,
-  registerUser,
-  createProposal,
-  updateProposalMessage,
-  getProposal,
-  getActiveProposals,
-  closeExpiredProposals,
-  closeProposal,
-  recordVote,
-  getVoteCounts,
-  hasVoted,
+  getUser, registerUser,
+  createProposal, updateProposalMessage, getProposal,
+  getActiveProposals, closeExpiredProposals, closeProposal, getAmendments,
+  recordVote, getVoteCounts, hasVoted,
+  getTotalVoters, getTotalProposals,
 };
