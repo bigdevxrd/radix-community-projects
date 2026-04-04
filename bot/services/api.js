@@ -2,9 +2,11 @@
 const http = require("http");
 const db = require("../db");
 const { hasBadge, getBadgeData } = require("./gateway");
+const { postBountyToCrumbsUp, validateWebhookSignature } = require("./crumbsup");
 
 const API_PORT = parseInt(process.env.API_PORT || "3003");
 const ALLOWED_ORIGINS = (process.env.CORS_ORIGINS || "").split(",").filter(Boolean);
+const ADMIN_API_KEY = process.env.ADMIN_API_KEY || "";
 
 // Simple in-memory rate limiter
 const rateBuckets = new Map();
@@ -22,6 +24,21 @@ setInterval(() => {
   for (const [ip, b] of rateBuckets) { if (now > b.reset + 60000) rateBuckets.delete(ip); }
 }, 300000);
 
+function isAdmin(req) {
+  if (!ADMIN_API_KEY) return false;
+  const auth = req.headers["authorization"] || "";
+  return auth === "Bearer " + ADMIN_API_KEY;
+}
+
+function readBody(req) {
+  return new Promise((resolve, reject) => {
+    let body = "";
+    req.on("data", chunk => { body += chunk; });
+    req.on("end", () => resolve(body));
+    req.on("error", reject);
+  });
+}
+
 function startApi() {
   const server = http.createServer(async (req, res) => {
     res.setHeader("Content-Type", "application/json");
@@ -35,8 +52,8 @@ function startApi() {
     } else {
       res.setHeader("Access-Control-Allow-Origin", "*"); // dev fallback
     }
-    res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
-    res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+    res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+    res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
 
     if (req.method === "OPTIONS") {
       res.writeHead(200);
@@ -146,6 +163,194 @@ function startApi() {
         res.writeHead(500);
         return res.end(JSON.stringify({ ok: false, error: "gateway_error" }));
       }
+    }
+
+    // ── Bounty endpoints ─────────────────────────────────
+
+    // GET /api/bounties — list bounties (optionally filter by status/category)
+    if (req.method === "GET" && url.pathname === "/api/bounties") {
+      const statusFilter = url.searchParams.get("status");
+      const categoryFilter = url.searchParams.get("category");
+      const limit = Math.min(100, Math.max(1, parseInt(url.searchParams.get("limit") || "50")));
+      let bounties = statusFilter === "open" ? db.getOpenBounties(limit) : db.getAllBounties(limit);
+      if (categoryFilter) bounties = bounties.filter(b => b.category === categoryFilter);
+      res.writeHead(200);
+      return res.end(JSON.stringify({ ok: true, data: bounties }));
+    }
+
+    // POST /api/bounties — create new bounty (admin only)
+    if (req.method === "POST" && url.pathname === "/api/bounties") {
+      if (!isAdmin(req)) {
+        res.writeHead(403);
+        return res.end(JSON.stringify({ ok: false, error: "forbidden" }));
+      }
+      let body;
+      try { body = JSON.parse(await readBody(req)); } catch(e) {
+        res.writeHead(400);
+        return res.end(JSON.stringify({ ok: false, error: "invalid_json" }));
+      }
+      const { title, description, category, reward_xrd, days_active } = body;
+      if (!title || !reward_xrd || !days_active) {
+        res.writeHead(400);
+        return res.end(JSON.stringify({ ok: false, error: "missing_fields" }));
+      }
+      const creatorAddress = body.creator_address || process.env.RADIX_ACCOUNT_ADDRESS || "";
+      const id = db.createBounty(title, description, category, reward_xrd, creatorAddress, days_active);
+
+      // Attempt to post to CrumbsUp
+      const bounty = db.getBounty(id);
+      const cuResult = await postBountyToCrumbsUp(bounty);
+      if (cuResult && cuResult.id) {
+        const cuUrl = "https://crumbsup.io/bounty/" + cuResult.id;
+        db.setBountyCrumbsUp(id, cuResult.id, cuUrl);
+      } else {
+        db.updateBountyStatus(id, "open");
+      }
+
+      const updated = db.getBounty(id);
+      res.writeHead(201);
+      return res.end(JSON.stringify({
+        ok: true,
+        id,
+        crumbsup_id: updated.crumbsup_id || null,
+        crumbsup_url: updated.crumbsup_url || null,
+      }));
+    }
+
+    // GET /api/bounties/pending-payment — bounties approved + awaiting XRD release
+    if (req.method === "GET" && url.pathname === "/api/bounties/pending-payment") {
+      const data = db.getBountiesPendingPayment();
+      res.writeHead(200);
+      return res.end(JSON.stringify({ ok: true, data }));
+    }
+
+    // POST /api/bounties/release-payment — batch-release XRD to approved claimers (signer only)
+    if (req.method === "POST" && url.pathname === "/api/bounties/release-payment") {
+      if (!isAdmin(req)) {
+        res.writeHead(403);
+        return res.end(JSON.stringify({ ok: false, error: "forbidden" }));
+      }
+      let body;
+      try { body = JSON.parse(await readBody(req)); } catch(e) { body = {}; }
+      const { released = [] } = body;
+      for (const item of released) {
+        const { bounty_id, tx_hash } = item;
+        if (!bounty_id || !tx_hash) continue;
+        const bounty = db.getBounty(bounty_id);
+        if (bounty && bounty.status === "approved") {
+          db.markBountyPaid(bounty_id, tx_hash);
+          db.recordEscrowRelease(bounty_id, bounty.reward_xrd, tx_hash);
+        }
+      }
+      res.writeHead(200);
+      return res.end(JSON.stringify({ ok: true, released }));
+    }
+
+    // GET /api/bounties/:id — single bounty detail
+    if (req.method === "GET" && url.pathname.match(/^\/api\/bounties\/\d+$/)) {
+      const id = parseInt(url.pathname.split("/").pop());
+      const bounty = db.getBounty(id);
+      if (!bounty) {
+        res.writeHead(404);
+        return res.end(JSON.stringify({ ok: false, error: "not_found" }));
+      }
+      const txHistory = db.getBountyTransactionHistory(id);
+      res.writeHead(200);
+      return res.end(JSON.stringify({ ok: true, data: { ...bounty, transactions: txHistory } }));
+    }
+
+    // POST /api/bounties/:id/claim — claim bounty
+    if (req.method === "POST" && url.pathname.match(/^\/api\/bounties\/\d+\/claim$/)) {
+      const id = parseInt(url.pathname.split("/")[3]);
+      let body;
+      try { body = JSON.parse(await readBody(req)); } catch(e) {
+        res.writeHead(400);
+        return res.end(JSON.stringify({ ok: false, error: "invalid_json" }));
+      }
+      const { address } = body;
+      if (!address) {
+        res.writeHead(400);
+        return res.end(JSON.stringify({ ok: false, error: "missing_address" }));
+      }
+      const result = db.claimBounty(id, address);
+      if (!result.ok) {
+        res.writeHead(409);
+        return res.end(JSON.stringify({ ok: false, error: result.error }));
+      }
+      const bounty = db.getBounty(id);
+      res.writeHead(200);
+      return res.end(JSON.stringify({
+        ok: true,
+        bounty_id: id,
+        claimed_by: address,
+        crumbsup_claim_url: bounty.crumbsup_url || null,
+      }));
+    }
+
+    // POST /api/bounties/:id/submit — mark bounty work as submitted
+    if (req.method === "POST" && url.pathname.match(/^\/api\/bounties\/\d+\/submit$/)) {
+      const id = parseInt(url.pathname.split("/")[3]);
+      const result = db.submitBountyWork(id);
+      if (!result.ok) {
+        res.writeHead(409);
+        return res.end(JSON.stringify({ ok: false, error: result.error }));
+      }
+      res.writeHead(200);
+      return res.end(JSON.stringify({ ok: true, bounty_id: id, status: "submitted" }));
+    }
+
+    // POST /api/bounties/:id/approve — approve bounty for payment (admin only)
+    if (req.method === "POST" && url.pathname.match(/^\/api\/bounties\/\d+\/approve$/)) {
+      if (!isAdmin(req)) {
+        res.writeHead(403);
+        return res.end(JSON.stringify({ ok: false, error: "forbidden" }));
+      }
+      const id = parseInt(url.pathname.split("/")[3]);
+      let body;
+      try { body = JSON.parse(await readBody(req)); } catch(e) { body = {}; }
+      const result = db.approveBountyPayment(id, null, body.crumbsup_id || null);
+      if (!result.ok) {
+        res.writeHead(409);
+        return res.end(JSON.stringify({ ok: false, error: result.error }));
+      }
+      res.writeHead(200);
+      return res.end(JSON.stringify({ ok: true, bounty_id: id, escrow_release_pending: true }));
+    }
+
+    // GET /api/escrow — escrow wallet state
+    if (req.method === "GET" && url.pathname === "/api/escrow") {
+      res.writeHead(200);
+      return res.end(JSON.stringify({ ok: true, data: db.getEscrowWallet() }));
+    }
+
+    // POST /api/webhooks/crumbsup — receive approval notifications from CrumbsUp
+    if (req.method === "POST" && url.pathname === "/api/webhooks/crumbsup") {
+      const rawBody = await readBody(req);
+      const sig = req.headers["x-crumbsup-signature"] || "";
+      if (!validateWebhookSignature(rawBody, sig)) {
+        res.writeHead(401);
+        return res.end(JSON.stringify({ ok: false, error: "invalid_signature" }));
+      }
+      let body;
+      try { body = JSON.parse(rawBody); } catch(e) {
+        res.writeHead(400);
+        return res.end(JSON.stringify({ ok: false, error: "invalid_json" }));
+      }
+      const { crumbsup_bounty_id, claimer_address } = body;
+      if (crumbsup_bounty_id) {
+        // Find bounty by crumbsup_id
+        const all = db.getAllBounties(1000);
+        const bounty = all.find(b => b.crumbsup_id === String(crumbsup_bounty_id));
+        if (bounty && bounty.status === "submitted") {
+          db.approveBountyPayment(bounty.id, null, String(crumbsup_bounty_id));
+          if (claimer_address && !bounty.claimed_by_address) {
+            db.claimBounty(bounty.id, claimer_address);
+          }
+          console.log("[Webhook] CrumbsUp approved bounty #" + bounty.id);
+        }
+      }
+      res.writeHead(200);
+      return res.end(JSON.stringify({ ok: true }));
     }
 
     res.writeHead(404);
