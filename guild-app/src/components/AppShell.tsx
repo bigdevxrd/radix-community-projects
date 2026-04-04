@@ -6,10 +6,10 @@ import { useWallet } from "@/hooks/useWallet";
 import { useTheme } from "@/hooks/useTheme";
 
 const NAV = [
-  { path: "/guild", label: "Dashboard" },
-  { path: "/guild/mint", label: "Mint" },
-  { path: "/guild/proposals", label: "Proposals" },
-  { path: "/guild/admin", label: "Admin" },
+  { path: "/", label: "Dashboard" },
+  { path: "/mint", label: "Mint" },
+  { path: "/proposals", label: "Proposals" },
+  { path: "/admin", label: "Admin" },
 ];
 
 const TIER_CSS: Record<string, string> = {
@@ -23,7 +23,9 @@ const TIER_CSS: Record<string, string> = {
 export function AppShell({ children }: { children: React.ReactNode }) {
   const { badge } = useWallet();
   const { theme, toggleTheme } = useTheme();
-  const pathname = usePathname();
+  const rawPathname = usePathname();
+  // Strip basePath for nav matching
+  const pathname = rawPathname.replace(/^\/guild/, "") || "/";
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => setMounted(true), []);
@@ -33,7 +35,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <header className="g-header sticky top-0 z-50">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 flex items-center justify-between h-14">
           <div className="flex items-center gap-2 sm:gap-3">
-            <Link href="/guild" className="font-bold text-base g-text no-underline">
+            <Link href="/" className="font-bold text-base g-text no-underline">
               Radix Guild
             </Link>
             {badge && (

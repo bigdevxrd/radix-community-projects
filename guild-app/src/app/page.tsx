@@ -9,8 +9,8 @@ import Link from "next/link";
 
 const ACTIONS = [
   { label: "Vote on Proposals", href: "https://t.me/radix_guild_bot", desc: "Open TG bot" },
-  { label: "View Proposals", href: "/guild/proposals", desc: "Live results" },
-  { label: "Manage Badges", href: "/guild/admin", desc: "Admin panel" },
+  { label: "View Proposals", href: "/proposals", desc: "Live results" },
+  { label: "Manage Badges", href: "/admin", desc: "Admin panel" },
 ];
 
 const ECOSYSTEM = [
@@ -56,7 +56,7 @@ function DashboardContent() {
           <CardBody className="py-8">
             <h2 className="text-lg font-semibold mb-2">Become a Member</h2>
             <p className="g-text-2 text-sm mb-4">Get a free Guild badge. Your badge is your vote.</p>
-            <Link href="/guild/mint" className="g-btn inline-block px-6 py-2.5 text-sm no-underline">
+            <Link href="/mint" className="g-btn inline-block px-6 py-2.5 text-sm no-underline">
               Mint Your Badge
             </Link>
           </CardBody>
