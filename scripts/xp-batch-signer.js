@@ -7,7 +7,7 @@
 /**
  * SETUP REQUIRED:
  * 1. The signer account must hold the v3 admin badge:
- *    resource_rdx1t4qyd9hwyk6rpt4006fysaw68lkuy7almctwppvw7j9m8cqvzgn6ea
+ *    resource_rdx1tkkzwrttvsqrsylyf4nqt2fxq6h27eva4lr4ffwad63x3f2cl43xwe
  *    Transfer it from the dApp def account via Radix Dashboard.
  * 2. The .env must have RADIX_ACCOUNT_ADDRESS set to the signer account.
  */
@@ -16,9 +16,9 @@ require("dotenv").config({ path: process.env.SIGNER_ENV || "/opt/sats/engine/.en
 const { signAndSubmit, waitForCommit } = require(process.env.SIGNER_MODULE || "/opt/sats/engine/src/radix/signer");
 
 const API_URL = process.env.BOT_API_URL || "http://localhost:3003";
-const MANAGER = "component_rdx1cz0fkhg86y33afk5jztxeqdxjz6hhzexla7u8fkrwfx5ekn3xdlf3u";
-const BADGE_NFT = "resource_rdx1ntxy3j2zclysyr99h3ayrvh92h0rhy3tmmwst9j4r8akeaj4u0qcn4";
-const ADMIN_BADGE = "resource_rdx1t4qyd9hwyk6rpt4006fysaw68lkuy7almctwppvw7j9m8cqvzgn6ea";
+const MANAGER = "component_rdx1czexylvvm0q4uhwpjaqmlznj9sd3y2jnmmah6qug9lm9sfm3tyrtva";
+const BADGE_NFT = "resource_rdx1n22rq94kh6ugwnrvc65m2pwhle3s6ez6j7702vkn2ctkaxemz4ppwl";
+const ADMIN_BADGE = "resource_rdx1tkkzwrttvsqrsylyf4nqt2fxq6h27eva4lr4ffwad63x3f2cl43xwe";
 const ACCOUNT = process.env.RADIX_ACCOUNT_ADDRESS;
 const GATEWAY = "https://mainnet.radixdlt.com";
 

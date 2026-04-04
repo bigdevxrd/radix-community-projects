@@ -1,5 +1,5 @@
 const GATEWAY = "https://mainnet.radixdlt.com";
-const BADGE_NFT = process.env.BADGE_NFT || "resource_rdx1ntxy3j2zclysyr99h3ayrvh92h0rhy3tmmwst9j4r8akeaj4u0qcn4";
+const BADGE_NFT = process.env.BADGE_NFT || "resource_rdx1n22rq94kh6ugwnrvc65m2pwhle3s6ez6j7702vkn2ctkaxemz4ppwl";
 
 async function hasBadge(radixAddress) {
   try {

@@ -8,15 +8,15 @@ export const GATEWAY = "https://mainnet.radixdlt.com";
 
 export const MANAGER =
   process.env.NEXT_PUBLIC_MANAGER ||
-  "component_rdx1cz0fkhg86y33afk5jztxeqdxjz6hhzexla7u8fkrwfx5ekn3xdlf3u";
+  "component_rdx1czexylvvm0q4uhwpjaqmlznj9sd3y2jnmmah6qug9lm9sfm3tyrtva";
 
 export const BADGE_NFT =
   process.env.NEXT_PUBLIC_BADGE_NFT ||
-  "resource_rdx1ntxy3j2zclysyr99h3ayrvh92h0rhy3tmmwst9j4r8akeaj4u0qcn4";
+  "resource_rdx1n22rq94kh6ugwnrvc65m2pwhle3s6ez6j7702vkn2ctkaxemz4ppwl";
 
 export const ADMIN_BADGE =
   process.env.NEXT_PUBLIC_ADMIN_BADGE ||
-  "resource_rdx1t4qyd9hwyk6rpt4006fysaw68lkuy7almctwppvw7j9m8cqvzgn6ea";
+  "resource_rdx1tkkzwrttvsqrsylyf4nqt2fxq6h27eva4lr4ffwad63x3f2cl43xwe";
 
 export const API_URL =
   process.env.NEXT_PUBLIC_API_URL ||
