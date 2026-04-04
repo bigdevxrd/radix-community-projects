@@ -2,161 +2,153 @@
 
 ## Overview
 
-Everything needed to run the Guild. Designed for handover — any technical person should be able to take this over from this document alone.
+Everything needed to run the Guild. Designed for handover — any technical person should be able to take this over from this document alone. See also: [HANDOVER.md](HANDOVER.md) for the transfer procedure.
+
+## Architecture
+
+```
+Internet → Caddy (443) → guild-bot (3003/localhost) — TG bot + REST API
+                        → guild-app (3002/localhost) — Next.js dashboard
+```
+
+All services bind to localhost. Only Caddy faces the internet.
 
 ## Services
 
 | Service | Location | Port | PM2 Name | Purpose |
 |---------|----------|------|----------|---------|
-| TG Bot (Rad-DAO) | /opt/rad-dao/bot/ | — | guild-bot | Governance bot: proposals, voting, badges |
-| Next.js App | /opt/rad-dao/guild/ | 3002 | guild-app | Badge mint page + admin dashboard |
-| Vite Portal | /opt/rad-dao/portal/dist/ | static | Caddy | Legacy portal (being replaced) |
-| Postgres | Docker | 5432 | docker | Consultation v2 database (ready, not active) |
-| Consultation v2 | /opt/rad-dao/consultation_v2/ | — | — | On-chain governance (cloned, not deployed) |
+| TG Bot + API | /opt/guild/bot/ | 3003 | guild-bot | Governance bot, proposals, voting, badges, Badge API |
+| Next.js Dashboard | /opt/guild/dashboard/ | 3002 | guild-app | Badge mint, viewer, admin panel |
 
 ## VPS Details
 
 | Item | Value |
 |------|-------|
-| Provider | Hostinger KVM2 |
-| IP | 156.67.219.105 |
-| SSH | Port 2222, key: id_ed25519_hostinger |
-| User | sats |
-| OS | Ubuntu |
-| Node | v22.22.0 |
-| Docker | 29.2.1 |
-| Caddy | 2.6.2 |
-| PM2 | Installed |
-| Cost | ~$14/month |
+| Provider | Hostinger |
+| SSH | Port 2222, user: guild |
+| OS | Ubuntu 22.04+ |
+| Node | v22 |
+| Caddy | Latest stable |
+| PM2 | Latest stable |
+| Firewall | UFW (2222, 80, 443 only) |
+| fail2ban | SSH protection |
+| Cost | ~$7/month |
 
 ## Caddy Routes
 
 ```
-156-67-219-105.sslip.io
-  /tv/webhook/*  → localhost:18795 (Sats trading)
-  /dao*          → localhost:3002 (Guild Next.js app)
-  /guild*        → static files /opt/rad-dao/portal/dist/ (legacy)
-  /*             → localhost:3001 (Sats dashboard, basicauth)
+DOMAIN.sslip.io {
+  /api/*  → localhost:3003 (Bot REST API)
+  /*      → localhost:3002 (Dashboard)
+}
 ```
 
-## Radix Mainnet Addresses
+Domain will be added later — Caddy config is one-line change.
+
+## Radix Mainnet Addresses (v3)
 
 | Entity | Address |
 |--------|---------|
-| Package (v2, royalties) | package_rdx1p5cs9vt3skd6zyvld9xfe54fqhshnu6zt5demv09l0prrvlqjwzvwu |
-| BadgeFactory | component_rdx1crtr4uccyeaccunvyw8nqf6unk2eknkhju4nh00re4mse93l22frmk |
-| Guild Member Manager | component_rdx1cz0fkhg86y33afk5jztxeqdxjz6hhzexla7u8fkrwfx5ekn3xdlf3u |
-| Guild Role Manager | component_rdx1crh7qlan0yuwrf8wkq7vg7tkrc6w3ftr00qqf4auktqv2uuwwg8lut |
-| Member Badge NFT | resource_rdx1ntxy3j2zclysyr99h3ayrvh92h0rhy3tmmwst9j4r8akeaj4u0qcn4 |
-| Role Badge NFT | resource_rdx1ntr6ye27zlyg2m06r90cletnwlzpedcv6yl0rhve64pp8prg0tw65e |
-| dApp Definition | account_rdx12yh4fwevmvnqgd3ppzau66cm9xu874srmrt9g2cye3fa8j8y78z9sq |
+| Package (v3) | `package_rdx1p5cs9vt3skd6zyvld9xfe54fqhshnu6zt5demv09l0prrvlqjwzvwu` |
+| BadgeFactory | `component_rdx1crtr4uccyeaccunvyw8nqf6unk2eknkhju4nh00re4mse93l22frmk` |
+| Guild Member Manager | `component_rdx1cz0fkhg86y33afk5jztxeqdxjz6hhzexla7u8fkrwfx5ekn3xdlf3u` |
+| Member Badge NFT | `resource_rdx1ntxy3j2zclysyr99h3ayrvh92h0rhy3tmmwst9j4r8akeaj4u0qcn4` |
+| Admin Badge | `resource_rdx1t4qyd9hwyk6rpt4006fysaw68lkuy7almctwppvw7j9m8cqvzgn6ea` |
+| Factory Owner Badge | `resource_rdx1tkqdakq9szr569urg42rh9p2matythftz8fm4yg9gwqvr69hlvlrhs` |
+| dApp Definition | `account_rdx12yh4fwevmvnqgd3ppzau66cm9xu874srmrt9g2cye3fa8j8y78z9sq` |
 
 ## Wallets
 
 | Wallet | Address | Purpose |
 |--------|---------|---------|
-| Agent (signer) | account_rdx128lggt503h7m2dhzqnrkkqv4zklxcjmdggr8xxtqy8e47p7fkmd8cx | TX signing, deploys |
-| dApp | account_rdx12yh4fwevmvnqgd3ppzau66cm9xu874srmrt9g2cye3fa8j8y78z9sq | dApp definition, ops |
+| Agent (signer) | `account_rdx128lggt503h7m2dhzqnrkkqv4zklxcjmdggr8xxtqy8e47p7fkmd8cx` | TX signing, deploys |
+| dApp | `account_rdx12yh4fwevmvnqgd3ppzau66cm9xu874srmrt9g2cye3fa8j8y78z9sq` | dApp definition |
 
 ## TG Bot
 
 | Item | Value |
 |------|-------|
+| Bot | @radix_guild_bot |
 | Framework | Grammy v1.41.1 |
 | Database | SQLite (rad-dao.db) |
-| Token | In /opt/rad-dao/bot/.env |
-| Commands | /start /register /badge /propose /poll /temp /amend /proposals /results /stats /mint /dao /help |
+| Token | In /opt/guild/bot/.env |
+| Commands | /start /register /badge /propose /poll /temp /amend /cancel /proposals /results /history /stats /dao /help /source /charter /mvd /wiki /talk |
 
-## How To
+## API Endpoints
 
-### Restart services
+| Endpoint | Method | Purpose |
+|----------|--------|---------|
+| /api/proposals | GET | All proposals with vote counts |
+| /api/proposals?status=active | GET | Active proposals only |
+| /api/proposals/:id | GET | Single proposal detail |
+| /api/stats | GET | Totals: proposals, voters, active, pending XP |
+| /api/xp-queue | GET | Pending XP rewards |
+| /api/badge/:address | GET | Full badge data for an address |
+| /api/badge/:address/verify | GET | Quick hasBadge true/false |
+
+## Dashboard Pages
+
+| Route | Purpose |
+|-------|---------|
+| /guild | Dashboard — badge card, tier progression, ecosystem |
+| /guild/mint | Public mint — username input, free badge |
+| /guild/proposals | Live proposal viewer |
+| /guild/admin | Badge lookup + admin actions (tier, XP, revoke) |
+
+## Deploy
+
 ```bash
+./scripts/deploy.sh all        # Sync + build + restart everything
+./scripts/deploy.sh bot        # Bot only
+./scripts/deploy.sh dashboard  # Dashboard only
+```
+
+## Common Operations
+
+```bash
+# Restart
+pm2 restart all
 pm2 restart guild-bot
 pm2 restart guild-app
-```
 
-### Deploy bot update
-```bash
-cd /opt/rad-dao/bot
-# Edit files
-pm2 restart guild-bot
-```
-
-### Deploy Next.js update
-```bash
-cd /opt/rad-dao/guild
-# Edit files
-npm run build
-pm2 restart guild-app
-```
-
-### Deploy portal update (legacy)
-```bash
-# Build locally
-cd portal && npm run build
-# Upload dist
-scp -r dist/ sats@156.67.219.105:/opt/rad-dao/portal/dist/
-```
-
-### Mint a badge via VPS signer
-```bash
-cd /opt/sats/engine
-node -e "
-require('dotenv').config();
-const { signAndSubmit, waitForCommit } = require('./src/radix/signer');
-const manifest = \`
-CALL_METHOD Address(\"account_rdx128lggt...\") \"lock_fee\" Decimal(\"10\");
-CALL_METHOD Address(\"component_rdx1cqarn8x...\") \"public_mint\" \"username\";
-CALL_METHOD Address(\"account_rdx128lggt...\") \"deposit_batch\" Expression(\"ENTIRE_WORKTOP\");
-\`;
-signAndSubmit(manifest).then(({intentHash}) => console.log(intentHash));
-"
-```
-
-### Check bot logs
-```bash
+# Logs
 pm2 logs guild-bot --lines 50
+pm2 logs guild-app --lines 20
+
+# Monitor
+pm2 monit
+
+# Status
+pm2 list
 ```
 
-### Backup bot database
+## Backups
+
+- **Location:** /opt/guild/backups/
+- **Schedule:** Daily at 3am UTC
+- **Retention:** 7 days
+- **Contents:** SQLite database + .env files
+
+## Pipeline Tests
+
 ```bash
-cp /opt/rad-dao/bot/rad-dao.db /opt/rad-dao/bot/rad-dao.db.backup.$(date +%Y%m%d)
+node scripts/pipeline-test.js
 ```
 
-## GitHub
+19 tests covering: API endpoints, dashboard routes, Gateway on-chain checks, Badge API, data integrity.
 
-| Repo | URL |
-|------|-----|
-| Monorepo | github.com/bigdevxrd/radix-community-projects |
-| Old (archived) | github.com/bigdevxrd/sats-badge-factory |
+## External Integrations
 
-## External Services
-
-| Service | URL | Our Relationship |
-|---------|-----|-----------------|
-| CrumbsUp | crumbsup.io | Guild DAO created, badge as governance token |
-| RadixTalk | radixtalk.com | Discourse forum, need API key for integration |
-| Radix Consultation | consultation.radixdlt.com | Foundation voting, v2 cloned locally |
+| Service | URL | Status |
+|---------|-----|--------|
+| CrumbsUp | crumbsup.io | Guild DAO active |
+| RadixTalk | radixtalk.com | Linked (API needs Pro plan) |
+| Consultation v2 | consultation.radixdlt.com | Parked |
 
 ## Monthly Costs
 
 | Item | Cost |
 |------|------|
-| VPS (Hostinger) | $14 |
-| Domain (sslip.io) | $0 |
-| Postgres (Docker) | $0 (on VPS) |
-| GitHub | $0 |
-| **Total** | **$14/month** |
-
-## Handover Checklist
-
-To transfer operations to another person/entity:
-
-- [ ] Share VPS SSH key (id_ed25519_hostinger)
-- [ ] Share TG bot token (from .env)
-- [ ] Transfer GitHub repo ownership (or add as admin)
-- [ ] Transfer Radix Wallet access (agent + dApp wallets)
-- [ ] Transfer domain (if using custom domain)
-- [ ] Document any environment-specific configs
-- [ ] Test all services after transfer
-- [ ] Update dApp definition owner if needed
+| VPS (Hostinger) | ~$7 |
+| Domain (later) | ~$1 |
+| **Total** | **~$8/month** |

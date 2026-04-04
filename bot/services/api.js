@@ -111,8 +111,9 @@ function startApi() {
     res.end(JSON.stringify({ ok: false, error: "not_found" }));
   });
 
-  server.listen(API_PORT, () => {
-    console.log("[API] Proposals API running on port " + API_PORT);
+  const API_HOST = process.env.API_HOST || "127.0.0.1";
+  server.listen(API_PORT, API_HOST, () => {
+    console.log("[API] Proposals API running on " + API_HOST + ":" + API_PORT);
   });
 }
 
