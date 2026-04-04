@@ -505,6 +505,38 @@ bot.command("welcome", async (ctx) => {
   try { await ctx.pinChatMessage(msg.message_id); } catch(e) {}
 });
 
+// ── /charter ───────────────────────────────────────────
+
+bot.command("charter", (ctx) => {
+  const status = db.getCharterStatus();
+  const ready = db.getReadyParams();
+
+  let msg = "Radix DAO Charter Status\n\n" +
+    "Total parameters: " + status.total + "\n" +
+    "Resolved: " + status.resolved + "\n" +
+    "Voting: " + status.voting + "\n" +
+    "Pending: " + status.tbd + "\n\n";
+
+  if (ready.length > 0) {
+    msg += "Ready to vote (" + ready.length + "):\n";
+    ready.slice(0, 10).forEach(p => {
+      msg += "  " + p.param_key + " — " + p.title + "\n";
+    });
+    if (ready.length > 10) msg += "  ... and " + (ready.length - 10) + " more\n";
+  }
+
+  const resolved = db.getCharterParams().filter(p => p.status === "resolved");
+  if (resolved.length > 0) {
+    msg += "\nResolved:\n";
+    resolved.forEach(p => {
+      msg += "  " + p.param_key + " = " + p.param_value + "\n";
+    });
+  }
+
+  msg += "\nFull charter: radix.wiki/ideas/radix-network-dao-charter";
+  ctx.reply(msg);
+});
+
 // ── /faq ───────────────────────────────────────────────
 
 bot.command("faq", (ctx) => ctx.reply(

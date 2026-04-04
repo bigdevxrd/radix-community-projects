@@ -79,6 +79,15 @@ function startApi() {
       return res.end(JSON.stringify({ ok: true, data: result, page, limit }));
     }
 
+    // GET /api/charter — charter parameter status
+    if (url.pathname === "/api/charter") {
+      const status = db.getCharterStatus();
+      const params = db.getCharterParams();
+      const ready = db.getReadyParams();
+      res.writeHead(200);
+      return res.end(JSON.stringify({ ok: true, data: { status, params, ready } }));
+    }
+
     // GET /api/proposals/:id — single proposal detail
     if (url.pathname.match(/^\/api\/proposals\/\d+$/)) {
       const id = parseInt(url.pathname.split("/").pop());

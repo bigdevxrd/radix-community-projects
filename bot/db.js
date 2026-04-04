@@ -52,6 +52,31 @@ function init() {
   try { db.exec("ALTER TABLE proposals ADD COLUMN options TEXT"); } catch(e) {}
   try { db.exec("ALTER TABLE proposals ADD COLUMN parent_id INTEGER"); } catch(e) {}
   try { db.exec("ALTER TABLE proposals ADD COLUMN round INTEGER DEFAULT 1"); } catch(e) {}
+  try { db.exec("ALTER TABLE proposals ADD COLUMN stage TEXT DEFAULT 'standalone'"); } catch(e) {}
+  try { db.exec("ALTER TABLE proposals ADD COLUMN category TEXT"); } catch(e) {}
+  try { db.exec("ALTER TABLE proposals ADD COLUMN charter_param TEXT"); } catch(e) {}
+
+  // Charter parameter tracking
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS charter_params (
+      param_key TEXT PRIMARY KEY,
+      title TEXT NOT NULL,
+      param_value TEXT,
+      resolved_by INTEGER,
+      resolved_at INTEGER,
+      category TEXT NOT NULL,
+      depends_on TEXT DEFAULT '[]',
+      status TEXT DEFAULT 'tbd',
+      phase INTEGER DEFAULT 1,
+      proposal_type TEXT DEFAULT 'poll',
+      options TEXT,
+      FOREIGN KEY (resolved_by) REFERENCES proposals(id)
+    );
+  `);
+
+  // Seed charter params if empty
+  const count = db.prepare("SELECT COUNT(*) as c FROM charter_params").get();
+  if (count.c === 0) seedCharterParams();
 
   // Indexes for 20k+ scale
   db.exec(`
@@ -169,6 +194,96 @@ function getTotalProposals() {
   return r ? r.c : 0;
 }
 
+// ── Charter Params ─────────────────────────────────────
+
+function seedCharterParams() {
+  const params = [
+    // Phase 1 — Foundation (no dependencies)
+    { key: "charter.adoption", title: "Adopt the Radix DAO Charter", cat: "foundation", phase: 1, type: "yesno", deps: "[]" },
+    { key: "rac.seats", title: "RAC seat count", cat: "foundation", phase: 1, type: "poll", opts: '["3","5","7","9"]', deps: "[]" },
+    { key: "voting.quorum.standard", title: "Standard proposal quorum", cat: "foundation", phase: 1, type: "poll", opts: '["3","10","25","50"]', deps: "[]" },
+    { key: "voting.period.standard", title: "Default voting period", cat: "foundation", phase: 1, type: "poll", opts: '["48 hours","72 hours","7 days"]', deps: "[]" },
+    { key: "voting.approval.standard", title: "Standard approval threshold", cat: "foundation", phase: 1, type: "poll", opts: '[">50%",">60%",">66%"]', deps: "[]" },
+    { key: "voting.approval.amendment", title: "Amendment approval threshold", cat: "foundation", phase: 1, type: "poll", opts: '[">60%",">66%",">75%"]', deps: "[]" },
+
+    // Phase 2 — Configuration
+    { key: "rac.multisig", title: "RAC multi-sig threshold", cat: "configuration", phase: 2, type: "poll", deps: '["rac.seats"]' },
+    { key: "rac.compensation", title: "RAC member compensation", cat: "configuration", phase: 2, type: "poll", deps: '["rac.seats"]' },
+    { key: "rac.meetings", title: "RAC meeting frequency", cat: "configuration", phase: 2, type: "poll", opts: '["weekly","biweekly","monthly"]', deps: '["rac.seats"]' },
+    { key: "rac.inactivity", title: "RAC inactivity trigger (missed meetings)", cat: "configuration", phase: 2, type: "poll", opts: '["2","3","5"]', deps: '["rac.seats"]' },
+    { key: "voting.quorum.amendment", title: "Amendment vote quorum", cat: "configuration", phase: 2, type: "poll", deps: '["voting.quorum.standard"]' },
+    { key: "voting.quorum.election", title: "Election vote quorum", cat: "configuration", phase: 2, type: "poll", deps: '["voting.quorum.standard"]' },
+    { key: "voting.quorum.emergency", title: "Emergency vote quorum", cat: "configuration", phase: 2, type: "poll", deps: '["voting.quorum.standard"]' },
+    { key: "voting.period.amendment", title: "Amendment voting period", cat: "configuration", phase: 2, type: "poll", opts: '["7 days","14 days","21 days"]', deps: '["voting.period.standard"]' },
+    { key: "voting.period.election", title: "Election voting period", cat: "configuration", phase: 2, type: "poll", opts: '["7 days","14 days"]', deps: '["voting.period.standard"]' },
+    { key: "voting.period.emergency", title: "Emergency voting period", cat: "configuration", phase: 2, type: "poll", opts: '["24 hours","48 hours","72 hours"]', deps: '["voting.period.standard"]' },
+    { key: "timing.forum_min", title: "Min forum discussion before vote", cat: "configuration", phase: 2, type: "poll", opts: '["24 hours","48 hours","72 hours","7 days"]', deps: '["voting.period.standard"]' },
+    { key: "timing.execution_delay", title: "Delay between approval and execution", cat: "configuration", phase: 2, type: "poll", opts: '["24 hours","48 hours","72 hours"]', deps: '["voting.period.standard"]' },
+    { key: "timing.cooldown", title: "Cooldown for resubmitting failed proposals", cat: "configuration", phase: 2, type: "poll", opts: '["7 days","14 days","30 days"]', deps: '["voting.period.standard"]' },
+    { key: "proposals.stake", title: "Proposal stake/deposit amount (XRD)", cat: "configuration", phase: 2, type: "poll", opts: '["0","100","500","1000"]', deps: '["voting.quorum.standard"]' },
+    { key: "treasury.grant_limit", title: "Max single grant (XRD)", cat: "configuration", phase: 2, type: "poll", opts: '["5000","10000","25000","50000"]', deps: '["voting.approval.standard"]' },
+    { key: "treasury.bounty_limit", title: "Max single bounty (XRD)", cat: "configuration", phase: 2, type: "poll", opts: '["1000","5000","10000"]', deps: '["voting.approval.standard"]' },
+    { key: "treasury.ops_limit", title: "Monthly ops spending limit (XRD)", cat: "configuration", phase: 2, type: "poll", opts: '["5000","10000","25000"]', deps: '["voting.approval.standard"]' },
+    { key: "treasury.emergency_cap", title: "Emergency spending cap (XRD)", cat: "configuration", phase: 2, type: "poll", opts: '["10000","25000","50000"]', deps: '["voting.approval.standard","voting.quorum.emergency"]' },
+    { key: "reputation.decay", title: "XP decay rate per month", cat: "configuration", phase: 2, type: "poll", opts: '["0%","5%","10%"]', deps: '["voting.quorum.standard"]' },
+    { key: "enforcement.suspension", title: "Default suspension duration", cat: "configuration", phase: 2, type: "poll", opts: '["30 days","60 days","90 days"]', deps: '["voting.approval.standard"]' },
+
+    // Phase 3 — Operational
+    { key: "election.nomination_period", title: "RAC nomination period", cat: "operational", phase: 3, type: "poll", opts: '["7 days","14 days"]', deps: '["voting.period.election"]' },
+    { key: "election.discussion_period", title: "Candidate discussion period", cat: "operational", phase: 3, type: "poll", opts: '["7 days","14 days"]', deps: '["voting.period.election"]' },
+    { key: "election.min_activity", title: "Min governance activity for RAC eligibility", cat: "operational", phase: 3, type: "poll", deps: '["voting.quorum.election"]' },
+    { key: "rac.first_election", title: "Launch first RAC election", cat: "operational", phase: 3, type: "yesno", deps: '["election.nomination_period","election.discussion_period","election.min_activity"]' },
+    { key: "treasury.first_fund", title: "Establish first bounty fund", cat: "operational", phase: 3, type: "yesno", deps: '["treasury.grant_limit","treasury.bounty_limit"]' },
+    { key: "infra.hosting", title: "Approve infrastructure hosting arrangement", cat: "operational", phase: 3, type: "yesno", deps: '["charter.adoption"]' },
+  ];
+
+  const stmt = db.prepare(
+    "INSERT OR IGNORE INTO charter_params (param_key, title, category, phase, proposal_type, options, depends_on, status) VALUES (?, ?, ?, ?, ?, ?, ?, 'tbd')"
+  );
+  for (const p of params) {
+    stmt.run(p.key, p.title, p.cat, p.phase, p.type, p.opts || null, p.deps);
+  }
+}
+
+function getCharterParams(category) {
+  if (category) {
+    return db.prepare("SELECT * FROM charter_params WHERE category = ? ORDER BY phase, param_key").all(category);
+  }
+  return db.prepare("SELECT * FROM charter_params ORDER BY phase, param_key").all();
+}
+
+function getCharterParam(key) {
+  return db.prepare("SELECT * FROM charter_params WHERE param_key = ?").get(key);
+}
+
+function resolveCharterParam(key, value, proposalId) {
+  const now = Math.floor(Date.now() / 1000);
+  db.prepare(
+    "UPDATE charter_params SET param_value = ?, resolved_by = ?, resolved_at = ?, status = 'resolved' WHERE param_key = ?"
+  ).run(value, proposalId, now, key);
+}
+
+function getCharterStatus() {
+  const total = db.prepare("SELECT COUNT(*) as c FROM charter_params").get().c;
+  const resolved = db.prepare("SELECT COUNT(*) as c FROM charter_params WHERE status = 'resolved'").get().c;
+  const voting = db.prepare("SELECT COUNT(*) as c FROM charter_params WHERE status = 'voting'").get().c;
+  const tbd = db.prepare("SELECT COUNT(*) as c FROM charter_params WHERE status = 'tbd'").get().c;
+  return { total, resolved, voting, tbd };
+}
+
+function getReadyParams() {
+  // Return params whose dependencies are all resolved
+  const all = db.prepare("SELECT * FROM charter_params WHERE status = 'tbd' ORDER BY phase").all();
+  return all.filter(p => {
+    const deps = JSON.parse(p.depends_on || "[]");
+    if (deps.length === 0) return true;
+    return deps.every(d => {
+      const dep = db.prepare("SELECT status FROM charter_params WHERE param_key = ?").get(d);
+      return dep && dep.status === "resolved";
+    });
+  });
+}
+
 module.exports = {
   init,
   getUser, registerUser,
@@ -176,6 +291,7 @@ module.exports = {
   getActiveProposals, closeExpiredProposals, closeProposal, getAmendments,
   recordVote, getVoteCounts, hasVoted,
   getTotalVoters, getTotalProposals,
+  getCharterParams, getCharterParam, resolveCharterParam, getCharterStatus, getReadyParams,
 };
 
 function cancelProposal(proposalId, tgId) {
