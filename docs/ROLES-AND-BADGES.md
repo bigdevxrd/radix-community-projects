@@ -35,9 +35,11 @@ Assigned by admin. Operational access. Not earned via XP.
 
 | Role | Who Gets It | What It Enables |
 |------|------------|----------------|
-| Admin | Infra custodians (Big Dev initially, RAC when formed) | Deploy code, manage VPS, mint role badges, emergency access |
-| Moderator | Community-appointed TG moderators | Moderate group, review proposals, verify bounty completion |
+| Host | Infrastructure operators (Big Dev for 12 months) | Deploy code, manage VPS/nodes, mint role badges, emergency access |
+| Moderator | Community-elected via proposal vote | Moderate TG group, review proposals, verify bounty completion |
 | Contributor | Active developers, content creators | Recognized builder status, access to working group tasks |
+
+**Host ≠ Leader.** The Host keeps infrastructure running. The community leads through proposals and votes. Moderators are the community's chosen representatives, not the Host's appointees.
 
 **How to get one:** Admin mints it to your wallet via `/dao/admin` page.
 **Transferable:** Yes (roles can be passed to successors).
@@ -66,27 +68,52 @@ ROLE: MODERATOR
   - Verify bounty completions
   - Flag/remove proposals (future)
 
-ROLE: ADMIN
-  - All moderator abilities
-  - Mint role badges to others
+ROLE: HOST (infrastructure)
+  - Deploy code, manage VPS/nodes
+  - Mint role badges
   - Update XP on any badge
-  - Deploy code, manage infrastructure
-  - Access /dao/admin page
+  - Access /guild/admin page
+  - Emergency response
+  - NOT governance decisions
+
+ROLE: MODERATOR (community-elected)
+  - All member abilities
+  - Verify bounty completions
+  - Flag/remove proposals (future)
+  - Represent community interests
 ```
+
+---
+
+## Big Dev's Role: Infrastructure Host
+
+Big Dev is **back of house** — keeps the lights on, not the face of the Guild.
+
+**Commits to:**
+- 12 months hosting (VPS, nodes, bot, dashboard)
+- Uptime monitoring and incident response
+- Code deployments and updates
+- Database backups
+- NOT a community representative or RAC contact
+- NOT making governance decisions
+- Available to support but not to lead
+
+**Think of it as:** The chef keeps the kitchen running. The community decides the menu.
 
 ---
 
 ## Handover Plan
 
-### Phase 1: Now (Big Dev custodian)
-- Big Dev holds Admin role badge
+### Phase 1: Now (Big Dev hosts)
+- Big Dev holds Admin role badge (infrastructure access only)
 - Big Dev manages VPS, bot, deployments
 - Community members get Member badges
-- Big Dev appoints 1-2 Moderators as trust builds
+- Community appoints Moderators via proposal vote
 
-### Phase 2: RAC Formed
-- RAC members receive Admin role badges
+### Phase 2: Community Leads Formed
+- Community-elected leads receive Moderator role badges
 - Big Dev retains Admin for infrastructure only
+- Leads manage proposals, bounties, community engagement
 - RAC approves new Moderators
 - Community votes on operational decisions
 
