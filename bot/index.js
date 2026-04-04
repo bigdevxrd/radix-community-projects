@@ -2,6 +2,7 @@ require("dotenv").config();
 const { Bot, InlineKeyboard } = require("grammy");
 const db = require("./db");
 const { hasBadge, getBadgeData } = require("./services/gateway");
+const { queueXpReward, getXpQueue } = require("./services/xp");
 
 const TOKEN = process.env.TG_BOT_TOKEN;
 if (!TOKEN) { console.error("Set TG_BOT_TOKEN in .env"); process.exit(1); }
@@ -147,6 +148,7 @@ bot.command("propose", async (ctx) => {
     { reply_markup: buildYesNoKeyboard(id, counts) }
   );
   db.updateProposalMessage(id, msg.message_id, ctx.chat.id);
+  queueXpReward(user.radix_address, "propose");
 });
 
 // ── /poll (Multi-choice) ────────────────────────────────
@@ -185,6 +187,7 @@ bot.command("poll", async (ctx) => {
     { reply_markup: buildPollKeyboard(id, options, counts) }
   );
   db.updateProposalMessage(id, msg.message_id, ctx.chat.id);
+  queueXpReward(user.radix_address, "poll");
 });
 
 // ── /temp (Temperature Check) ───────────────────────────
@@ -214,6 +217,7 @@ bot.command("temp", async (ctx) => {
     { reply_markup: buildPollKeyboard(id, options, counts) }
   );
   db.updateProposalMessage(id, msg.message_id, ctx.chat.id);
+  queueXpReward(user.radix_address, "temp");
 });
 
 // ── /amend (Refine a proposal) ──────────────────────────
@@ -252,6 +256,7 @@ bot.command("amend", async (ctx) => {
     { reply_markup: buildYesNoKeyboard(id, counts) }
   );
   db.updateProposalMessage(id, msg.message_id, ctx.chat.id);
+  queueXpReward(user.radix_address, "amend");
 });
 
 // ── Inline Vote Handler ─────────────────────────────────
@@ -305,7 +310,10 @@ bot.on("callback_query:data", async (ctx) => {
     await ctx.editMessageReplyMarkup({ reply_markup: keyboard });
   } catch (e) { /* message might not be editable */ }
 
-  ctx.answerCallbackQuery({ text: "Vote recorded: " + voteChoice });
+  // Queue XP reward for voting
+  queueXpReward(user.radix_address, "vote");
+
+  ctx.answerCallbackQuery({ text: "Vote recorded: " + voteChoice + " (+10 XP)" });
 });
 
 // ── /proposals ──────────────────────────────────────────

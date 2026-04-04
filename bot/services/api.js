@@ -51,8 +51,16 @@ function startApi() {
       return res.end(JSON.stringify({ ok: true, data: { ...proposal, counts, amendments } }));
     }
 
+    // GET /api/xp-queue — pending XP rewards
+    if (url.pathname === "/api/xp-queue") {
+      const { getXpQueue } = require("./xp");
+      res.writeHead(200);
+      return res.end(JSON.stringify({ ok: true, data: getXpQueue() }));
+    }
+
     // GET /api/stats
     if (url.pathname === "/api/stats") {
+      const { getXpQueue } = require("./xp");
       res.writeHead(200);
       return res.end(JSON.stringify({
         ok: true,
@@ -60,6 +68,7 @@ function startApi() {
           total_proposals: db.getTotalProposals(),
           total_voters: db.getTotalVoters(),
           active_proposals: db.getActiveProposals().length,
+          pending_xp_rewards: getXpQueue().length,
         }
       }));
     }
