@@ -89,6 +89,10 @@ bot.command("help", (ctx) => {
     "/proposals - List active\n" +
     "/vote <id> - Open vote buttons for a proposal\n" +
     "/results <id> - Vote counts\n\n" +
+    "💰 Bounties:\n" +
+    "/bounties - List open bounties\n" +
+    "/bounties <id> - Bounty details\n" +
+    "/my_bounties - Your claimed bounties\n\n" +
     "📊 Info:\n" +
     "/dao - CrumbsUp DAO\n" +
     "/cancel <id> - Cancel your proposal\n" +
@@ -512,6 +516,90 @@ bot.command("charter", (ctx) => ctx.reply("DAO Charter:\nhttps://radix.wiki/idea
 bot.command("mvd", (ctx) => ctx.reply("Minimum Viable DAO discussion:\nhttps://radixtalk.com/t/design-our-minimum-viable-dao-mvd/2258"));
 bot.command("wiki", (ctx) => ctx.reply("Radix Wiki:\nhttps://radix.wiki/ecosystem"));
 bot.command("talk", (ctx) => ctx.reply("RadixTalk forum:\nhttps://radixtalk.com"));
+
+// ── /bounties ────────────────────────────────────────────
+
+const CATEGORY_EMOJI = {
+  tutorial: "📖", design: "🎨", social: "📢", bug: "🐛", translation: "🌐", other: "💼",
+};
+
+function formatDaysLeft(endsAt) {
+  const diff = endsAt - Math.floor(Date.now() / 1000);
+  if (diff <= 0) return "expired";
+  const days = Math.floor(diff / 86400);
+  return days > 0 ? days + "d" : Math.floor(diff / 3600) + "h";
+}
+
+bot.command("bounties", async (ctx) => {
+  const args = ctx.message.text.split(" ").slice(1);
+  const id = args[0] ? parseInt(args[0]) : null;
+
+  if (id) {
+    // /bounties <id> — single bounty detail
+    const bounty = db.getBounty(id);
+    if (!bounty) return ctx.reply("Bounty #" + id + " not found.");
+    const emoji = CATEGORY_EMOJI[bounty.category] || "💼";
+    const daysLeft = formatDaysLeft(bounty.ends_at);
+    let text = emoji + " Bounty #" + bounty.id + " [" + bounty.category + "]\n\n";
+    text += bounty.title + "\n";
+    if (bounty.description) text += "\n" + bounty.description + "\n";
+    text += "\n💰 Reward: " + bounty.reward_xrd + " XRD";
+    text += "\n⏰ Status: " + bounty.status;
+    text += "\n📅 Due: " + new Date(bounty.ends_at * 1000).toISOString().slice(0, 10) + " (" + daysLeft + ")";
+    if (bounty.claimed_by_address) {
+      text += "\n👤 Claimed by: " + bounty.claimed_by_address.slice(0, 20) + "...";
+    }
+    return ctx.reply(text);
+  }
+
+  // /bounties — list open bounties
+  db.expireBounties();
+  const result = db.getOpenBounties(5, 1);
+  const bounties = result.bounties;
+  const total = result.total;
+
+  if (bounties.length === 0) {
+    return ctx.reply("No open bounties right now.\n\nCheck back soon or visit the portal.");
+  }
+
+  const totalXrd = bounties.reduce((sum, b) => sum + b.reward_xrd, 0);
+  let text = "Active Bounties (" + total + " open | " + totalXrd + " XRD pool)\n\n";
+
+  bounties.forEach((b, i) => {
+    const emoji = CATEGORY_EMOJI[b.category] || "💼";
+    const daysLeft = formatDaysLeft(b.ends_at);
+    const dueDate = new Date(b.ends_at * 1000).toISOString().slice(5, 10).replace("-", " ");
+    text += emoji + " " + (i + 1) + ". " + b.title + " (" + b.reward_xrd + " XRD) — Due: " + dueDate + " (" + daysLeft + ")\n";
+    if (b.description) text += "   " + b.description.slice(0, 80) + (b.description.length > 80 ? "..." : "") + "\n";
+    text += "\n";
+  });
+
+  if (total > 5) {
+    text += "Showing 5 of " + total + " bounties.\n";
+  }
+  text += "\n/bounties <id> for details | /my_bounties for your claims";
+  ctx.reply(text);
+});
+
+// ── /my-bounties ─────────────────────────────────────────
+
+bot.command("my_bounties", async (ctx) => {
+  const user = db.getUser(ctx.from.id);
+  if (!user) return ctx.reply("Register first: /register <account_rdx1...>");
+
+  const bounties = db.getMyBounties(user.radix_address);
+  if (bounties.length === 0) {
+    return ctx.reply("You haven't claimed any bounties yet.\n\n/bounties to see available ones.");
+  }
+
+  let text = "Your Bounties:\n\n";
+  bounties.forEach((b) => {
+    const emoji = CATEGORY_EMOJI[b.category] || "💼";
+    text += emoji + " #" + b.id + " " + b.title + "\n";
+    text += "   " + b.reward_xrd + " XRD | Status: " + b.status + "\n\n";
+  });
+  ctx.reply(text);
+});
 
 bot.on("message:text", (ctx) => {
   // Check if user is in wizard flow
