@@ -3,6 +3,7 @@ const { Bot, InlineKeyboard } = require("grammy");
 const db = require("./db");
 const { hasBadge, getBadgeData } = require("./services/gateway");
 const { queueXpReward, getXpQueue } = require("./services/xp");
+const { setupWizard, setupSkipDesc, pendingProposals } = require("./wizard");
 
 const TOKEN = process.env.TG_BOT_TOKEN;
 if (!TOKEN) { console.error("Set TG_BOT_TOKEN in .env"); process.exit(1); }
@@ -74,7 +75,8 @@ bot.command("help", (ctx) => {
     "/badge - Check your badge\n" +
     "/mint - Get a free badge\n\n" +
     "🗳️ Governance:\n" +
-    "/propose <title> - Yes/No/Amend vote\n" +
+    "/new - Guided proposal wizard (recommended)\n" +
+    "/propose <title> - Quick Yes/No/Amend vote\n" +
     "/poll <question> | opt1 | opt2 | opt3 - Multi-choice\n" +
     "/temp <question> - Quick temperature check\n" +
     "/amend <id> <new text> - Refine a passed proposal\n" +
@@ -127,7 +129,12 @@ bot.command("badge", async (ctx) => {
   );
 });
 
-// ── /propose (Yes/No/Amend) ─────────────────────────────
+// ── /new (Guided proposal wizard) ────────────────────────
+
+const handleWizardText = setupWizard(bot, db, requireBadge, buildYesNoKeyboard, buildPollKeyboard, endsLabel, queueXpReward);
+setupSkipDesc(bot, pendingProposals);
+
+// ── /propose (Yes/No/Amend) — quick mode ────────────────
 
 bot.command("propose", async (ctx) => {
   const user = await requireBadge(ctx);
@@ -483,6 +490,9 @@ bot.command("wiki", (ctx) => ctx.reply("Radix Wiki:\nhttps://radix.wiki/ecosyste
 bot.command("talk", (ctx) => ctx.reply("RadixTalk forum:\nhttps://radixtalk.com"));
 
 bot.on("message:text", (ctx) => {
+  // Check if user is in wizard flow
+  if (handleWizardText(ctx)) return;
+
   // Only respond to unknown commands in private chat, not groups
   if (ctx.message.text.startsWith("/") && ctx.chat.type === "private") {
     ctx.reply("Unknown command. /help");
