@@ -21,14 +21,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   useEffect(() => setMounted(true), []);
 
-  const tierColor = badge ? TIER_COLORS[badge.tier] || "var(--text-muted)" : "";
+  const tierColor = badge ? TIER_COLORS[badge.tier] || "var(--c-text-muted)" : "";
 
   return (
     <>
       {/* Header */}
       <header className="sticky top-0 z-50 border-b border-border bg-base">
-        <div className="max-w-[900px] mx-auto px-6 flex items-center justify-between h-14">
-          <div className="flex items-center gap-3">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 flex items-center justify-between h-14">
+          <div className="flex items-center gap-2 sm:gap-3">
             <Link
               href="/guild"
               className="font-bold text-base text-text-primary no-underline"
@@ -37,17 +37,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             </Link>
             {badge && (
               <span
-                className="px-2.5 py-0.5 rounded-full text-[11px] font-bold font-mono"
-                style={{
-                  background: `${tierColor}1a`,
-                  color: tierColor,
-                }}
+                className="hidden sm:inline px-2.5 py-0.5 rounded-full text-[11px] font-bold font-mono"
+                style={{ background: `${tierColor}1a`, color: tierColor }}
               >
                 {badge.tier.toUpperCase()} | {badge.xp} XP
               </span>
             )}
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
             <button
               onClick={toggleTheme}
               className="bg-transparent border border-border rounded-md px-2 py-1 cursor-pointer text-text-secondary text-sm hover:border-border-focus"
@@ -55,7 +52,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             >
               {theme === "dark" ? "\u2600\ufe0f" : "\ud83c\udf19"}
             </button>
-            <span className="bg-surface-2 border border-border rounded-full px-3 py-1 text-xs text-accent font-mono">
+            <span className="hidden sm:inline bg-surface-2 border border-border rounded-full px-3 py-1 text-xs text-accent font-mono">
               Mainnet
             </span>
             {mounted && <radix-connect-button />}
@@ -64,12 +61,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       </header>
 
       {/* Nav */}
-      <nav className="max-w-[900px] mx-auto px-6 flex gap-1 border-b border-border">
+      <nav className="max-w-4xl mx-auto px-4 sm:px-6 flex gap-0.5 sm:gap-1 border-b border-border overflow-x-auto">
         {NAV.map((n) => (
           <Link
             key={n.path}
             href={n.path}
-            className={`px-4 py-3 text-[13px] font-medium no-underline border-b-2 transition-colors ${
+            className={`px-3 sm:px-4 py-3 text-[13px] font-medium no-underline border-b-2 transition-colors whitespace-nowrap ${
               pathname === n.path
                 ? "text-accent border-accent"
                 : "text-text-secondary border-transparent hover:text-text-primary"
@@ -81,10 +78,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       </nav>
 
       {/* Main */}
-      <main className="max-w-[900px] mx-auto px-6 py-6">{children}</main>
+      <main className="max-w-4xl mx-auto px-4 sm:px-6 py-4 sm:py-6">{children}</main>
 
       {/* Footer */}
-      <footer className="max-w-[900px] mx-auto mt-12 px-6 py-6 border-t border-border text-center flex justify-center gap-6 text-[13px] text-text-secondary">
+      <footer className="max-w-4xl mx-auto mt-8 sm:mt-12 px-4 sm:px-6 py-6 border-t border-border text-center flex justify-center gap-6 text-[13px] text-text-secondary">
         <a
           href="https://github.com/bigdevxrd/radix-community-projects"
           target="_blank"

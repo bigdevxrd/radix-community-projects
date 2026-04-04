@@ -86,7 +86,7 @@ function DashboardContent() {
       <Card>
         <CardHeader title="Quick Actions" />
         <CardBody>
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             {QUICK_ACTIONS.map((a) => (
               <a
                 key={a.label}
@@ -105,7 +105,7 @@ function DashboardContent() {
       <Card>
         <CardHeader title="Ecosystem" />
         <CardBody>
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             {ECOSYSTEM.map((s) => (
               <a
                 key={s.name}
@@ -134,7 +134,7 @@ function DashboardContent() {
       <Card>
         <CardHeader title="Resources" />
         <CardBody>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {RESOURCES.map((r) => (
               <a
                 key={r.name}

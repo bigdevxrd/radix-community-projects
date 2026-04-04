@@ -58,7 +58,7 @@ export function BadgeCard({ badge }: { badge: BadgeInfo }) {
       </div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-4 gap-3 mb-4">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
         {[
           { label: "Level", value: badge.level },
           { label: "XP", value: badge.xp.toLocaleString() },

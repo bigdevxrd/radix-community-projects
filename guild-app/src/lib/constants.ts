@@ -48,13 +48,13 @@ export interface SchemaConfig {
 }
 
 export const TIER_COLORS: Record<string, string> = {
-  member: "var(--tier-member)",
-  contributor: "var(--tier-contributor)",
-  builder: "var(--tier-builder)",
-  steward: "var(--tier-steward)",
-  elder: "var(--tier-elder)",
-  admin: "var(--tier-elder)",
-  moderator: "var(--tier-steward)",
+  member: "var(--c-tier-member)",
+  contributor: "var(--c-tier-contributor)",
+  builder: "var(--c-tier-builder)",
+  steward: "var(--c-tier-steward)",
+  elder: "var(--c-tier-elder)",
+  admin: "var(--c-tier-elder)",
+  moderator: "var(--c-tier-steward)",
 };
 
 export const XP_THRESHOLDS: Record<string, number> = {

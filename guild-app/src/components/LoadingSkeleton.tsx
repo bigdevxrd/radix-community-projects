@@ -13,7 +13,7 @@ export function BadgeSkeleton() {
         <LoadingSkeleton className="h-5 w-32" />
         <LoadingSkeleton className="h-5 w-20 rounded-full" />
       </div>
-      <div className="grid grid-cols-4 gap-3 mb-4">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
         {[1, 2, 3, 4].map((i) => (
           <LoadingSkeleton key={i} className="h-14" />
         ))}
