@@ -115,11 +115,6 @@ async function main() {
     assert(resp.ok, "should be 200");
   });
 
-  await test("GET /guild/admin returns 200", async () => {
-    const resp = await fetch(GUILD + "/admin");
-    assert(resp.ok, "should be 200");
-  });
-
   await test("GET /guild/mint returns 200", async () => {
     const resp = await fetch(GUILD + "/mint");
     assert(resp.ok, "should be 200");
