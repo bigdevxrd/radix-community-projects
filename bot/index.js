@@ -407,6 +407,23 @@ bot.command("history", (ctx) => {
   ctx.reply(text);
 });
 
+// /welcome — post pinnable onboarding message
+bot.command("welcome", async (ctx) => {
+  const msg = await ctx.reply(
+    "Welcome to the Radix Guild Governance!\n\n" +
+    "This is where the Radix community makes decisions together.\n\n" +
+    "Get started in 3 steps:\n" +
+    "1. /register <your account_rdx1... address>\n" +
+    "2. Mint your free badge: " + PORTAL + "\n" +
+    "3. Come back here and vote on proposals!\n\n" +
+    "Commands: /help\n" +
+    "Charter: radix.wiki/ideas/radix-network-dao-charter\n" +
+    "MVD: radixtalk.com/t/design-our-minimum-viable-dao-mvd/2258\n" +
+    "Source: " + GITHUB
+  );
+  try { await ctx.pinChatMessage(msg.message_id); } catch(e) {}
+});
+
 bot.command("mint", (ctx) => ctx.reply("Mint badge:\n" + PORTAL));
 bot.command("dao", (ctx) => ctx.reply("Guild DAO:\n" + DAO_URL));
 bot.command("source", (ctx) => ctx.reply("Source:\n" + GITHUB));
