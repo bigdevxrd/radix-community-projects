@@ -9,6 +9,7 @@ const GUILD = process.env.GUILD_URL || "https://156-67-219-105.sslip.io/guild";
 const GATEWAY = "https://mainnet.radixdlt.com";
 const BADGE_NFT = "resource_rdx1ntxy3j2zclysyr99h3ayrvh92h0rhy3tmmwst9j4r8akeaj4u0qcn4";
 const MANAGER = "component_rdx1cz0fkhg86y33afk5jztxeqdxjz6hhzexla7u8fkrwfx5ekn3xdlf3u";
+const TEST_ACCOUNT = "account_rdx12yh4fwevmvnqgd3ppzau66cm9xu874srmrt9g2cye3fa8j8y78z9sq";
 
 let passed = 0;
 let failed = 0;
@@ -78,6 +79,26 @@ async function main() {
     assert(resp.status === 404);
   });
 
+  await test("GET /api/badge/:address returns badge data", async () => {
+    const data = await fetchJson(API + "/badge/" + TEST_ACCOUNT);
+    assert(data.ok === true, "ok should be true");
+    assert(data.data.tier, "should have tier");
+    assert(data.data.issued_to, "should have issued_to");
+  });
+
+  await test("GET /api/badge/:address/verify returns hasBadge", async () => {
+    const data = await fetchJson(API + "/badge/" + TEST_ACCOUNT + "/verify");
+    assert(data.ok === true, "ok should be true");
+    assert(data.hasBadge === true, "test account should have badge");
+  });
+
+  await test("GET /api/badge/account_rdx1invalid/verify returns false", async () => {
+    const resp = await fetch(API + "/badge/account_rdx1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq/verify");
+    const data = await resp.json();
+    assert(data.ok === true);
+    assert(data.hasBadge === false, "fake address should have no badge");
+  });
+
   // ── Dashboard Tests ────────────────────────────────
 
   console.log("\n  Dashboard:");
@@ -96,6 +117,11 @@ async function main() {
 
   await test("GET /guild/admin returns 200", async () => {
     const resp = await fetch(GUILD + "/admin");
+    assert(resp.ok, "should be 200");
+  });
+
+  await test("GET /guild/mint returns 200", async () => {
+    const resp = await fetch(GUILD + "/mint");
     assert(resp.ok, "should be 200");
   });
 

@@ -1,11 +1,12 @@
-// Simple HTTP API for proposal data — consumed by the portal
+// HTTP API for proposal data + badge verification — consumed by portal and external dApps
 const http = require("http");
 const db = require("../db");
+const { hasBadge, getBadgeData } = require("./gateway");
 
 const API_PORT = parseInt(process.env.API_PORT || "3003");
 
 function startApi() {
-  const server = http.createServer((req, res) => {
+  const server = http.createServer(async (req, res) => {
     res.setHeader("Content-Type", "application/json");
     res.setHeader("Access-Control-Allow-Origin", "*");
 
@@ -72,6 +73,38 @@ function startApi() {
           xp: require("./xp").getXpStats(),
         }
       }));
+    }
+
+    // GET /api/badge/:address — full badge data for an address
+    const badgeMatch = url.pathname.match(/^\/api\/badge\/(account_rdx1[a-z0-9]+)$/);
+    if (badgeMatch) {
+      const addr = badgeMatch[1];
+      try {
+        const data = await getBadgeData(addr);
+        if (data) {
+          res.writeHead(200);
+          return res.end(JSON.stringify({ ok: true, data }));
+        }
+        res.writeHead(404);
+        return res.end(JSON.stringify({ ok: false, error: "no_badge", address: addr }));
+      } catch (e) {
+        res.writeHead(500);
+        return res.end(JSON.stringify({ ok: false, error: "gateway_error" }));
+      }
+    }
+
+    // GET /api/badge/:address/verify — quick badge check (true/false)
+    const verifyMatch = url.pathname.match(/^\/api\/badge\/(account_rdx1[a-z0-9]+)\/verify$/);
+    if (verifyMatch) {
+      const addr = verifyMatch[1];
+      try {
+        const has = await hasBadge(addr);
+        res.writeHead(200);
+        return res.end(JSON.stringify({ ok: true, hasBadge: has, address: addr }));
+      } catch (e) {
+        res.writeHead(500);
+        return res.end(JSON.stringify({ ok: false, error: "gateway_error" }));
+      }
     }
 
     res.writeHead(404);
