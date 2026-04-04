@@ -1,5 +1,35 @@
 @import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap");
+@import "tailwindcss";
 
+@theme {
+  --color-base: var(--bg-base);
+  --color-surface: var(--bg-surface);
+  --color-surface-2: var(--bg-surface-2);
+  --color-border: var(--border);
+  --color-border-focus: var(--border-focus);
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-dim: var(--accent-dim);
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-muted: var(--text-muted);
+  --color-status-active: var(--status-active);
+  --color-status-revoked: var(--status-revoked);
+  --color-status-pending: var(--status-pending);
+  --color-status-planned: var(--status-planned);
+  --color-tier-member: var(--tier-member);
+  --color-tier-contributor: var(--tier-contributor);
+  --color-tier-builder: var(--tier-builder);
+  --color-tier-steward: var(--tier-steward);
+  --color-tier-elder: var(--tier-elder);
+  --font-sans: "Inter", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", "SF Mono", monospace;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 12px;
+}
+
+/* ── Dark Theme (default) ── */
 :root, [data-theme="dark"] {
   --bg-base: #0a0a0f;
   --bg-surface: #12121a;
@@ -16,22 +46,14 @@
   --status-revoked: #ef4444;
   --status-pending: #f59e0b;
   --status-planned: #a78bfa;
-  --radius: 12px;
-  --radius-sm: 6px;
-  --font-mono: "JetBrains Mono", "SF Mono", monospace;
-  --font-sans: "Inter", system-ui, sans-serif;
   --tier-member: #8888a0;
   --tier-contributor: #4ea8de;
   --tier-builder: #a78bfa;
   --tier-steward: #f59e0b;
   --tier-elder: #00e49f;
-  --input-bg: #1a1a26;
-  --input-border: #2a2a3d;
-  --input-text: #e8e8f0;
-  --xp-bar-bg: #2a2a3d;
-  --xp-bar-fill: #00e49f;
 }
 
+/* ── Light Theme ── */
 [data-theme="light"] {
   --bg-base: #f5f5f7;
   --bg-surface: #ffffff;
@@ -46,18 +68,13 @@
   --accent-dim: rgba(5, 150, 105, 0.1);
   --status-active: #059669;
   --status-revoked: #ef4444;
-  --status-pending: #f59e0b;
+  --status-pending: #d97706;
   --status-planned: #7c3aed;
   --tier-member: #71717a;
   --tier-contributor: #2563eb;
   --tier-builder: #7c3aed;
   --tier-steward: #d97706;
   --tier-elder: #059669;
-  --input-bg: #f0f0f3;
-  --input-border: #d4d4d8;
-  --input-text: #18181b;
-  --xp-bar-bg: #d4d4d8;
-  --xp-bar-fill: #059669;
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }

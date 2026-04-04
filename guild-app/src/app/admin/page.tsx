@@ -1,37 +1,25 @@
 "use client";
-import { Shell, useWallet } from "../../components/Shell";
-import { StatusMessage } from "../../components/StatusMessage";
 import { useState } from "react";
-import { SCHEMAS, TIER_COLORS, ROYALTIES } from "../../lib/constants";
-import { lookupAllBadges } from "../../lib/gateway";
+import { AppShell } from "@/components/AppShell";
+import { Card, CardHeader, CardBody } from "@/components/Card";
+import { StatusAlert } from "@/components/StatusAlert";
+import { useWallet } from "@/hooks/useWallet";
+import { SCHEMAS, TIER_COLORS, ROYALTIES } from "@/lib/constants";
+import { lookupAllBadges } from "@/lib/gateway";
 import {
   adminMintManifest,
   updateTierManifest,
   updateXpManifest,
   revokeBadgeManifest,
   updateExtraDataManifest,
-} from "../../lib/manifests";
-import type { BadgeInfo } from "../../lib/types";
-
-const inputStyle: React.CSSProperties = {
-  flex: 1, minWidth: 140, padding: "8px 12px", fontSize: 13,
-  background: "var(--input-bg)", border: "1px solid var(--input-border)",
-  borderRadius: "var(--radius-sm)", color: "var(--input-text)", fontFamily: "var(--font-mono)",
-};
-
-const btnStyle = (color: string): React.CSSProperties => ({
-  background: color, color: "#000", border: "none", padding: "8px 16px",
-  borderRadius: "var(--radius-sm)", fontWeight: 600, fontSize: 13, cursor: "pointer",
-  whiteSpace: "nowrap",
-});
+} from "@/lib/manifests";
+import type { BadgeInfo } from "@/lib/types";
 
 function AdminContent() {
   const { account, rdt } = useWallet();
   const [badges, setBadges] = useState<BadgeInfo[]>([]);
   const [loading, setLoading] = useState(false);
   const [lookupAddr, setLookupAddr] = useState("");
-
-  // Admin action states
   const [actionStatus, setActionStatus] = useState("");
   const [actionTxId, setActionTxId] = useState("");
   const [actionError, setActionError] = useState("");
@@ -50,7 +38,6 @@ function AdminContent() {
     setActionStatus(`${label}...`);
     setActionTxId("");
     setActionError("");
-
     try {
       const result = await rdt.walletApi.sendTransaction({
         transactionManifest: manifest,
@@ -70,232 +57,297 @@ function AdminContent() {
   }
 
   return (
-    <div>
-      <h1 style={{ fontSize: 22, marginBottom: 6 }}>Badge Manager</h1>
-      <p style={{ color: "var(--text-secondary)", marginBottom: 24, fontSize: 14 }}>
-        Manage Guild badges across all schemas
-      </p>
+    <div className="space-y-5">
+      <div>
+        <h1 className="text-xl font-bold">Badge Manager</h1>
+        <p className="text-text-secondary text-sm mt-1">
+          Manage Guild badges across all schemas
+        </p>
+      </div>
 
       {/* Badge Lookup */}
-      <div style={{ padding: 20, background: "var(--bg-surface)", borderRadius: "var(--radius)", border: "1px solid var(--border)" }}>
-        <h2 style={{ fontSize: 15, marginBottom: 12 }}>Look Up Badges</h2>
-        <div style={{ display: "flex", gap: 8 }}>
-          <input
-            value={lookupAddr}
-            onChange={e => setLookupAddr(e.target.value)}
-            placeholder="account_rdx1..."
-            style={inputStyle}
-          />
-          <button onClick={() => handleLookup(lookupAddr)} style={btnStyle("var(--accent)")}>
-            Search
-          </button>
-        </div>
-        {account && (
-          <button
-            onClick={() => { setLookupAddr(account); handleLookup(account); }}
-            style={{ marginTop: 8, background: "none", border: "1px solid var(--border)", color: "var(--text-muted)", padding: "4px 12px", borderRadius: "var(--radius-sm)", fontSize: 12, cursor: "pointer" }}
-          >
-            Check my badges
-          </button>
-        )}
-        {loading && <p style={{ color: "var(--text-muted)", marginTop: 12 }}>Loading...</p>}
-        {badges.length > 0 && (
-          <div style={{ marginTop: 16 }}>
-            {badges.map(b => (
-              <div key={b.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 0", borderBottom: "1px solid var(--border)" }}>
-                <div>
-                  <div style={{ fontWeight: 600 }}>{b.issued_to}</div>
-                  <div style={{ fontSize: 12, color: "var(--text-muted)" }}>{b.schema_name} | {b.id}</div>
-                </div>
-                <div style={{ textAlign: "right" }}>
-                  <span style={{
-                    background: (TIER_COLORS[b.tier] || "var(--text-muted)") + "1a",
-                    color: TIER_COLORS[b.tier] || "var(--text-muted)",
-                    padding: "2px 10px", borderRadius: 99, fontSize: 12, fontWeight: 700,
-                  }}>
-                    {b.tier}
-                  </span>
-                  <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 4 }}>
-                    XP: {b.xp} | {b.status}
+      <Card>
+        <CardHeader title="Look Up Badges" />
+        <CardBody>
+          <div className="flex gap-2">
+            <input
+              value={lookupAddr}
+              onChange={(e) => setLookupAddr(e.target.value)}
+              placeholder="account_rdx1..."
+              className="flex-1 px-3 py-2 text-[13px] bg-surface-2 border border-border rounded-md text-text-primary font-mono outline-none focus:border-accent transition-colors"
+            />
+            <button
+              onClick={() => handleLookup(lookupAddr)}
+              className="px-5 py-2 bg-accent text-black rounded-md text-[13px] font-semibold cursor-pointer hover:bg-accent-hover transition-colors"
+            >
+              Search
+            </button>
+          </div>
+          {account && (
+            <button
+              onClick={() => {
+                setLookupAddr(account);
+                handleLookup(account);
+              }}
+              className="mt-2 px-3 py-1 text-xs text-text-muted border border-border rounded-md cursor-pointer bg-transparent hover:border-border-focus transition-colors"
+            >
+              Check my badges
+            </button>
+          )}
+
+          {loading && (
+            <p className="text-text-muted text-sm mt-3">Loading...</p>
+          )}
+
+          {badges.length > 0 && (
+            <div className="mt-4 divide-y divide-border">
+              {badges.map((b) => (
+                <div
+                  key={b.id}
+                  className="flex items-center justify-between py-3"
+                >
+                  <div>
+                    <div className="font-semibold text-sm">{b.issued_to}</div>
+                    <div className="text-xs text-text-muted">
+                      {b.schema_name} | {b.id}
+                    </div>
                   </div>
+                  <div className="text-right">
+                    <span
+                      className="px-2.5 py-0.5 rounded-full text-xs font-bold"
+                      style={{
+                        background: `${TIER_COLORS[b.tier] || "var(--text-muted)"}1a`,
+                        color: TIER_COLORS[b.tier] || "var(--text-muted)",
+                      }}
+                    >
+                      {b.tier}
+                    </span>
+                    <div className="text-[11px] text-text-muted mt-1">
+                      XP: {b.xp} | {b.status}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {!loading && badges.length === 0 && lookupAddr && (
+            <p className="text-text-muted text-sm mt-3">No badges found.</p>
+          )}
+        </CardBody>
+      </Card>
+
+      {/* Admin Actions */}
+      <Card>
+        <CardHeader title="Admin Actions" />
+        <CardBody>
+          <p className="text-text-muted text-xs mb-4">
+            Requires admin badge in connected wallet. Royalties apply.
+          </p>
+
+          <div className="space-y-3">
+            <AdminAction
+              label="Mint Role Badge"
+              cost={ROYALTIES.mint}
+              fields={[
+                { name: "username", placeholder: "username" },
+                {
+                  name: "tier",
+                  placeholder: "contributor",
+                  type: "select",
+                  options: SCHEMAS.guild_role.tiers,
+                },
+              ]}
+              btnColor="bg-status-pending"
+              onSubmit={(v) => {
+                const s = SCHEMAS.guild_role;
+                sendAdminTx(
+                  adminMintManifest(s.manager, s.adminBadge, v.username, v.tier, account!),
+                  "Minting role badge"
+                );
+              }}
+            />
+
+            <AdminAction
+              label="Update Tier"
+              cost={ROYALTIES.update_tier}
+              fields={[
+                { name: "badgeId", placeholder: "guild_member_1" },
+                {
+                  name: "newTier",
+                  placeholder: "contributor",
+                  type: "select",
+                  options: SCHEMAS.guild_member.tiers,
+                },
+              ]}
+              onSubmit={(v) =>
+                sendAdminTx(
+                  updateTierManifest(SCHEMAS.guild_member.manager, SCHEMAS.guild_member.adminBadge, v.badgeId, v.newTier, account!),
+                  "Updating tier"
+                )
+              }
+            />
+
+            <AdminAction
+              label="Update XP"
+              cost={ROYALTIES.update_xp}
+              fields={[
+                { name: "badgeId", placeholder: "guild_member_1" },
+                { name: "newXp", placeholder: "100", type: "number" },
+              ]}
+              onSubmit={(v) =>
+                sendAdminTx(
+                  updateXpManifest(SCHEMAS.guild_member.manager, SCHEMAS.guild_member.adminBadge, v.badgeId, parseInt(v.newXp), account!),
+                  "Updating XP"
+                )
+              }
+            />
+
+            <AdminAction
+              label="Revoke Badge"
+              cost={ROYALTIES.revoke}
+              fields={[
+                { name: "badgeId", placeholder: "guild_member_1" },
+                { name: "reason", placeholder: "Reason" },
+              ]}
+              btnColor="bg-status-revoked"
+              onSubmit={(v) =>
+                sendAdminTx(
+                  revokeBadgeManifest(SCHEMAS.guild_member.manager, SCHEMAS.guild_member.adminBadge, v.badgeId, v.reason, account!),
+                  "Revoking badge"
+                )
+              }
+            />
+
+            <AdminAction
+              label="Update Extra Data"
+              cost={ROYALTIES.update_extra_data}
+              fields={[
+                { name: "badgeId", placeholder: "guild_member_1" },
+                { name: "data", placeholder: '{"role":"mod"}' },
+              ]}
+              onSubmit={(v) =>
+                sendAdminTx(
+                  updateExtraDataManifest(SCHEMAS.guild_member.manager, SCHEMAS.guild_member.adminBadge, v.badgeId, v.data, account!),
+                  "Updating extra data"
+                )
+              }
+            />
+          </div>
+
+          <StatusAlert
+            status={actionStatus}
+            txId={actionTxId}
+            error={actionError}
+          />
+        </CardBody>
+      </Card>
+
+      {/* Schemas Overview */}
+      <Card>
+        <CardHeader title="Badge Schemas" />
+        <CardBody>
+          <div className="divide-y divide-border">
+            {Object.entries(SCHEMAS).map(([name, schema]) => (
+              <div key={name} className="py-3">
+                <div className="flex items-center justify-between">
+                  <span className="font-semibold text-sm">{name}</span>
+                  <span
+                    className={`text-xs ${
+                      schema.freeMint
+                        ? "text-accent"
+                        : "text-status-pending"
+                    }`}
+                  >
+                    {schema.freeMint ? "Free mint" : "Admin only"}
+                  </span>
+                </div>
+                <div className="text-xs text-text-muted mt-1">
+                  Tiers: {schema.tiers.join(" / ")} | Manager:{" "}
+                  {schema.manager.slice(0, 25)}...
                 </div>
               </div>
             ))}
           </div>
-        )}
-        {!loading && badges.length === 0 && lookupAddr && (
-          <p style={{ color: "var(--text-muted)", marginTop: 12 }}>No badges found.</p>
-        )}
-      </div>
-
-      {/* Admin Actions */}
-      <div style={{ marginTop: 24, padding: 20, background: "var(--bg-surface)", borderRadius: "var(--radius)", border: "1px solid var(--border)" }}>
-        <h2 style={{ fontSize: 15, marginBottom: 4 }}>Admin Actions</h2>
-        <p style={{ color: "var(--text-muted)", fontSize: 12, marginBottom: 16 }}>
-          Requires admin badge in connected wallet. Royalties apply.
-        </p>
-
-        <AdminMintForm onSubmit={(u, t) => {
-          const s = SCHEMAS.guild_role;
-          sendAdminTx(adminMintManifest(s.manager, s.adminBadge, u, t, account!), "Minting role badge");
-        }} />
-
-        <AdminActionForm
-          label="Update Tier"
-          cost={ROYALTIES.update_tier}
-          fields={[
-            { name: "badgeId", placeholder: "guild_member_1", label: "Badge ID" },
-            { name: "newTier", placeholder: "contributor", label: "New Tier", type: "select", options: SCHEMAS.guild_member.tiers },
-          ]}
-          onSubmit={(v) => {
-            sendAdminTx(updateTierManifest(SCHEMAS.guild_member.manager, SCHEMAS.guild_member.adminBadge, v.badgeId, v.newTier, account!), "Updating tier");
-          }}
-        />
-
-        <AdminActionForm
-          label="Update XP"
-          cost={ROYALTIES.update_xp}
-          fields={[
-            { name: "badgeId", placeholder: "guild_member_1", label: "Badge ID" },
-            { name: "newXp", placeholder: "100", label: "New XP", type: "number" },
-          ]}
-          onSubmit={(v) => {
-            sendAdminTx(updateXpManifest(SCHEMAS.guild_member.manager, SCHEMAS.guild_member.adminBadge, v.badgeId, parseInt(v.newXp), account!), "Updating XP");
-          }}
-        />
-
-        <AdminActionForm
-          label="Revoke Badge"
-          cost={ROYALTIES.revoke}
-          fields={[
-            { name: "badgeId", placeholder: "guild_member_1", label: "Badge ID" },
-            { name: "reason", placeholder: "Reason for revocation", label: "Reason" },
-          ]}
-          onSubmit={(v) => {
-            sendAdminTx(revokeBadgeManifest(SCHEMAS.guild_member.manager, SCHEMAS.guild_member.adminBadge, v.badgeId, v.reason, account!), "Revoking badge");
-          }}
-          color="var(--status-revoked)"
-        />
-
-        <AdminActionForm
-          label="Update Extra Data"
-          cost={ROYALTIES.update_extra_data}
-          fields={[
-            { name: "badgeId", placeholder: "guild_member_1", label: "Badge ID" },
-            { name: "data", placeholder: '{"role":"mod"}', label: "JSON Data" },
-          ]}
-          onSubmit={(v) => {
-            sendAdminTx(updateExtraDataManifest(SCHEMAS.guild_member.manager, SCHEMAS.guild_member.adminBadge, v.badgeId, v.data, account!), "Updating extra data");
-          }}
-        />
-
-        <StatusMessage status={actionStatus} txId={actionTxId} error={actionError} />
-      </div>
-
-      {/* Schemas Overview */}
-      <div style={{ marginTop: 24, padding: 20, background: "var(--bg-surface)", borderRadius: "var(--radius)", border: "1px solid var(--border)" }}>
-        <h2 style={{ fontSize: 15, marginBottom: 12 }}>Badge Schemas</h2>
-        {Object.entries(SCHEMAS).map(([name, schema]) => (
-          <div key={name} style={{ padding: "10px 0", borderBottom: "1px solid var(--border)" }}>
-            <div style={{ display: "flex", justifyContent: "space-between" }}>
-              <span style={{ fontWeight: 600 }}>{name}</span>
-              <span style={{ fontSize: 12, color: schema.freeMint ? "var(--accent)" : "var(--status-pending)" }}>
-                {schema.freeMint ? "Free mint" : "Admin only"}
-              </span>
-            </div>
-            <div style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 4 }}>
-              Tiers: {schema.tiers.join(" / ")} | Manager: {schema.manager.slice(0, 25)}...
-            </div>
-          </div>
-        ))}
-      </div>
+        </CardBody>
+      </Card>
     </div>
   );
 }
 
-/* ── Reusable Admin Sub-Components ── */
-
-function AdminMintForm({ onSubmit }: { onSubmit: (username: string, tier: string) => void }) {
-  const [username, setUsername] = useState("");
-  const [tier, setTier] = useState("contributor");
-  return (
-    <div style={{ marginBottom: 16, padding: 14, background: "var(--bg-surface-2)", borderRadius: "var(--radius-sm)" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
-        <span style={{ fontSize: 13, fontWeight: 600 }}>Mint Role Badge</span>
-        <span style={{ fontSize: 11, color: "var(--status-pending)", fontFamily: "var(--font-mono)" }}>
-          {ROYALTIES.mint} XRD
-        </span>
-      </div>
-      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-        <input value={username} onChange={e => setUsername(e.target.value)} placeholder="Username" style={inputStyle} />
-        <select value={tier} onChange={e => setTier(e.target.value)} style={{ ...inputStyle, flex: "none", width: 140 }}>
-          {SCHEMAS.guild_role.tiers.map(t => <option key={t} value={t}>{t}</option>)}
-        </select>
-        <button onClick={() => username && onSubmit(username, tier)} style={btnStyle("var(--status-pending)")}>
-          Mint
-        </button>
-      </div>
-    </div>
-  );
-}
+/* ── Admin Action Component ── */
 
 interface FieldDef {
   name: string;
   placeholder: string;
-  label: string;
   type?: "text" | "number" | "select";
   options?: string[];
 }
 
-function AdminActionForm({
-  label, cost, fields, onSubmit, color = "var(--accent)",
+function AdminAction({
+  label,
+  cost,
+  fields,
+  onSubmit,
+  btnColor = "bg-accent",
 }: {
   label: string;
   cost: number;
   fields: FieldDef[];
   onSubmit: (values: Record<string, string>) => void;
-  color?: string;
+  btnColor?: string;
 }) {
   const [values, setValues] = useState<Record<string, string>>(
-    Object.fromEntries(fields.map(f => [f.name, ""]))
+    Object.fromEntries(fields.map((f) => [f.name, f.options?.[0] || ""]))
   );
 
   const update = (name: string, val: string) =>
-    setValues(prev => ({ ...prev, [name]: val }));
+    setValues((prev) => ({ ...prev, [name]: val }));
 
-  const allFilled = fields.every(f => values[f.name]?.trim());
+  const allFilled = fields.every((f) => f.options || values[f.name]?.trim());
 
   return (
-    <div style={{ marginBottom: 16, padding: 14, background: "var(--bg-surface-2)", borderRadius: "var(--radius-sm)" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
-        <span style={{ fontSize: 13, fontWeight: 600 }}>{label}</span>
-        <span style={{ fontSize: 11, color: "var(--status-pending)", fontFamily: "var(--font-mono)" }}>
+    <div className="bg-surface-2 rounded-md p-3.5">
+      <div className="flex items-center justify-between mb-2">
+        <span className="text-[13px] font-semibold">{label}</span>
+        <span className="text-[11px] text-status-pending font-mono">
           {cost} XRD
         </span>
       </div>
-      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-        {fields.map(f => f.type === "select" ? (
-          <select key={f.name} value={values[f.name]} onChange={e => update(f.name, e.target.value)} style={{ ...inputStyle, flex: "none", width: 140 }}>
-            {f.options?.map(o => <option key={o} value={o}>{o}</option>)}
-          </select>
-        ) : (
-          <input
-            key={f.name}
-            type={f.type || "text"}
-            value={values[f.name]}
-            onChange={e => update(f.name, e.target.value)}
-            placeholder={f.placeholder}
-            style={inputStyle}
-          />
-        ))}
+      <div className="flex gap-2 flex-wrap">
+        {fields.map((f) =>
+          f.type === "select" ? (
+            <select
+              key={f.name}
+              value={values[f.name]}
+              onChange={(e) => update(f.name, e.target.value)}
+              className="px-3 py-2 text-[13px] bg-surface border border-border rounded-md text-text-primary font-mono outline-none w-36"
+            >
+              {f.options?.map((o) => (
+                <option key={o} value={o}>
+                  {o}
+                </option>
+              ))}
+            </select>
+          ) : (
+            <input
+              key={f.name}
+              type={f.type || "text"}
+              value={values[f.name]}
+              onChange={(e) => update(f.name, e.target.value)}
+              placeholder={f.placeholder}
+              className="flex-1 min-w-[140px] px-3 py-2 text-[13px] bg-surface border border-border rounded-md text-text-primary font-mono outline-none focus:border-accent transition-colors"
+            />
+          )
+        )}
         <button
           onClick={() => allFilled && onSubmit(values)}
           disabled={!allFilled}
-          style={{
-            ...btnStyle(color),
-            opacity: allFilled ? 1 : 0.5,
-            cursor: allFilled ? "pointer" : "not-allowed",
-          }}
+          className={`px-4 py-2 ${btnColor} text-black rounded-md text-[13px] font-semibold whitespace-nowrap transition-opacity ${
+            allFilled
+              ? "cursor-pointer opacity-100"
+              : "cursor-not-allowed opacity-50"
+          }`}
         >
           {label}
         </button>
@@ -305,5 +357,9 @@ function AdminActionForm({
 }
 
 export default function AdminPage() {
-  return <Shell><AdminContent /></Shell>;
+  return (
+    <AppShell>
+      <AdminContent />
+    </AppShell>
+  );
 }
