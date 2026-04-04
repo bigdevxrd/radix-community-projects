@@ -435,5 +435,72 @@ bot.on("message:text", (ctx) => {
   }
 });
 
+// ── Background: Auto-close expired proposals ────────────
+
+const { postToRadixTalk, formatProposalForRT } = require("./services/discourse");
+
+async function checkExpiredProposals() {
+  const now = Math.floor(Date.now() / 1000);
+  const expired = db.getActiveProposals().filter(p => now > p.ends_at);
+
+  for (const proposal of expired) {
+    const counts = db.getVoteCounts(proposal.id);
+    const total = Object.values(counts).reduce((a, b) => a + b, 0);
+
+    // Determine result
+    let result = "expired";
+    if (total >= proposal.min_votes) {
+      if (proposal.type === "yesno") {
+        const forVotes = counts.for || 0;
+        const againstVotes = counts.against || 0;
+        const amendVotes = counts.amend || 0;
+        if (forVotes > againstVotes && forVotes > amendVotes) result = "passed";
+        else if (amendVotes > forVotes) result = "needs_amendment";
+        else result = "failed";
+      } else {
+        result = "completed";
+      }
+    }
+
+    db.closeProposal(proposal.id, result);
+
+    // Announce result in the original chat
+    if (proposal.tg_chat_id) {
+      let text = "Proposal #" + proposal.id + " — " + result.toUpperCase() + "\n\n";
+      text += proposal.title + "\n\n";
+      Object.entries(counts).sort((a, b) => b[1] - a[1]).forEach(([opt, cnt]) => {
+        const pct = total > 0 ? Math.round((cnt / total) * 100) : 0;
+        text += opt + ": " + cnt + " (" + pct + "%)\n";
+      });
+      text += "\nTotal: " + total + " votes";
+
+      if (result === "needs_amendment") {
+        text += "\n\nAmend won — use /amend " + proposal.id + " <refined text> to submit R2";
+      }
+
+      try {
+        await bot.api.sendMessage(proposal.tg_chat_id, text);
+      } catch (e) {
+        console.error("[AutoClose] Failed to announce:", e.message);
+      }
+    }
+
+    // Post to RadixTalk (if API key configured)
+    const rtTitle = "[Result] Proposal #" + proposal.id + ": " + proposal.title.slice(0, 80);
+    const rtBody = formatProposalForRT(proposal, counts);
+    const rtPost = await postToRadixTalk(rtTitle, rtBody);
+    if (rtPost) {
+      console.log("[AutoClose] Posted to RadixTalk:", rtPost.url);
+    }
+
+    console.log("[AutoClose] Proposal #" + proposal.id + " → " + result);
+  }
+}
+
+// Check every 5 minutes
+setInterval(checkExpiredProposals, 5 * 60 * 1000);
+
+// ── Start ───────────────────────────────────────────────
+
 bot.start();
-console.log("Radix Guild Bot v3 running! (proposals, polls, amendments, temp checks)");
+console.log("Radix Guild Bot v4 running! (proposals, polls, auto-close, RadixTalk ready)");
