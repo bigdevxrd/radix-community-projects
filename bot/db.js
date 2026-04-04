@@ -216,6 +216,20 @@ function getTotalProposals() {
   return r ? r.c : 0;
 }
 
+function cancelProposal(proposalId, tgId) {
+  const p = db.prepare("SELECT * FROM proposals WHERE id = ? AND creator_tg_id = ?").get(proposalId, tgId);
+  if (!p) return { ok: false, error: "not_found_or_not_owner" };
+  if (p.status !== "active") return { ok: false, error: "not_active" };
+  db.prepare("UPDATE proposals SET status = ? WHERE id = ?").run("cancelled", proposalId);
+  return { ok: true };
+}
+
+function getProposalHistory(limit = 10) {
+  return db.prepare(
+    "SELECT * FROM proposals ORDER BY created_at DESC LIMIT ?"
+  ).all(limit);
+}
+
 // ── Bounty functions ─────────────────────────────────────
 
 function createBounty(title, description, category, rewardXrd, creatorAddress, daysActive) {
@@ -349,20 +363,3 @@ module.exports = {
   getEscrowWallet, recordEscrowDeposit, recordEscrowRelease,
   getBountyTransactionHistory,
 };
-
-function cancelProposal(proposalId, tgId) {
-  const p = db.prepare("SELECT * FROM proposals WHERE id = ? AND creator_tg_id = ?").get(proposalId, tgId);
-  if (!p) return { ok: false, error: "not_found_or_not_owner" };
-  if (p.status !== "active") return { ok: false, error: "not_active" };
-  db.prepare("UPDATE proposals SET status = ? WHERE id = ?").run("cancelled", proposalId);
-  return { ok: true };
-}
-
-function getProposalHistory(limit = 10) {
-  return db.prepare(
-    "SELECT * FROM proposals ORDER BY created_at DESC LIMIT ?"
-  ).all(limit);
-}
-
-module.exports.cancelProposal = cancelProposal;
-module.exports.getProposalHistory = getProposalHistory;

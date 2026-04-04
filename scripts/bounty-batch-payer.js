@@ -70,8 +70,8 @@ function buildXrdTransferManifest(toAddress, amountXrd) {
 
 async function main() {
   console.log("\n  Bounty Batch Payer");
-  console.log("  Account:", ACCOUNT?.slice(0, 30) + "...");
-  console.log("  Escrow:", ESCROW_ACCOUNT?.slice(0, 30) + "...");
+  if (ACCOUNT) console.log("  Account:", ACCOUNT.slice(0, 15) + "...[redacted]");
+  if (ESCROW_ACCOUNT && ESCROW_ACCOUNT !== ACCOUNT) console.log("  Escrow:", ESCROW_ACCOUNT.slice(0, 15) + "...[redacted]");
 
   if (!ACCOUNT) { console.error("  RADIX_ACCOUNT_ADDRESS not set"); return; }
 
