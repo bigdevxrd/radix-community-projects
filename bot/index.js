@@ -502,5 +502,10 @@ setInterval(checkExpiredProposals, 5 * 60 * 1000);
 
 // ── Start ───────────────────────────────────────────────
 
+// ── Start bot + API ─────────────────────────────────────
+
+const { startApi } = require("./services/api");
+startApi();
+
 bot.start();
-console.log("Radix Guild Bot v4 running! (proposals, polls, auto-close, RadixTalk ready)");
+console.log("Radix Guild Bot v4 running! (proposals, polls, auto-close, API, RadixTalk ready)");
