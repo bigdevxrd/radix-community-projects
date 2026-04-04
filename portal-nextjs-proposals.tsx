@@ -1,4 +1,5 @@
 "use client";
+import { Shell } from "../../components/Shell";
 import { useEffect, useState } from "react";
 
 const API = "https://156-67-219-105.sslip.io/api";
@@ -24,7 +25,7 @@ interface Stats {
   pending_xp_rewards: number;
 }
 
-export default function ProposalsPage() {
+function ProposalsContent() {
   const [proposals, setProposals] = useState<Proposal[]>([]);
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
@@ -149,4 +150,9 @@ export default function ProposalsPage() {
       </div>
     </div>
   );
+}
+
+
+export default function ProposalsPage() {
+  return <Shell><ProposalsContent /></Shell>;
 }
