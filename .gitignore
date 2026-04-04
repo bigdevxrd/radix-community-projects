@@ -7,3 +7,6 @@ dist/
 *.swp
 *.swo
 badge-manager/build/
+badge-manager/build/
+*.db
+*.db-journal
