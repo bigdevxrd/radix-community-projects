@@ -47,7 +47,11 @@ async function requireBadge(ctx) {
   }
   const has = await hasBadge(user.radix_address);
   if (!has) {
-    await ctx.reply("You need a Guild badge to do this.\nMint one: " + PORTAL);
+    await ctx.reply(
+      "You need a Guild badge to do this.\n\n" +
+      "Mint one (free): " + PORTAL + "/mint\n" +
+      "After minting, wait ~30s then try again."
+    );
     return null;
   }
   return user;
@@ -57,12 +61,14 @@ async function requireBadge(ctx) {
 
 bot.command("start", (ctx) => {
   ctx.reply(
-    "Welcome to the Radix Guild!\n\n" +
-    "One badge. All DAOs. Governed from Telegram.\n\n" +
-    "Get started:\n" +
-    "1. /register <your_account_rdx1...>\n" +
-    "2. Mint badge: " + PORTAL + "\n" +
-    "3. Create proposals and vote!\n\n" +
+    "Welcome to the Radix Guild\n\n" +
+    "A community governance system for Radix. Propose ideas, vote on them, earn XP — all from Telegram.\n\n" +
+    "Your badge is a free on-chain NFT that gives you voting power. Higher XP = more influence.\n\n" +
+    "Get started in 3 steps:\n" +
+    "1. /register <your_account_rdx1...> — link your wallet\n" +
+    "2. Mint a free badge: " + PORTAL + "/mint\n" +
+    "   (Connect wallet → enter a username → confirm in wallet)\n" +
+    "3. Come back here and /proposals to see what to vote on\n\n" +
     "/help for all commands"
   );
 });
@@ -106,8 +112,11 @@ bot.command("register", (ctx) => {
   }
   db.registerUser(ctx.from.id, address, ctx.from.username || ctx.from.first_name);
   ctx.reply(
-    "Registered!\nAddress: " + address.slice(0, 30) + "...\n\n" +
-    "Mint badge: " + PORTAL + "\nThen /badge to check."
+    "Registered! Wallet linked.\n\n" +
+    "Next: Mint your free badge:\n" +
+    PORTAL + "/mint\n\n" +
+    "Connect your Radix Wallet, enter a username, and confirm the transaction. It's free.\n\n" +
+    "After minting, wait ~30 seconds then /badge to verify."
   );
 });
 
@@ -117,15 +126,20 @@ bot.command("badge", async (ctx) => {
   const user = db.getUser(ctx.from.id);
   if (!user) return ctx.reply("Register first: /register <account_rdx1...>");
   const badge = await getBadgeData(user.radix_address);
-  if (!badge) return ctx.reply("No Guild badge found.\nMint one: " + PORTAL);
+  if (!badge) return ctx.reply(
+    "No badge found for this wallet.\n\n" +
+    "If you just minted, wait ~30 seconds for the blockchain to confirm, then try /badge again.\n\n" +
+    "Haven't minted yet? Go to:\n" + PORTAL + "/mint"
+  );
+  const tierWeights = { member: "1x", contributor: "2x", builder: "3x", steward: "5x", elder: "10x" };
   ctx.reply(
     "Your Guild Badge\n\n" +
     "Name: " + badge.issued_to + "\n" +
-    "Tier: " + badge.tier + "\n" +
-    "XP: " + badge.xp + "\n" +
-    "Level: " + badge.level + "\n" +
+    "Tier: " + badge.tier + " (vote weight: " + (tierWeights[badge.tier] || "1x") + ")\n" +
+    "XP: " + badge.xp + " / Level: " + badge.level + "\n" +
     "Status: " + badge.status + "\n" +
-    "ID: " + badge.id
+    "ID: " + badge.id + "\n\n" +
+    "Earn XP: vote (+10), propose (+25), poll (+25), temp check (+10)"
   );
 });
 
@@ -320,7 +334,7 @@ bot.on("callback_query:data", async (ctx) => {
   // Queue XP reward for voting
   queueXpReward(user.radix_address, "vote");
 
-  ctx.answerCallbackQuery({ text: "Vote recorded: " + voteChoice + " (+10 XP)" });
+  ctx.answerCallbackQuery({ text: "Vote recorded: " + voteChoice + " (+10 XP). /badge to check your XP." });
 });
 
 // ── /proposals ──────────────────────────────────────────
@@ -481,7 +495,15 @@ bot.command("welcome", async (ctx) => {
   try { await ctx.pinChatMessage(msg.message_id); } catch(e) {}
 });
 
-bot.command("mint", (ctx) => ctx.reply("Mint badge:\n" + PORTAL));
+bot.command("mint", (ctx) => ctx.reply(
+  "Mint your free Guild badge:\n" +
+  PORTAL + "/mint\n\n" +
+  "1. Connect your Radix Wallet\n" +
+  "2. Enter a username (your governance identity)\n" +
+  "3. Confirm the transaction (0 XRD cost)\n\n" +
+  "After minting, wait ~30 seconds then /badge to verify.\n" +
+  "Then /proposals to see what to vote on."
+));
 bot.command("dao", (ctx) => ctx.reply("Guild DAO:\n" + DAO_URL));
 bot.command("source", (ctx) => ctx.reply("Source:\n" + GITHUB));
 bot.command("charter", (ctx) => ctx.reply("DAO Charter:\nhttps://radix.wiki/ideas/radix-network-dao-charter"));

@@ -49,7 +49,16 @@ function MintContent() {
     return (
       <div className="space-y-5">
         <BadgeCard badge={badge} />
-        <p className="g-text-2 text-[13px]">You already have a badge. Earn XP by voting and contributing.</p>
+        <Card>
+          <CardBody className="pt-4">
+            <p className="text-sm font-semibold mb-2">Next Steps</p>
+            <div className="space-y-2 text-[13px] g-text-2">
+              <p>1. Open the <a href="https://t.me/radix_guild_bot" target="_blank" className="g-accent">Telegram Bot</a> and type <code className="font-mono g-text-3">/register</code> with your wallet address</p>
+              <p>2. Type <code className="font-mono g-text-3">/proposals</code> to see active governance votes</p>
+              <p>3. Vote on proposals to earn XP and level up your tier</p>
+            </div>
+          </CardBody>
+        </Card>
       </div>
     );
   }
@@ -59,10 +68,11 @@ function MintContent() {
       <Card>
         <CardBody className="pt-5">
           <label className="block text-[11px] g-text-3 uppercase tracking-wider mb-1.5">Username</label>
+          <p className="text-xs g-text-3 mb-2">Your governance identity. Stored on-chain with your badge.</p>
           <input type="text" value={username} onChange={(e) => setUsername(e.target.value)}
-            placeholder="Enter your username" maxLength={64}
+            placeholder="e.g. bigdevxrd" maxLength={64}
             className="g-input w-full px-3.5 py-2.5 text-sm" />
-          <div className="text-[11px] g-text-3 mt-1">{username.length}/64</div>
+          <div className="text-[11px] g-text-3 mt-1">{username.length}/64 characters</div>
           <button onClick={handleMint} disabled={minting || !username.trim()}
             className="g-btn mt-4 w-full py-3 text-sm">
             {minting ? "Minting..." : "Mint Guild Badge (Free)"}
