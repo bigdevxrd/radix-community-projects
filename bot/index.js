@@ -513,6 +513,81 @@ bot.command("mvd", (ctx) => ctx.reply("Minimum Viable DAO discussion:\nhttps://r
 bot.command("wiki", (ctx) => ctx.reply("Radix Wiki:\nhttps://radix.wiki/ecosystem"));
 bot.command("talk", (ctx) => ctx.reply("RadixTalk forum:\nhttps://radixtalk.com"));
 
+// ── /bounties ────────────────────────────────────────────
+
+bot.command("bounties", async (ctx) => {
+  const parts = ctx.message.text.split(" ");
+  const idArg = parseInt(parts[1]);
+
+  if (idArg) {
+    // Single bounty detail
+    const bounty = db.getBounty(idArg);
+    if (!bounty) return ctx.reply("Bounty #" + idArg + " not found.");
+    const statusIcon = { open: "💰", claimed: "🔒", submitted: "📬", approved: "✅", paid: "🏆", draft: "📝", expired: "⏰" }[bounty.status] || "❓";
+    const expires = new Date(bounty.expires_at * 1000).toISOString().slice(0, 10);
+    let text = statusIcon + " Bounty #" + bounty.id + " [" + bounty.status.toUpperCase() + "]\n\n";
+    text += bounty.title + "\n";
+    if (bounty.description) text += "\n" + bounty.description + "\n";
+    text += "\nCategory: " + bounty.category;
+    text += "\nReward: " + bounty.reward_xrd + " XRD";
+    text += "\nExpires: " + expires;
+    if (bounty.claimed_by) text += "\nClaimed by: " + bounty.claimed_by.slice(0, 24) + "...";
+    if (bounty.tx_hash_paid) text += "\nPaid tx: " + bounty.tx_hash_paid;
+    return ctx.reply(text);
+  }
+
+  // List active bounties
+  const bounties = db.getActiveBounties({ status: "open", limit: 10 });
+  const stats = db.getBountyStats();
+
+  if (bounties.length === 0) {
+    return ctx.reply(
+      "No active bounties right now.\n\n" +
+      "Check back soon or visit the portal for more info."
+    );
+  }
+
+  let text = "Active Bounties (" + stats.open + " open | " + stats.open_xrd_pool + " XRD pool)\n\n";
+  bounties.forEach((b) => {
+    const due = new Date(b.expires_at * 1000).toISOString().slice(0, 10);
+    const cat = b.category ? b.category.charAt(0).toUpperCase() + b.category.slice(1) : "General";
+    text += "💰 " + b.id + ". " + b.title + " (" + b.reward_xrd + " XRD) — Due: " + due + "\n";
+    if (b.description) text += "   " + b.description.slice(0, 80) + (b.description.length > 80 ? "..." : "") + "\n";
+    text += "   [" + cat + "] /bounties " + b.id + " for details\n\n";
+  });
+  text += "/bounties <id> for details | /my-bounties for your claims";
+  ctx.reply(text);
+});
+
+// ── /my-bounties ─────────────────────────────────────────
+
+bot.command("my-bounties", async (ctx) => {
+  const user = db.getUser(ctx.from.id);
+  if (!user) return ctx.reply("Register first: /register <account_rdx1...>");
+
+  const claims = db.getBountiesByAddress(user.radix_address);
+  if (claims.length === 0) {
+    return ctx.reply(
+      "You haven't claimed any bounties yet.\n\n" +
+      "Use /bounties to see what's available."
+    );
+  }
+
+  const totalEarned = claims.filter(b => b.status === "paid").reduce((sum, b) => sum + b.reward_xrd, 0);
+  let text = "Your Bounties\n\n";
+  text += "Total earned: " + totalEarned + " XRD\n\n";
+
+  claims.forEach((b) => {
+    const statusIcon = { claimed: "🔒", submitted: "📬", approved: "✅", paid: "🏆" }[b.status] || "❓";
+    text += statusIcon + " #" + b.id + " " + b.title + " (" + b.reward_xrd + " XRD)\n";
+    text += "   Status: " + b.status;
+    if (b.tx_hash_paid) text += " | Tx: " + b.tx_hash_paid.slice(0, 20) + "...";
+    text += "\n\n";
+  });
+
+  ctx.reply(text);
+});
+
 bot.on("message:text", (ctx) => {
   // Check if user is in wizard flow
   if (handleWizardText(ctx)) return;
@@ -593,6 +668,45 @@ setInterval(async () => {
     console.error("[AutoClose] Background task failed:", e.message);
   }
 }, 5 * 60 * 1000);
+
+// ── Daily Bounty Summary Cron ───────────────────────────
+
+const BOUNTY_NOTIFY_CHAT_ID = process.env.BOUNTY_NOTIFY_CHAT_ID;
+
+async function sendDailyBountySummary() {
+  if (!BOUNTY_NOTIFY_CHAT_ID) return;
+  try {
+    const stats = db.getBountyStats();
+    const pending = db.getBountiesPendingApproval();
+    if (stats.open === 0 && pending.length === 0) return;
+
+    let text = "Daily Bounty Summary\n\n";
+    if (stats.open > 0) {
+      text += "💰 " + stats.open + " open bounties | " + stats.open_xrd_pool + " XRD pool\n";
+      text += "Use /bounties to see what's available.\n";
+    }
+    if (pending.length > 0) {
+      text += "\n✅ " + pending.length + " " + (pending.length === 1 ? "bounty" : "bounties") + " awaiting payment approval.\n";
+    }
+    await bot.api.sendMessage(BOUNTY_NOTIFY_CHAT_ID, text);
+  } catch (e) {
+    console.error("[BountyCron] Daily summary failed:", e.message);
+  }
+}
+
+// Schedule daily at 09:00 UTC
+function scheduleDailyBountySummary() {
+  const now = new Date();
+  const next = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 9, 0, 0, 0));
+  if (next <= now) next.setUTCDate(next.getUTCDate() + 1);
+  const msUntilNext = next.getTime() - now.getTime();
+  setTimeout(() => {
+    sendDailyBountySummary();
+    setInterval(sendDailyBountySummary, 24 * 60 * 60 * 1000);
+  }, msUntilNext);
+}
+
+scheduleDailyBountySummary();
 
 // ── Start ───────────────────────────────────────────────
 

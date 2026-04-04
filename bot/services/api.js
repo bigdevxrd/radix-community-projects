@@ -5,6 +5,7 @@ const { hasBadge, getBadgeData } = require("./gateway");
 
 const API_PORT = parseInt(process.env.API_PORT || "3003");
 const ALLOWED_ORIGINS = (process.env.CORS_ORIGINS || "").split(",").filter(Boolean);
+const ADMIN_ADDRESSES = (process.env.ADMIN_ADDRESSES || "").split(",").map(s => s.trim()).filter(Boolean);
 
 // Simple in-memory rate limiter
 const rateBuckets = new Map();
@@ -22,6 +23,23 @@ setInterval(() => {
   for (const [ip, b] of rateBuckets) { if (now > b.reset + 60000) rateBuckets.delete(ip); }
 }, 300000);
 
+// Read JSON body from a POST request
+function readBody(req) {
+  return new Promise((resolve, reject) => {
+    let data = "";
+    req.on("data", chunk => { data += chunk; if (data.length > 1e6) { req.destroy(); reject(new Error("body_too_large")); } });
+    req.on("end", () => {
+      try { resolve(JSON.parse(data || "{}")); }
+      catch (e) { reject(new Error("invalid_json")); }
+    });
+    req.on("error", reject);
+  });
+}
+
+function isAdmin(address) {
+  return ADMIN_ADDRESSES.length > 0 && ADMIN_ADDRESSES.includes(address);
+}
+
 function startApi() {
   const server = http.createServer(async (req, res) => {
     res.setHeader("Content-Type", "application/json");
@@ -35,7 +53,7 @@ function startApi() {
     } else {
       res.setHeader("Access-Control-Allow-Origin", "*"); // dev fallback
     }
-    res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
+    res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
     res.setHeader("Access-Control-Allow-Headers", "Content-Type");
 
     if (req.method === "OPTIONS") {
@@ -146,6 +164,140 @@ function startApi() {
         res.writeHead(500);
         return res.end(JSON.stringify({ ok: false, error: "gateway_error" }));
       }
+    }
+
+    // ── Bounty endpoints ────────────────────────────────────
+
+    // GET /api/bounties/pending-payment — admin dashboard
+    if (url.pathname === "/api/bounties/pending-payment" && req.method === "GET") {
+      const address = url.searchParams.get("address");
+      if (!address || !isAdmin(address)) {
+        res.writeHead(403);
+        return res.end(JSON.stringify({ ok: false, error: "admin_required" }));
+      }
+      const data = db.getBountiesPendingApproval();
+      res.writeHead(200);
+      return res.end(JSON.stringify({ ok: true, data }));
+    }
+
+    // GET /api/bounties — list bounties with filters
+    if (url.pathname === "/api/bounties" && req.method === "GET") {
+      const status = url.searchParams.get("status");
+      const category = url.searchParams.get("category");
+      const limit = Math.min(100, Math.max(1, parseInt(url.searchParams.get("limit") || "50")));
+      const page = Math.max(1, parseInt(url.searchParams.get("page") || "1"));
+      const offset = (page - 1) * limit;
+
+      const bounties = status
+        ? db.getAllBounties({ status, category, limit, offset })
+        : db.getActiveBounties({ category, limit, offset });
+
+      res.writeHead(200);
+      return res.end(JSON.stringify({ ok: true, data: bounties, page, limit }));
+    }
+
+    // POST /api/bounties — create a new bounty (admin only)
+    if (url.pathname === "/api/bounties" && req.method === "POST") {
+      let body;
+      try { body = await readBody(req); }
+      catch (e) {
+        res.writeHead(400);
+        return res.end(JSON.stringify({ ok: false, error: e.message }));
+      }
+      const { address, title, description, category, reward_xrd, days_active } = body;
+      if (!address || !isAdmin(address)) {
+        res.writeHead(403);
+        return res.end(JSON.stringify({ ok: false, error: "admin_required" }));
+      }
+      if (!title || typeof title !== "string" || title.trim().length === 0) {
+        res.writeHead(400);
+        return res.end(JSON.stringify({ ok: false, error: "title_required" }));
+      }
+      if (!reward_xrd || typeof reward_xrd !== "number" || reward_xrd <= 0) {
+        res.writeHead(400);
+        return res.end(JSON.stringify({ ok: false, error: "reward_xrd_must_be_positive_number" }));
+      }
+      const days = parseInt(days_active) || 7;
+      const id = db.createBounty(title.trim(), description || null, category || "general", reward_xrd, address, days);
+      const bounty = db.getBounty(id);
+      res.writeHead(201);
+      return res.end(JSON.stringify({ ok: true, id, status: bounty.status, created_at: bounty.created_at }));
+    }
+
+    // POST /api/bounties/:id/claim — claim a bounty
+    const claimMatch = url.pathname.match(/^\/api\/bounties\/(\d+)\/claim$/);
+    if (claimMatch && req.method === "POST") {
+      let body;
+      try { body = await readBody(req); }
+      catch (e) {
+        res.writeHead(400);
+        return res.end(JSON.stringify({ ok: false, error: e.message }));
+      }
+      const bountyId = parseInt(claimMatch[1]);
+      const { address } = body;
+      if (!address) {
+        res.writeHead(400);
+        return res.end(JSON.stringify({ ok: false, error: "address_required" }));
+      }
+      // Require Guild badge to claim
+      let hasBadgeResult;
+      try { hasBadgeResult = await hasBadge(address); }
+      catch (e) { hasBadgeResult = false; }
+      if (!hasBadgeResult) {
+        res.writeHead(403);
+        return res.end(JSON.stringify({ ok: false, error: "guild_badge_required" }));
+      }
+      const result = db.claimBounty(bountyId, address);
+      if (!result.ok) {
+        const statusCode = result.error === "not_found" ? 404 : 400;
+        res.writeHead(statusCode);
+        return res.end(JSON.stringify(result));
+      }
+      res.writeHead(200);
+      return res.end(JSON.stringify({
+        ok: true,
+        bounty_id: result.bounty_id,
+        claimed_by: result.claimer,
+        crumbsup_claim_url: process.env.CRUMBSUP_URL || null,
+      }));
+    }
+
+    // POST /api/bounties/:id/submit — submit work for a bounty
+    const submitMatch = url.pathname.match(/^\/api\/bounties\/(\d+)\/submit$/);
+    if (submitMatch && req.method === "POST") {
+      let body;
+      try { body = await readBody(req); }
+      catch (e) {
+        res.writeHead(400);
+        return res.end(JSON.stringify({ ok: false, error: e.message }));
+      }
+      const bountyId = parseInt(submitMatch[1]);
+      const { address } = body;
+      if (!address) {
+        res.writeHead(400);
+        return res.end(JSON.stringify({ ok: false, error: "address_required" }));
+      }
+      const result = db.submitBountyWork(bountyId, address);
+      if (!result.ok) {
+        const statusCode = result.error === "not_found" ? 404 : 400;
+        res.writeHead(statusCode);
+        return res.end(JSON.stringify(result));
+      }
+      res.writeHead(200);
+      return res.end(JSON.stringify({ ok: true, bounty_id: result.bounty_id, status: "submitted" }));
+    }
+
+    // GET /api/bounties/:id — single bounty detail
+    const bountyDetailMatch = url.pathname.match(/^\/api\/bounties\/(\d+)$/);
+    if (bountyDetailMatch && req.method === "GET") {
+      const bountyId = parseInt(bountyDetailMatch[1]);
+      const bounty = db.getBounty(bountyId);
+      if (!bounty) {
+        res.writeHead(404);
+        return res.end(JSON.stringify({ ok: false, error: "not_found" }));
+      }
+      res.writeHead(200);
+      return res.end(JSON.stringify({ ok: true, data: bounty }));
     }
 
     res.writeHead(404);
