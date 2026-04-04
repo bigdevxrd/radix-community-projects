@@ -136,3 +136,41 @@ CALL_METHOD
   "${sanitize(extraData)}"
 ;`;
 }
+
+export interface OutcomeData {
+  proposal_id: number;
+  winner: string | null;
+  result: string;
+  total_votes: number;
+  timestamp: number;
+}
+
+export function updateOutcomeManifest(
+  manager: string,
+  adminBadge: string,
+  badgeId: string,
+  outcome: OutcomeData,
+  account: string
+): string {
+  const a = validateAddress(account, "account_rdx");
+  const ab = validateAddress(adminBadge, "resource_rdx");
+  const m = validateAddress(manager, "component_rdx");
+  const outcomeJson = sanitize(JSON.stringify(outcome));
+  return `CALL_METHOD
+  Address("${a}")
+  "lock_fee"
+  Decimal("10")
+;
+CALL_METHOD
+  Address("${a}")
+  "create_proof_of_amount"
+  Address("${ab}")
+  Decimal("1")
+;
+CALL_METHOD
+  Address("${m}")
+  "update_extra_data"
+  NonFungibleLocalId("${sanitize(badgeId)}")
+  "${outcomeJson}"
+;`;
+}

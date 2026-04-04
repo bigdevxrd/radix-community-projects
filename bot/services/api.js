@@ -35,7 +35,7 @@ function startApi() {
     } else {
       res.setHeader("Access-Control-Allow-Origin", "*"); // dev fallback
     }
-    res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
+    res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
     res.setHeader("Access-Control-Allow-Headers", "Content-Type");
 
     if (req.method === "OPTIONS") {
@@ -146,6 +146,61 @@ function startApi() {
         res.writeHead(500);
         return res.end(JSON.stringify({ ok: false, error: "gateway_error" }));
       }
+    }
+
+    // GET /api/outcomes-queue — proposals pending on-chain outcome recording
+    if (req.method === "GET" && url.pathname === "/api/outcomes-queue") {
+      const pending = db.getProposalsPendingOutcomeRecording();
+      const result = pending.map(p => {
+        const counts = db.getVoteCounts(p.id);
+        const total_votes = Object.values(counts).reduce((a, b) => a + b, 0);
+        const keys = Object.keys(counts);
+        const winner = keys.length > 0 ? keys.reduce((a, b) => counts[a] >= counts[b] ? a : b) : null;
+        return {
+          id: p.id,
+          title: p.title,
+          status: p.status,
+          ends_at: p.ends_at,
+          counts,
+          outcome_data: {
+            winner: winner || null,
+            result: p.status,
+            total_votes,
+          },
+        };
+      });
+      res.writeHead(200);
+      return res.end(JSON.stringify({ ok: true, data: result }));
+    }
+
+    // POST /api/outcomes-queue/:id/mark-recorded — mark proposal outcome as written on-chain
+    const markRecordedMatch = url.pathname.match(/^\/api\/outcomes-queue\/(\d+)\/mark-recorded$/);
+    if (req.method === "POST" && markRecordedMatch) {
+      const id = parseInt(markRecordedMatch[1]);
+      const proposal = db.getProposal(id);
+      if (!proposal) {
+        res.writeHead(404);
+        return res.end(JSON.stringify({ ok: false, error: "not_found" }));
+      }
+      let body = "";
+      req.on("data", chunk => { body += chunk; });
+      req.on("end", () => {
+        let parsed;
+        try { parsed = JSON.parse(body); } catch (e) {
+          res.writeHead(400);
+          return res.end(JSON.stringify({ ok: false, error: "invalid_json" }));
+        }
+        const { tx_hash, outcome_data } = parsed;
+        if (!tx_hash) {
+          res.writeHead(400);
+          return res.end(JSON.stringify({ ok: false, error: "tx_hash_required" }));
+        }
+        const outcomeJson = JSON.stringify(outcome_data || {});
+        db.markProposalRecordedOnChain(id, tx_hash, outcomeJson);
+        res.writeHead(200);
+        return res.end(JSON.stringify({ ok: true, id, tx_hash }));
+      });
+      return;
     }
 
     res.writeHead(404);
