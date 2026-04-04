@@ -78,6 +78,54 @@ function init() {
   const count = db.prepare("SELECT COUNT(*) as c FROM charter_params").get();
   if (count.c === 0) seedCharterParams();
 
+  // Bounty + escrow tracking
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS bounties (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      title TEXT NOT NULL,
+      description TEXT,
+      reward_xrd REAL NOT NULL,
+      reward_xp INTEGER DEFAULT 0,
+      status TEXT DEFAULT 'open',
+      creator_tg_id INTEGER NOT NULL,
+      assignee_tg_id INTEGER,
+      assignee_address TEXT,
+      github_issue TEXT,
+      github_pr TEXT,
+      proposal_id INTEGER,
+      created_at INTEGER DEFAULT (strftime('%s','now')),
+      assigned_at INTEGER,
+      submitted_at INTEGER,
+      verified_at INTEGER,
+      paid_at INTEGER,
+      paid_tx TEXT,
+      FOREIGN KEY (creator_tg_id) REFERENCES users(tg_id),
+      FOREIGN KEY (proposal_id) REFERENCES proposals(id)
+    );
+
+    CREATE TABLE IF NOT EXISTS escrow_wallet (
+      id INTEGER PRIMARY KEY CHECK (id = 1),
+      total_funded_xrd REAL DEFAULT 0,
+      total_released_xrd REAL DEFAULT 0
+    );
+
+    CREATE TABLE IF NOT EXISTS bounty_transactions (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      bounty_id INTEGER,
+      tx_type TEXT NOT NULL,
+      amount_xrd REAL NOT NULL,
+      tx_hash TEXT,
+      description TEXT,
+      created_at INTEGER DEFAULT (strftime('%s','now')),
+      FOREIGN KEY (bounty_id) REFERENCES bounties(id)
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_bounties_status ON bounties(status);
+  `);
+
+  // Seed escrow wallet singleton
+  db.prepare("INSERT OR IGNORE INTO escrow_wallet (id) VALUES (1)").run();
+
   // Indexes for 20k+ scale
   db.exec(`
     CREATE INDEX IF NOT EXISTS idx_users_address ON users(radix_address);
@@ -284,6 +332,80 @@ function getReadyParams() {
   });
 }
 
+// ── Bounties ───────────────────────────────────────────
+// Lifecycle: open → assigned → submitted → verified → paid
+
+function createBounty(title, rewardXrd, creatorTgId, opts = {}) {
+  const result = db.prepare(
+    "INSERT INTO bounties (title, description, reward_xrd, reward_xp, creator_tg_id, github_issue, proposal_id) VALUES (?, ?, ?, ?, ?, ?, ?)"
+  ).run(title, opts.description || null, rewardXrd, opts.rewardXp || 0, creatorTgId, opts.githubIssue || null, opts.proposalId || null);
+  return result.lastInsertRowid;
+}
+
+function getBounty(id) { return db.prepare("SELECT * FROM bounties WHERE id = ?").get(id); }
+function getOpenBounties() { return db.prepare("SELECT * FROM bounties WHERE status IN ('open','assigned') ORDER BY created_at DESC").all(); }
+function getAllBounties() { return db.prepare("SELECT * FROM bounties ORDER BY created_at DESC").all(); }
+
+function assignBounty(id, tgId, radixAddress) {
+  const now = Math.floor(Date.now() / 1000);
+  return db.prepare("UPDATE bounties SET assignee_tg_id = ?, assignee_address = ?, status = 'assigned', assigned_at = ? WHERE id = ? AND status = 'open'")
+    .run(tgId, radixAddress, now, id);
+}
+
+function submitBounty(id, githubPr) {
+  const now = Math.floor(Date.now() / 1000);
+  return db.prepare("UPDATE bounties SET github_pr = ?, status = 'submitted', submitted_at = ? WHERE id = ? AND status = 'assigned'")
+    .run(githubPr, now, id);
+}
+
+function verifyBounty(id) {
+  const now = Math.floor(Date.now() / 1000);
+  return db.prepare("UPDATE bounties SET status = 'verified', verified_at = ? WHERE id = ? AND status = 'submitted'")
+    .run(now, id);
+}
+
+function payBounty(id, txHash) {
+  const now = Math.floor(Date.now() / 1000);
+  const bounty = getBounty(id);
+  if (!bounty || bounty.status !== "verified") return { ok: false, error: "not_verified" };
+  db.prepare("UPDATE bounties SET paid_tx = ?, status = 'paid', paid_at = ? WHERE id = ?").run(txHash, now, id);
+  // Record in escrow ledger
+  db.prepare("UPDATE escrow_wallet SET total_released_xrd = total_released_xrd + ? WHERE id = 1").run(bounty.reward_xrd);
+  db.prepare("INSERT INTO bounty_transactions (bounty_id, tx_type, amount_xrd, tx_hash, description) VALUES (?, 'release', ?, ?, ?)")
+    .run(id, bounty.reward_xrd, txHash, "Bounty #" + id + " paid to " + (bounty.assignee_address || "unknown").slice(0, 20));
+  return { ok: true };
+}
+
+function fundEscrow(amountXrd, txHash) {
+  db.prepare("UPDATE escrow_wallet SET total_funded_xrd = total_funded_xrd + ? WHERE id = 1").run(amountXrd);
+  db.prepare("INSERT INTO bounty_transactions (bounty_id, tx_type, amount_xrd, tx_hash, description) VALUES (NULL, 'deposit', ?, ?, 'Escrow funded')")
+    .run(amountXrd, txHash);
+}
+
+function getEscrowBalance() {
+  const row = db.prepare("SELECT * FROM escrow_wallet WHERE id = 1").get();
+  return {
+    funded: row?.total_funded_xrd || 0,
+    released: row?.total_released_xrd || 0,
+    available: (row?.total_funded_xrd || 0) - (row?.total_released_xrd || 0),
+  };
+}
+
+function getBountyTransactions() {
+  return db.prepare("SELECT * FROM bounty_transactions ORDER BY created_at DESC LIMIT 50").all();
+}
+
+function getBountyStats() {
+  const open = db.prepare("SELECT COUNT(*) as c FROM bounties WHERE status = 'open'").get().c;
+  const assigned = db.prepare("SELECT COUNT(*) as c FROM bounties WHERE status = 'assigned'").get().c;
+  const submitted = db.prepare("SELECT COUNT(*) as c FROM bounties WHERE status = 'submitted'").get().c;
+  const verified = db.prepare("SELECT COUNT(*) as c FROM bounties WHERE status = 'verified'").get().c;
+  const paid = db.prepare("SELECT COUNT(*) as c FROM bounties WHERE status = 'paid'").get().c;
+  const totalPaid = db.prepare("SELECT COALESCE(SUM(reward_xrd), 0) as t FROM bounties WHERE status = 'paid'").get().t;
+  const escrow = getEscrowBalance();
+  return { open, assigned, submitted, verified, paid, totalPaid, escrow };
+}
+
 module.exports = {
   init,
   getUser, registerUser,
@@ -292,6 +414,8 @@ module.exports = {
   recordVote, getVoteCounts, hasVoted,
   getTotalVoters, getTotalProposals,
   getCharterParams, getCharterParam, resolveCharterParam, getCharterStatus, getReadyParams,
+  createBounty, getBounty, getOpenBounties, getAllBounties, assignBounty, submitBounty, verifyBounty, payBounty,
+  fundEscrow, getEscrowBalance, getBountyTransactions, getBountyStats,
 };
 
 function cancelProposal(proposalId, tgId) {

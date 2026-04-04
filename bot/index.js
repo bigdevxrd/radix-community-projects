@@ -505,6 +505,107 @@ bot.command("welcome", async (ctx) => {
   try { await ctx.pinChatMessage(msg.message_id); } catch(e) {}
 });
 
+// ── /bounty commands ───────────────────────────────────
+
+bot.command("bounty", async (ctx) => {
+  const args = ctx.message.text.split(" ").slice(1);
+  const sub = args[0];
+
+  if (!sub || sub === "list") {
+    const bounties = db.getOpenBounties();
+    if (bounties.length === 0) return ctx.reply("No open bounties. Admin: /bounty create <xrd> <title>");
+    let msg = "Open Bounties:\n\n";
+    bounties.forEach(b => {
+      msg += "#" + b.id + " [" + b.status + "] " + b.reward_xrd + " XRD — " + b.title + "\n";
+      if (b.assignee_tg_id) msg += "  Assigned to: " + (b.assignee_address?.slice(0, 20) || "?") + "...\n";
+    });
+    return ctx.reply(msg);
+  }
+
+  if (sub === "stats") {
+    const s = db.getBountyStats();
+    const e = db.getEscrowBalance();
+    return ctx.reply(
+      "Bounty Stats\n\n" +
+      "Open: " + s.open + " | Assigned: " + s.assigned + " | Submitted: " + s.submitted + "\n" +
+      "Verified: " + s.verified + " | Paid: " + s.paid + "\n" +
+      "Total paid: " + s.totalPaid + " XRD\n\n" +
+      "Escrow: " + e.available + " XRD available (" + e.funded + " funded, " + e.released + " released)"
+    );
+  }
+
+  if (sub === "create") {
+    const user = await requireBadge(ctx);
+    if (!user) return;
+    const xrd = parseInt(args[1]);
+    const title = args.slice(2).join(" ");
+    if (!xrd || !title) return ctx.reply("Usage: /bounty create <xrd> <title>");
+    if (title.length > 500) return ctx.reply("Title too long (max 500)");
+    const id = db.createBounty(title, xrd, ctx.from.id);
+    queueXpReward(user.radix_address, "propose");
+    ctx.reply("Bounty #" + id + " created: " + xrd + " XRD\n" + title);
+    return;
+  }
+
+  if (sub === "claim") {
+    const user = await requireBadge(ctx);
+    if (!user) return;
+    const id = parseInt(args[1]);
+    if (!id) return ctx.reply("Usage: /bounty claim <id>");
+    const result = db.assignBounty(id, ctx.from.id, user.radix_address);
+    if (result.changes === 0) return ctx.reply("Bounty not found or already claimed.");
+    ctx.reply("Bounty #" + id + " claimed! Submit your work with: /bounty submit " + id + " <github_pr_url>");
+    return;
+  }
+
+  if (sub === "submit") {
+    const id = parseInt(args[1]);
+    const pr = args[2];
+    if (!id || !pr) return ctx.reply("Usage: /bounty submit <id> <github_pr_url>");
+    const result = db.submitBounty(id, pr);
+    if (result.changes === 0) return ctx.reply("Bounty not found or not assigned to you.");
+    ctx.reply("Bounty #" + id + " submitted for review.\nPR: " + pr + "\nAwaiting admin verification.");
+    return;
+  }
+
+  if (sub === "verify") {
+    // Admin only — requires badge
+    const user = await requireBadge(ctx);
+    if (!user) return;
+    const id = parseInt(args[1]);
+    if (!id) return ctx.reply("Usage: /bounty verify <id>");
+    const result = db.verifyBounty(id);
+    if (result.changes === 0) return ctx.reply("Bounty not found or not submitted.");
+    const bounty = db.getBounty(id);
+    ctx.reply("Bounty #" + id + " verified! Ready for payment: " + bounty.reward_xrd + " XRD\nAdmin: /bounty pay " + id + " <tx_hash>");
+    return;
+  }
+
+  if (sub === "pay") {
+    const id = parseInt(args[1]);
+    const txHash = args[2];
+    if (!id || !txHash) return ctx.reply("Usage: /bounty pay <id> <tx_hash>");
+    const result = db.payBounty(id, txHash);
+    if (!result.ok) return ctx.reply("Error: " + result.error);
+    const bounty = db.getBounty(id);
+    queueXpReward(bounty.assignee_address, "propose");
+    ctx.reply("Bounty #" + id + " PAID! " + bounty.reward_xrd + " XRD\nTX: " + txHash.slice(0, 30) + "...\nAssignee earned XP.");
+    return;
+  }
+
+  if (sub === "fund") {
+    const xrd = parseFloat(args[1]);
+    const txHash = args[2];
+    if (!xrd || !txHash) return ctx.reply("Usage: /bounty fund <xrd_amount> <tx_hash>");
+    db.fundEscrow(xrd, txHash);
+    const e = db.getEscrowBalance();
+    ctx.reply("Escrow funded: +" + xrd + " XRD\nAvailable: " + e.available + " XRD\nTX: " + txHash.slice(0, 30) + "...");
+    return;
+  }
+
+  ctx.reply("Bounty commands:\n/bounty list — open bounties\n/bounty stats — stats + escrow\n/bounty create <xrd> <title>\n/bounty claim <id>\n/bounty submit <id> <pr_url>\n/bounty verify <id> (admin)\n/bounty pay <id> <tx_hash> (admin)\n/bounty fund <xrd> <tx_hash> (admin)");
+});
+
 // ── /charter ───────────────────────────────────────────
 
 bot.command("charter", (ctx) => {

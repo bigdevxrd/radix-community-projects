@@ -79,6 +79,22 @@ function startApi() {
       return res.end(JSON.stringify({ ok: true, data: result, page, limit }));
     }
 
+    // GET /api/bounties — bounty list + stats
+    if (url.pathname === "/api/bounties") {
+      const bounties = db.getAllBounties();
+      const stats = db.getBountyStats();
+      res.writeHead(200);
+      return res.end(JSON.stringify({ ok: true, data: { bounties, stats } }));
+    }
+
+    // GET /api/escrow — escrow balance + transactions
+    if (url.pathname === "/api/escrow") {
+      const balance = db.getEscrowBalance();
+      const transactions = db.getBountyTransactions();
+      res.writeHead(200);
+      return res.end(JSON.stringify({ ok: true, data: { balance, transactions } }));
+    }
+
     // GET /api/charter — charter parameter status
     if (url.pathname === "/api/charter") {
       const status = db.getCharterStatus();
