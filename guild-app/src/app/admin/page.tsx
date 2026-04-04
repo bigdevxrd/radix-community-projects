@@ -1,211 +1,209 @@
 "use client";
-import { Shell } from "../../components/Shell";
-import { useEffect, useRef, useState } from "react";
-import { RadixDappToolkit, RadixNetwork, DataRequestBuilder } from "@radixdlt/radix-dapp-toolkit";
+import { Shell, useWallet } from "../../components/Shell";
+import { StatusMessage } from "../../components/StatusMessage";
+import { useState } from "react";
+import { SCHEMAS, TIER_COLORS, ROYALTIES } from "../../lib/constants";
+import { lookupAllBadges } from "../../lib/gateway";
+import {
+  adminMintManifest,
+  updateTierManifest,
+  updateXpManifest,
+  revokeBadgeManifest,
+  updateExtraDataManifest,
+} from "../../lib/manifests";
+import type { BadgeInfo } from "../../lib/types";
 
-const DAPP_DEF = process.env.NEXT_PUBLIC_DAPP_DEF || "account_rdx128lggt503h7m2dhzqnrkkqv4zklxcjmdggr8xxtqy8e47p7fkmd8cx";
-const GATEWAY = "https://mainnet.radixdlt.com";
-
-const SCHEMAS = {
-  guild_member: {
-    manager: "component_rdx1cqarn8x6gk0806qyc9eee4nh6arzkm90xvnk0edqgtcfgghx5m2v2w",
-    badge: "resource_rdx1ntlzdss8nhd353h2lmu7d9cxhdajyzvstwp8kdnh53mk5vckfz9mj6",
-    tiers: ["member", "contributor", "builder", "steward", "elder"],
-    freeMint: true,
-  },
-  guild_role: {
-    manager: "component_rdx1crh7qlan0yuwrf8wkq7vg7tkrc6w3ftr00qqf4auktqv2uuwwg8lut",
-    badge: "resource_rdx1ntr6ye27zlyg2m06r90cletnwlzpedcv6yl0rhve64pp8prg0tw65e",
-    tiers: ["admin", "moderator", "contributor"],
-    freeMint: false,
-  },
-  guild_dev: {
-    manager: "component_rdx1cqarn8x6gk0806qyc9eee4nh6arzkm90xvnk0edqgtcfgghx5m2v2w",
-    badge: "resource_rdx1ntlzdss8nhd353h2lmu7d9cxhdajyzvstwp8kdnh53mk5vckfz9mj6",
-    tiers: ["member", "lead", "senior"],
-    freeMint: false,
-  },
+const inputStyle: React.CSSProperties = {
+  flex: 1, minWidth: 140, padding: "8px 12px", fontSize: 13,
+  background: "var(--input-bg)", border: "1px solid var(--input-border)",
+  borderRadius: "var(--radius-sm)", color: "var(--input-text)", fontFamily: "var(--font-mono)",
 };
 
-interface BadgeInfo {
-  id: string;
-  issued_to: string;
-  schema: string;
-  tier: string;
-  status: string;
-  xp: number;
-  level: string;
-}
+const btnStyle = (color: string): React.CSSProperties => ({
+  background: color, color: "#000", border: "none", padding: "8px 16px",
+  borderRadius: "var(--radius-sm)", fontWeight: 600, fontSize: 13, cursor: "pointer",
+  whiteSpace: "nowrap",
+});
 
 function AdminContent() {
-  const [account, setAccount] = useState<string | null>(null);
-  const [mounted, setMounted] = useState(false);
+  const { account, rdt } = useWallet();
   const [badges, setBadges] = useState<BadgeInfo[]>([]);
   const [loading, setLoading] = useState(false);
-  const [status, setStatus] = useState("");
   const [lookupAddr, setLookupAddr] = useState("");
-  const rdtRef = useRef<RadixDappToolkit | null>(null);
 
-  useEffect(() => {
-    setMounted(true);
-    const rdt = RadixDappToolkit({
-      dAppDefinitionAddress: DAPP_DEF,
-      networkId: RadixNetwork.Mainnet,
-      applicationName: "Radix Guild Admin",
-      applicationVersion: "1.0.0",
-    });
-    rdt.walletApi.setRequestData(DataRequestBuilder.accounts().atLeast(1));
-    rdt.walletApi.walletData$.subscribe((data) => {
-      const accts = data?.accounts ?? [];
-      setAccount(accts[0]?.address ?? null);
-    });
-    rdtRef.current = rdt;
-    return () => rdt.destroy();
-  }, []);
+  // Admin action states
+  const [actionStatus, setActionStatus] = useState("");
+  const [actionTxId, setActionTxId] = useState("");
+  const [actionError, setActionError] = useState("");
 
-  async function lookupBadges(address: string) {
+  async function handleLookup(address: string) {
     if (!address) return;
     setLoading(true);
     setBadges([]);
-    try {
-      const resp = await fetch(GATEWAY + "/state/entity/details", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          addresses: [address],
-          aggregation_level: "Vault",
-          opt_ins: { non_fungible_include_nfids: true },
-        }),
-      });
-      const data = await resp.json();
-      const nfResources = data.items?.[0]?.non_fungible_resources?.items || [];
-      const found: BadgeInfo[] = [];
-
-      for (const schema of Object.values(SCHEMAS)) {
-        const res = nfResources.find((r: any) => r.resource_address === schema.badge);
-        if (!res) continue;
-        const nfIds = res.vaults?.items?.[0]?.items || [];
-        for (const nfId of nfIds) {
-          const badgeResp = await fetch(GATEWAY + "/state/non-fungible/data", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ resource_address: schema.badge, non_fungible_ids: [nfId] }),
-          });
-          const bd = await badgeResp.json();
-          const nft = bd.non_fungible_ids?.[0];
-          if (nft?.data?.programmatic_json?.fields) {
-            const f = nft.data.programmatic_json.fields;
-            const g = (i: number) => f[i]?.value || f[i]?.fields?.[0]?.value || "-";
-            found.push({
-              id: nfId, issued_to: g(0), schema: g(1),
-              tier: g(3), status: g(4), xp: parseInt(g(6)) || 0, level: g(7),
-            });
-          }
-        }
-      }
-      setBadges(found);
-    } catch (e: any) {
-      setStatus("Error: " + e.message);
-    }
+    const found = await lookupAllBadges(address);
+    setBadges(found);
     setLoading(false);
   }
 
-  async function mintRoleBadge(username: string, tier: string) {
-    if (!rdtRef.current || !account) return;
-    setStatus("Minting role badge...");
-    const manager = SCHEMAS.guild_role.manager;
-    const manifest = `CALL_METHOD
-  Address("${manager}")
-  "mint_badge"
-  "${username}"
-  "${tier}"
-;
-CALL_METHOD
-  Address("${account}")
-  "deposit_batch"
-  Expression("ENTIRE_WORKTOP")
-;`;
+  async function sendAdminTx(manifest: string, label: string) {
+    if (!rdt || !account) return;
+    setActionStatus(`${label}...`);
+    setActionTxId("");
+    setActionError("");
+
     try {
-      const result = await rdtRef.current.walletApi.sendTransaction({
+      const result = await rdt.walletApi.sendTransaction({
         transactionManifest: manifest,
         version: 1,
       });
       if (result.isOk()) {
-        setStatus("Role badge minted! TX: " + result.value.transactionIntentHash.slice(0, 20) + "...");
+        setActionStatus(`${label} complete!`);
+        setActionTxId(result.value.transactionIntentHash);
       } else {
-        setStatus("Error: " + JSON.stringify(result.error));
+        setActionError(JSON.stringify(result.error));
+        setActionStatus("");
       }
-    } catch (e: any) {
-      setStatus("Error: " + e.message);
+    } catch (e: unknown) {
+      setActionError(e instanceof Error ? e.message : "Transaction failed");
+      setActionStatus("");
     }
   }
 
-  const s = (css: Record<string, any>) => css as React.CSSProperties;
-
   return (
-    <div style={s({ maxWidth: 800, margin: "0 auto", padding: 40, color: "#e8e8f0" })}>
-      <h1 style={s({ fontSize: 24, marginBottom: 8 })}>Badge Manager</h1>
-      <p style={s({ color: "#888", marginBottom: 24 })}>Manage Guild badges across all schemas</p>
+    <div>
+      <h1 style={{ fontSize: 22, marginBottom: 6 }}>Badge Manager</h1>
+      <p style={{ color: "var(--text-secondary)", marginBottom: 24, fontSize: 14 }}>
+        Manage Guild badges across all schemas
+      </p>
 
-      {mounted && <radix-connect-button />}
-
-      {/* Lookup */}
-      <div style={s({ marginTop: 24, padding: 20, background: "#12121a", borderRadius: 12, border: "1px solid #2a2a3d" })}>
-        <h2 style={s({ fontSize: 16, marginBottom: 12 })}>Look Up Badges</h2>
-        <div style={s({ display: "flex", gap: 8 })}>
+      {/* Badge Lookup */}
+      <div style={{ padding: 20, background: "var(--bg-surface)", borderRadius: "var(--radius)", border: "1px solid var(--border)" }}>
+        <h2 style={{ fontSize: 15, marginBottom: 12 }}>Look Up Badges</h2>
+        <div style={{ display: "flex", gap: 8 }}>
           <input
             value={lookupAddr}
-            onChange={(e) => setLookupAddr(e.target.value)}
+            onChange={e => setLookupAddr(e.target.value)}
             placeholder="account_rdx1..."
-            style={s({ flex: 1, background: "#1a1a26", border: "1px solid #2a2a3d", borderRadius: 6, padding: "8px 12px", color: "#e8e8f0", fontFamily: "monospace", fontSize: 13 })}
+            style={inputStyle}
           />
-          <button onClick={() => lookupBadges(lookupAddr)} style={s({ background: "#00e49f", color: "#0a0a0f", border: "none", padding: "8px 20px", borderRadius: 6, fontWeight: 600, cursor: "pointer" })}>
+          <button onClick={() => handleLookup(lookupAddr)} style={btnStyle("var(--accent)")}>
             Search
           </button>
         </div>
         {account && (
-          <button onClick={() => { setLookupAddr(account); lookupBadges(account); }} style={s({ marginTop: 8, background: "none", border: "1px solid #2a2a3d", color: "#888", padding: "4px 12px", borderRadius: 6, fontSize: 12, cursor: "pointer" })}>
+          <button
+            onClick={() => { setLookupAddr(account); handleLookup(account); }}
+            style={{ marginTop: 8, background: "none", border: "1px solid var(--border)", color: "var(--text-muted)", padding: "4px 12px", borderRadius: "var(--radius-sm)", fontSize: 12, cursor: "pointer" }}
+          >
             Check my badges
           </button>
         )}
-        {loading && <p style={s({ color: "#888", marginTop: 12 })}>Loading...</p>}
+        {loading && <p style={{ color: "var(--text-muted)", marginTop: 12 }}>Loading...</p>}
         {badges.length > 0 && (
-          <div style={s({ marginTop: 16 })}>
-            {badges.map((b) => (
-              <div key={b.id} style={s({ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 0", borderBottom: "1px solid #2a2a3d" })}>
+          <div style={{ marginTop: 16 }}>
+            {badges.map(b => (
+              <div key={b.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 0", borderBottom: "1px solid var(--border)" }}>
                 <div>
-                  <div style={s({ fontWeight: 600 })}>{b.issued_to}</div>
-                  <div style={s({ fontSize: 12, color: "#888" })}>{b.schema} | {b.id}</div>
+                  <div style={{ fontWeight: 600 }}>{b.issued_to}</div>
+                  <div style={{ fontSize: 12, color: "var(--text-muted)" }}>{b.schema_name} | {b.id}</div>
                 </div>
-                <div style={s({ textAlign: "right" })}>
-                  <span style={s({ background: "#00e49f1a", color: "#00e49f", padding: "2px 10px", borderRadius: 99, fontSize: 12, fontWeight: 700 })}>{b.tier}</span>
-                  <div style={s({ fontSize: 11, color: "#888", marginTop: 4 })}>XP: {b.xp} | {b.status}</div>
+                <div style={{ textAlign: "right" }}>
+                  <span style={{
+                    background: (TIER_COLORS[b.tier] || "var(--text-muted)") + "1a",
+                    color: TIER_COLORS[b.tier] || "var(--text-muted)",
+                    padding: "2px 10px", borderRadius: 99, fontSize: 12, fontWeight: 700,
+                  }}>
+                    {b.tier}
+                  </span>
+                  <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 4 }}>
+                    XP: {b.xp} | {b.status}
+                  </div>
                 </div>
               </div>
             ))}
           </div>
         )}
-        {!loading && badges.length === 0 && lookupAddr && <p style={s({ color: "#888", marginTop: 12 })}>No badges found for this address.</p>}
+        {!loading && badges.length === 0 && lookupAddr && (
+          <p style={{ color: "var(--text-muted)", marginTop: 12 }}>No badges found.</p>
+        )}
       </div>
 
-      {/* Mint Role Badge */}
-      <div style={s({ marginTop: 24, padding: 20, background: "#12121a", borderRadius: 12, border: "1px solid #2a2a3d" })}>
-        <h2 style={s({ fontSize: 16, marginBottom: 12 })}>Mint Role Badge (Admin Only)</h2>
-        <p style={s({ color: "#888", fontSize: 13, marginBottom: 12 })}>Requires admin badge in connected wallet.</p>
-        <MintRoleForm onMint={mintRoleBadge} />
-        {status && <p style={s({ marginTop: 12, color: status.includes("Error") ? "#ef4444" : "#00e49f", fontSize: 13 })}>{status}</p>}
+      {/* Admin Actions */}
+      <div style={{ marginTop: 24, padding: 20, background: "var(--bg-surface)", borderRadius: "var(--radius)", border: "1px solid var(--border)" }}>
+        <h2 style={{ fontSize: 15, marginBottom: 4 }}>Admin Actions</h2>
+        <p style={{ color: "var(--text-muted)", fontSize: 12, marginBottom: 16 }}>
+          Requires admin badge in connected wallet. Royalties apply.
+        </p>
+
+        <AdminMintForm onSubmit={(u, t) => {
+          const s = SCHEMAS.guild_role;
+          sendAdminTx(adminMintManifest(s.manager, s.adminBadge, u, t, account!), "Minting role badge");
+        }} />
+
+        <AdminActionForm
+          label="Update Tier"
+          cost={ROYALTIES.update_tier}
+          fields={[
+            { name: "badgeId", placeholder: "guild_member_1", label: "Badge ID" },
+            { name: "newTier", placeholder: "contributor", label: "New Tier", type: "select", options: SCHEMAS.guild_member.tiers },
+          ]}
+          onSubmit={(v) => {
+            sendAdminTx(updateTierManifest(SCHEMAS.guild_member.manager, SCHEMAS.guild_member.adminBadge, v.badgeId, v.newTier, account!), "Updating tier");
+          }}
+        />
+
+        <AdminActionForm
+          label="Update XP"
+          cost={ROYALTIES.update_xp}
+          fields={[
+            { name: "badgeId", placeholder: "guild_member_1", label: "Badge ID" },
+            { name: "newXp", placeholder: "100", label: "New XP", type: "number" },
+          ]}
+          onSubmit={(v) => {
+            sendAdminTx(updateXpManifest(SCHEMAS.guild_member.manager, SCHEMAS.guild_member.adminBadge, v.badgeId, parseInt(v.newXp), account!), "Updating XP");
+          }}
+        />
+
+        <AdminActionForm
+          label="Revoke Badge"
+          cost={ROYALTIES.revoke}
+          fields={[
+            { name: "badgeId", placeholder: "guild_member_1", label: "Badge ID" },
+            { name: "reason", placeholder: "Reason for revocation", label: "Reason" },
+          ]}
+          onSubmit={(v) => {
+            sendAdminTx(revokeBadgeManifest(SCHEMAS.guild_member.manager, SCHEMAS.guild_member.adminBadge, v.badgeId, v.reason, account!), "Revoking badge");
+          }}
+          color="var(--status-revoked)"
+        />
+
+        <AdminActionForm
+          label="Update Extra Data"
+          cost={ROYALTIES.update_extra_data}
+          fields={[
+            { name: "badgeId", placeholder: "guild_member_1", label: "Badge ID" },
+            { name: "data", placeholder: '{"role":"mod"}', label: "JSON Data" },
+          ]}
+          onSubmit={(v) => {
+            sendAdminTx(updateExtraDataManifest(SCHEMAS.guild_member.manager, SCHEMAS.guild_member.adminBadge, v.badgeId, v.data, account!), "Updating extra data");
+          }}
+        />
+
+        <StatusMessage status={actionStatus} txId={actionTxId} error={actionError} />
       </div>
 
       {/* Schemas Overview */}
-      <div style={s({ marginTop: 24, padding: 20, background: "#12121a", borderRadius: 12, border: "1px solid #2a2a3d" })}>
-        <h2 style={s({ fontSize: 16, marginBottom: 12 })}>Badge Schemas</h2>
+      <div style={{ marginTop: 24, padding: 20, background: "var(--bg-surface)", borderRadius: "var(--radius)", border: "1px solid var(--border)" }}>
+        <h2 style={{ fontSize: 15, marginBottom: 12 }}>Badge Schemas</h2>
         {Object.entries(SCHEMAS).map(([name, schema]) => (
-          <div key={name} style={s({ padding: "10px 0", borderBottom: "1px solid #2a2a3d" })}>
-            <div style={s({ display: "flex", justifyContent: "space-between" })}>
-              <span style={s({ fontWeight: 600 })}>{name}</span>
-              <span style={s({ fontSize: 12, color: schema.freeMint ? "#00e49f" : "#f59e0b" })}>{schema.freeMint ? "Free mint" : "Admin only"}</span>
+          <div key={name} style={{ padding: "10px 0", borderBottom: "1px solid var(--border)" }}>
+            <div style={{ display: "flex", justifyContent: "space-between" }}>
+              <span style={{ fontWeight: 600 }}>{name}</span>
+              <span style={{ fontSize: 12, color: schema.freeMint ? "var(--accent)" : "var(--status-pending)" }}>
+                {schema.freeMint ? "Free mint" : "Admin only"}
+              </span>
             </div>
-            <div style={s({ fontSize: 12, color: "#888", marginTop: 4 })}>
+            <div style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 4 }}>
               Tiers: {schema.tiers.join(" / ")} | Manager: {schema.manager.slice(0, 25)}...
             </div>
           </div>
@@ -215,24 +213,96 @@ CALL_METHOD
   );
 }
 
-function MintRoleForm({ onMint }: { onMint: (username: string, tier: string) => void }) {
+/* ── Reusable Admin Sub-Components ── */
+
+function AdminMintForm({ onSubmit }: { onSubmit: (username: string, tier: string) => void }) {
   const [username, setUsername] = useState("");
   const [tier, setTier] = useState("contributor");
   return (
-    <div style={{ display: "flex", gap: 8, flexWrap: "wrap" as const }}>
-      <input value={username} onChange={(e) => setUsername(e.target.value)} placeholder="Username" style={{ flex: 1, minWidth: 150, background: "#1a1a26", border: "1px solid #2a2a3d", borderRadius: 6, padding: "8px 12px", color: "#e8e8f0", fontFamily: "monospace", fontSize: 13 }} />
-      <select value={tier} onChange={(e) => setTier(e.target.value)} style={{ background: "#1a1a26", border: "1px solid #2a2a3d", borderRadius: 6, padding: "8px 12px", color: "#e8e8f0", fontSize: 13 }}>
-        <option value="contributor">Contributor</option>
-        <option value="moderator">Moderator</option>
-        <option value="admin">Admin</option>
-      </select>
-      <button onClick={() => username && onMint(username, tier)} style={{ background: "#f59e0b", color: "#0a0a0f", border: "none", padding: "8px 20px", borderRadius: 6, fontWeight: 600, cursor: "pointer" }}>
-        Mint Role
-      </button>
+    <div style={{ marginBottom: 16, padding: 14, background: "var(--bg-surface-2)", borderRadius: "var(--radius-sm)" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
+        <span style={{ fontSize: 13, fontWeight: 600 }}>Mint Role Badge</span>
+        <span style={{ fontSize: 11, color: "var(--status-pending)", fontFamily: "var(--font-mono)" }}>
+          {ROYALTIES.mint} XRD
+        </span>
+      </div>
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+        <input value={username} onChange={e => setUsername(e.target.value)} placeholder="Username" style={inputStyle} />
+        <select value={tier} onChange={e => setTier(e.target.value)} style={{ ...inputStyle, flex: "none", width: 140 }}>
+          {SCHEMAS.guild_role.tiers.map(t => <option key={t} value={t}>{t}</option>)}
+        </select>
+        <button onClick={() => username && onSubmit(username, tier)} style={btnStyle("var(--status-pending)")}>
+          Mint
+        </button>
+      </div>
     </div>
   );
 }
 
+interface FieldDef {
+  name: string;
+  placeholder: string;
+  label: string;
+  type?: "text" | "number" | "select";
+  options?: string[];
+}
+
+function AdminActionForm({
+  label, cost, fields, onSubmit, color = "var(--accent)",
+}: {
+  label: string;
+  cost: number;
+  fields: FieldDef[];
+  onSubmit: (values: Record<string, string>) => void;
+  color?: string;
+}) {
+  const [values, setValues] = useState<Record<string, string>>(
+    Object.fromEntries(fields.map(f => [f.name, ""]))
+  );
+
+  const update = (name: string, val: string) =>
+    setValues(prev => ({ ...prev, [name]: val }));
+
+  const allFilled = fields.every(f => values[f.name]?.trim());
+
+  return (
+    <div style={{ marginBottom: 16, padding: 14, background: "var(--bg-surface-2)", borderRadius: "var(--radius-sm)" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
+        <span style={{ fontSize: 13, fontWeight: 600 }}>{label}</span>
+        <span style={{ fontSize: 11, color: "var(--status-pending)", fontFamily: "var(--font-mono)" }}>
+          {cost} XRD
+        </span>
+      </div>
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+        {fields.map(f => f.type === "select" ? (
+          <select key={f.name} value={values[f.name]} onChange={e => update(f.name, e.target.value)} style={{ ...inputStyle, flex: "none", width: 140 }}>
+            {f.options?.map(o => <option key={o} value={o}>{o}</option>)}
+          </select>
+        ) : (
+          <input
+            key={f.name}
+            type={f.type || "text"}
+            value={values[f.name]}
+            onChange={e => update(f.name, e.target.value)}
+            placeholder={f.placeholder}
+            style={inputStyle}
+          />
+        ))}
+        <button
+          onClick={() => allFilled && onSubmit(values)}
+          disabled={!allFilled}
+          style={{
+            ...btnStyle(color),
+            opacity: allFilled ? 1 : 0.5,
+            cursor: allFilled ? "pointer" : "not-allowed",
+          }}
+        >
+          {label}
+        </button>
+      </div>
+    </div>
+  );
+}
 
 export default function AdminPage() {
   return <Shell><AdminContent /></Shell>;

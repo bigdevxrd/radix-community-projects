@@ -8,8 +8,8 @@ require("dotenv").config({ path: "/opt/sats/engine/.env" });
 const { signAndSubmit, waitForCommit } = require("/opt/sats/engine/src/radix/signer");
 
 const API_URL = process.env.BOT_API_URL || "http://localhost:3003";
-const MANAGER = "component_rdx1cqarn8x6gk0806qyc9eee4nh6arzkm90xvnk0edqgtcfgghx5m2v2w";
-const BADGE_NFT = "resource_rdx1ntlzdss8nhd353h2lmu7d9cxhdajyzvstwp8kdnh53mk5vckfz9mj6";
+const MANAGER = "component_rdx1cz0fkhg86y33afk5jztxeqdxjz6hhzexla7u8fkrwfx5ekn3xdlf3u";
+const BADGE_NFT = "resource_rdx1ntxy3j2zclysyr99h3ayrvh92h0rhy3tmmwst9j4r8akeaj4u0qcn4";
 const ACCOUNT = process.env.RADIX_ACCOUNT_ADDRESS;
 const GATEWAY = "https://mainnet.radixdlt.com";
 

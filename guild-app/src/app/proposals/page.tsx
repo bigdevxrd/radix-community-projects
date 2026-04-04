@@ -2,7 +2,7 @@
 import { Shell } from "../../components/Shell";
 import { useEffect, useState } from "react";
 
-const API = "https://156-67-219-105.sslip.io/api";
+const API = process.env.NEXT_PUBLIC_API_URL || "https://156-67-219-105.sslip.io/api";
 
 interface Proposal {
   id: number;

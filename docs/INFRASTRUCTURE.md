@@ -43,11 +43,11 @@ Everything needed to run the Guild. Designed for handover — any technical pers
 
 | Entity | Address |
 |--------|---------|
-| Package (v2, royalties) | package_rdx1p4hx8r99n3fdf60sa7868tw2p8grq7nar4uycr8nup4f3c7xwy2q90 |
-| BadgeFactory | component_rdx1cz0494dztlww72czpynshpcjvxu3hfnhvemet3ndfunum65z3ewp2h |
-| Guild Member Manager | component_rdx1cqarn8x6gk0806qyc9eee4nh6arzkm90xvnk0edqgtcfgghx5m2v2w |
+| Package (v2, royalties) | package_rdx1p5cs9vt3skd6zyvld9xfe54fqhshnu6zt5demv09l0prrvlqjwzvwu |
+| BadgeFactory | component_rdx1crtr4uccyeaccunvyw8nqf6unk2eknkhju4nh00re4mse93l22frmk |
+| Guild Member Manager | component_rdx1cz0fkhg86y33afk5jztxeqdxjz6hhzexla7u8fkrwfx5ekn3xdlf3u |
 | Guild Role Manager | component_rdx1crh7qlan0yuwrf8wkq7vg7tkrc6w3ftr00qqf4auktqv2uuwwg8lut |
-| Member Badge NFT | resource_rdx1ntlzdss8nhd353h2lmu7d9cxhdajyzvstwp8kdnh53mk5vckfz9mj6 |
+| Member Badge NFT | resource_rdx1ntxy3j2zclysyr99h3ayrvh92h0rhy3tmmwst9j4r8akeaj4u0qcn4 |
 | Role Badge NFT | resource_rdx1ntr6ye27zlyg2m06r90cletnwlzpedcv6yl0rhve64pp8prg0tw65e |
 | dApp Definition | account_rdx12yh4fwevmvnqgd3ppzau66cm9xu874srmrt9g2cye3fa8j8y78z9sq |
 

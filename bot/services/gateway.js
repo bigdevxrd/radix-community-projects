@@ -1,5 +1,5 @@
 const GATEWAY = "https://mainnet.radixdlt.com";
-const BADGE_NFT = process.env.BADGE_NFT || "resource_rdx1ntlzdss8nhd353h2lmu7d9cxhdajyzvstwp8kdnh53mk5vckfz9mj6";
+const BADGE_NFT = process.env.BADGE_NFT || "resource_rdx1ntxy3j2zclysyr99h3ayrvh92h0rhy3tmmwst9j4r8akeaj4u0qcn4";
 
 async function hasBadge(radixAddress) {
   try {
@@ -12,6 +12,7 @@ async function hasBadge(radixAddress) {
         opt_ins: { non_fungible_include_nfids: true },
       }),
     });
+    if (!resp.ok) return false;
     const data = await resp.json();
     const nfResources = data.items?.[0]?.non_fungible_resources?.items || [];
     return nfResources.some((r) => r.resource_address === BADGE_NFT);
@@ -32,6 +33,7 @@ async function getBadgeData(radixAddress) {
         opt_ins: { non_fungible_include_nfids: true },
       }),
     });
+    if (!resp.ok) return null;
     const data = await resp.json();
     const nfResources = data.items?.[0]?.non_fungible_resources?.items || [];
     const badgeRes = nfResources.find((r) => r.resource_address === BADGE_NFT);
@@ -48,6 +50,7 @@ async function getBadgeData(radixAddress) {
         non_fungible_ids: [nfIds[0]],
       }),
     });
+    if (!badgeResp.ok) return null;
     const badgeData = await badgeResp.json();
     const nft = badgeData.non_fungible_ids?.[0];
     if (!nft?.data?.programmatic_json?.fields) return null;

@@ -11,7 +11,7 @@ if (!TOKEN) { console.error("Set TG_BOT_TOKEN in .env"); process.exit(1); }
 db.init();
 const bot = new Bot(TOKEN);
 
-const PORTAL = "https://156-67-219-105.sslip.io/guild";
+const PORTAL = process.env.PORTAL_URL || "https://156-67-219-105.sslip.io/guild";
 const DAO_URL = "https://www.crumbsup.io/#dao?id=4db790d7-4d75-49ed-a2e0-3514743809e0";
 const GITHUB = "https://github.com/bigdevxrd/radix-community-projects";
 const HOURS = 72;
@@ -562,7 +562,13 @@ async function checkExpiredProposals() {
 }
 
 // Check every 5 minutes
-setInterval(checkExpiredProposals, 5 * 60 * 1000);
+setInterval(async () => {
+  try {
+    await checkExpiredProposals();
+  } catch (e) {
+    console.error("[AutoClose] Background task failed:", e.message);
+  }
+}, 5 * 60 * 1000);
 
 // ── Start ───────────────────────────────────────────────
 

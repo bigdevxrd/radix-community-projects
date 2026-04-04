@@ -7,8 +7,8 @@
 const API = process.env.API_URL || "https://156-67-219-105.sslip.io/api";
 const GUILD = process.env.GUILD_URL || "https://156-67-219-105.sslip.io/guild";
 const GATEWAY = "https://mainnet.radixdlt.com";
-const BADGE_NFT = "resource_rdx1ntlzdss8nhd353h2lmu7d9cxhdajyzvstwp8kdnh53mk5vckfz9mj6";
-const MANAGER = "component_rdx1cqarn8x6gk0806qyc9eee4nh6arzkm90xvnk0edqgtcfgghx5m2v2w";
+const BADGE_NFT = "resource_rdx1ntxy3j2zclysyr99h3ayrvh92h0rhy3tmmwst9j4r8akeaj4u0qcn4";
+const MANAGER = "component_rdx1cz0fkhg86y33afk5jztxeqdxjz6hhzexla7u8fkrwfx5ekn3xdlf3u";
 
 let passed = 0;
 let failed = 0;
