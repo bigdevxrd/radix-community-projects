@@ -4,12 +4,21 @@
  * Run via cron or manually: node scripts/xp-batch-signer.js
  */
 
-require("dotenv").config({ path: "/opt/sats/engine/.env" });
-const { signAndSubmit, waitForCommit } = require("/opt/sats/engine/src/radix/signer");
+/**
+ * SETUP REQUIRED:
+ * 1. The signer account must hold the v3 admin badge:
+ *    resource_rdx1t4qyd9hwyk6rpt4006fysaw68lkuy7almctwppvw7j9m8cqvzgn6ea
+ *    Transfer it from the dApp def account via Radix Dashboard.
+ * 2. The .env must have RADIX_ACCOUNT_ADDRESS set to the signer account.
+ */
+
+require("dotenv").config({ path: process.env.SIGNER_ENV || "/opt/sats/engine/.env" });
+const { signAndSubmit, waitForCommit } = require(process.env.SIGNER_MODULE || "/opt/sats/engine/src/radix/signer");
 
 const API_URL = process.env.BOT_API_URL || "http://localhost:3003";
 const MANAGER = "component_rdx1cz0fkhg86y33afk5jztxeqdxjz6hhzexla7u8fkrwfx5ekn3xdlf3u";
 const BADGE_NFT = "resource_rdx1ntxy3j2zclysyr99h3ayrvh92h0rhy3tmmwst9j4r8akeaj4u0qcn4";
+const ADMIN_BADGE = "resource_rdx1t4qyd9hwyk6rpt4006fysaw68lkuy7almctwppvw7j9m8cqvzgn6ea";
 const ACCOUNT = process.env.RADIX_ACCOUNT_ADDRESS;
 const GATEWAY = "https://mainnet.radixdlt.com";
 
@@ -48,6 +57,7 @@ async function main() {
 
   // Get pending XP from bot API
   const resp = await fetch(API_URL + "/api/xp-queue");
+  if (!resp.ok) { console.log("  Error fetching XP queue:", resp.status); return; }
   const { data: queue } = await resp.json();
 
   if (!queue || queue.length === 0) {
@@ -85,7 +95,7 @@ async function main() {
       'CALL_METHOD',
       '  Address("' + ACCOUNT + '")',
       '  "create_proof_of_amount"',
-      '  Address("resource_rdx1t4v0kenpa22tdkvsfz8crmrdfnzg0ad6x2u8f9ak0wk73arlzd6c69")',
+      '  Address("' + ADMIN_BADGE + '")',
       '  Decimal("1")',
       ';',
       'CALL_METHOD',
