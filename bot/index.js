@@ -78,6 +78,7 @@ bot.command("help", (ctx) => {
     "/temp <question> - Quick temperature check\n" +
     "/amend <id> <new text> - Refine a passed proposal\n" +
     "/proposals - List active\n" +
+    "/vote <id> - Open vote buttons for a proposal\n" +
     "/results <id> - Vote counts\n\n" +
     "📊 Info:\n" +
     "/dao - CrumbsUp DAO\n" +
@@ -324,9 +325,45 @@ bot.command("proposals", (ctx) => {
     const roundLabel = p.parent_id ? " (R" + p.round + " of #" + p.parent_id + ")" : "";
     const voteStr = Object.entries(counts).map(([k, v]) => k + ":" + v).join(" | ");
     text += "#" + p.id + " [" + type + "]" + roundLabel + " " + p.title + "\n";
-    text += "  " + (voteStr || "No votes yet") + " | Ends: " + ends + "\n\n";
+    text += "  " + (voteStr || "No votes yet") + " | Ends: " + ends + "\n";
+    text += "  Vote: /vote " + p.id + "\n\n";
   });
+  text += "Tap /vote <id> to open vote buttons for any proposal.";
   ctx.reply(text);
+});
+
+// ── /vote (re-post a proposal with vote buttons) ────────
+
+bot.command("vote", async (ctx) => {
+  const parts = ctx.message.text.split(" ");
+  const id = parseInt(parts[1]);
+  if (!id) return ctx.reply("Usage: /vote <proposal_id>");
+
+  const proposal = db.getProposal(id);
+  if (!proposal) return ctx.reply("Proposal #" + id + " not found.");
+  if (proposal.status !== "active") return ctx.reply("Proposal #" + id + " is " + proposal.status + ". Use /results " + id);
+
+  const counts = db.getVoteCounts(id);
+  const endsDate = new Date(proposal.ends_at * 1000).toISOString().slice(0, 16).replace("T", " ") + " UTC";
+
+  let keyboard;
+  if (proposal.type === "yesno") {
+    keyboard = buildYesNoKeyboard(id, counts);
+  } else {
+    keyboard = buildPollKeyboard(id, proposal.options || ["Yes!", "Maybe", "No"], counts);
+  }
+
+  const roundLabel = proposal.parent_id ? " (R" + proposal.round + " of #" + proposal.parent_id + ")" : "";
+  const type = proposal.type === "poll" ? "Poll" : proposal.type === "temp" ? "Temp" : "Vote";
+
+  const msg = await ctx.reply(
+    "[" + type + "] Proposal #" + id + roundLabel + "\n\n" +
+    proposal.title + "\n\n" +
+    "Ends: " + endsDate,
+    { reply_markup: keyboard }
+  );
+
+  db.updateProposalMessage(id, msg.message_id, ctx.chat.id);
 });
 
 // ── /results ────────────────────────────────────────────
