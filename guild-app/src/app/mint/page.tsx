@@ -23,6 +23,7 @@ function MintContent() {
   async function handleMint() {
     if (!rdt || !account || !username.trim()) return;
     if (username.length > 64) { setError("Username too long (max 64 chars)"); return; }
+    if (!/^[a-zA-Z0-9_-]+$/.test(username.trim())) { setError("Username can only contain letters, numbers, _ and -"); return; }
     setMinting(true); setStatus(""); setError(""); setTxId("");
     try {
       const manifest = publicMintManifest(MANAGER, username.trim(), account);

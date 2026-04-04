@@ -107,8 +107,8 @@ bot.command("help", (ctx) => {
 bot.command("register", (ctx) => {
   const parts = ctx.message.text.split(" ");
   const address = parts[1];
-  if (!address || !address.startsWith("account_rdx")) {
-    return ctx.reply("Usage: /register account_rdx1...");
+  if (!address || !/^account_rdx1[a-z0-9]{40,60}$/.test(address)) {
+    return ctx.reply("Invalid address format.\nUsage: /register account_rdx1...");
   }
   db.registerUser(ctx.from.id, address, ctx.from.username || ctx.from.first_name);
   ctx.reply(
@@ -156,6 +156,7 @@ bot.command("propose", async (ctx) => {
 
   const title = ctx.message.text.replace(/^\/propose\s*/, "").trim();
   if (!title) return ctx.reply("Usage: /propose Your proposal here");
+  if (title.length > 500) return ctx.reply("Title too long (max 500 chars, got " + title.length + ")");
 
   const id = db.createProposal(title, ctx.from.id, { type: "yesno", daysActive: 3 });
   const counts = db.getVoteCounts(id);
@@ -219,6 +220,7 @@ bot.command("temp", async (ctx) => {
 
   const question = ctx.message.text.replace(/^\/temp\s*/, "").trim();
   if (!question) return ctx.reply("Usage: /temp Your question here");
+  if (question.length > 500) return ctx.reply("Question too long (max 500 chars)");
 
   const options = ["Yes!", "Maybe", "No"];
   const id = db.createProposal(question, ctx.from.id, {

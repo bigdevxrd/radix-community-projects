@@ -1,126 +1,138 @@
+// Sanitize string values to prevent manifest injection
+function sanitize(val: string): string {
+  return val.replace(/["\\\n\r;]/g, "");
+}
+
+// Validate Radix address format
+function validateAddress(addr: string, prefix: string): string {
+  if (!addr.match(new RegExp(`^${prefix}[a-z0-9]{20,}`))) {
+    throw new Error(`Invalid ${prefix} address`);
+  }
+  return addr;
+}
+
 export function publicMintManifest(
   manager: string,
   username: string,
   account: string
 ): string {
+  const m = validateAddress(manager, "component_rdx");
+  const a = validateAddress(account, "account_rdx");
+  const u = sanitize(username);
   return `CALL_METHOD
-  Address("${manager}")
+  Address("${m}")
   "public_mint"
-  "${username}"
+  "${u}"
 ;
 CALL_METHOD
-  Address("${account}")
+  Address("${a}")
   "deposit_batch"
   Expression("ENTIRE_WORKTOP")
 ;`;
 }
 
 export function adminMintManifest(
-  manager: string,
-  adminBadge: string,
-  username: string,
-  tier: string,
-  account: string
+  manager: string, adminBadge: string, username: string, tier: string, account: string
 ): string {
+  const a = validateAddress(account, "account_rdx");
+  const ab = validateAddress(adminBadge, "resource_rdx");
+  const m = validateAddress(manager, "component_rdx");
   return `CALL_METHOD
-  Address("${account}")
+  Address("${a}")
   "create_proof_of_amount"
-  Address("${adminBadge}")
+  Address("${ab}")
   Decimal("1")
 ;
 CALL_METHOD
-  Address("${manager}")
+  Address("${m}")
   "mint_badge"
-  "${username}"
-  "${tier}"
+  "${sanitize(username)}"
+  "${sanitize(tier)}"
 ;
 CALL_METHOD
-  Address("${account}")
+  Address("${a}")
   "deposit_batch"
   Expression("ENTIRE_WORKTOP")
 ;`;
 }
 
 export function updateTierManifest(
-  manager: string,
-  adminBadge: string,
-  badgeId: string,
-  newTier: string,
-  account: string
+  manager: string, adminBadge: string, badgeId: string, newTier: string, account: string
 ): string {
+  const a = validateAddress(account, "account_rdx");
+  const ab = validateAddress(adminBadge, "resource_rdx");
+  const m = validateAddress(manager, "component_rdx");
   return `CALL_METHOD
-  Address("${account}")
+  Address("${a}")
   "create_proof_of_amount"
-  Address("${adminBadge}")
+  Address("${ab}")
   Decimal("1")
 ;
 CALL_METHOD
-  Address("${manager}")
+  Address("${m}")
   "update_tier"
-  NonFungibleLocalId("${badgeId}")
-  "${newTier}"
+  NonFungibleLocalId("${sanitize(badgeId)}")
+  "${sanitize(newTier)}"
 ;`;
 }
 
 export function updateXpManifest(
-  manager: string,
-  adminBadge: string,
-  badgeId: string,
-  newXp: number,
-  account: string
+  manager: string, adminBadge: string, badgeId: string, newXp: number, account: string
 ): string {
+  const a = validateAddress(account, "account_rdx");
+  const ab = validateAddress(adminBadge, "resource_rdx");
+  const m = validateAddress(manager, "component_rdx");
+  const xp = Math.max(0, Math.floor(newXp));
   return `CALL_METHOD
-  Address("${account}")
+  Address("${a}")
   "create_proof_of_amount"
-  Address("${adminBadge}")
+  Address("${ab}")
   Decimal("1")
 ;
 CALL_METHOD
-  Address("${manager}")
+  Address("${m}")
   "update_xp"
-  NonFungibleLocalId("${badgeId}")
-  ${newXp}u64
+  NonFungibleLocalId("${sanitize(badgeId)}")
+  ${xp}u64
 ;`;
 }
 
 export function revokeBadgeManifest(
-  manager: string,
-  adminBadge: string,
-  badgeId: string,
-  reason: string,
-  account: string
+  manager: string, adminBadge: string, badgeId: string, reason: string, account: string
 ): string {
+  const a = validateAddress(account, "account_rdx");
+  const ab = validateAddress(adminBadge, "resource_rdx");
+  const m = validateAddress(manager, "component_rdx");
   return `CALL_METHOD
-  Address("${account}")
+  Address("${a}")
   "create_proof_of_amount"
-  Address("${adminBadge}")
+  Address("${ab}")
   Decimal("1")
 ;
 CALL_METHOD
-  Address("${manager}")
+  Address("${m}")
   "revoke_badge"
-  NonFungibleLocalId("${badgeId}")
-  "${reason}"
+  NonFungibleLocalId("${sanitize(badgeId)}")
+  "${sanitize(reason)}"
 ;`;
 }
 
 export function updateExtraDataManifest(
-  manager: string,
-  adminBadge: string,
-  badgeId: string,
-  extraData: string,
-  account: string
+  manager: string, adminBadge: string, badgeId: string, extraData: string, account: string
 ): string {
+  const a = validateAddress(account, "account_rdx");
+  const ab = validateAddress(adminBadge, "resource_rdx");
+  const m = validateAddress(manager, "component_rdx");
   return `CALL_METHOD
-  Address("${account}")
+  Address("${a}")
   "create_proof_of_amount"
-  Address("${adminBadge}")
+  Address("${ab}")
   Decimal("1")
 ;
 CALL_METHOD
-  Address("${manager}")
+  Address("${m}")
   "update_extra_data"
-  NonFungibleLocalId("${badgeId}")
-  "${extraData}"
+  NonFungibleLocalId("${sanitize(badgeId)}")
+  "${sanitize(extraData)}"
 ;`;
 }

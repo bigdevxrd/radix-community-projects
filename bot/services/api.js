@@ -4,15 +4,50 @@ const db = require("../db");
 const { hasBadge, getBadgeData } = require("./gateway");
 
 const API_PORT = parseInt(process.env.API_PORT || "3003");
+const ALLOWED_ORIGINS = (process.env.CORS_ORIGINS || "").split(",").filter(Boolean);
+
+// Simple in-memory rate limiter
+const rateBuckets = new Map();
+function rateLimit(ip, maxPerMin = 60) {
+  const now = Date.now();
+  const bucket = rateBuckets.get(ip) || { count: 0, reset: now + 60000 };
+  if (now > bucket.reset) { bucket.count = 0; bucket.reset = now + 60000; }
+  bucket.count++;
+  rateBuckets.set(ip, bucket);
+  return bucket.count <= maxPerMin;
+}
+// Clean old buckets every 5 min
+setInterval(() => {
+  const now = Date.now();
+  for (const [ip, b] of rateBuckets) { if (now > b.reset + 60000) rateBuckets.delete(ip); }
+}, 300000);
 
 function startApi() {
   const server = http.createServer(async (req, res) => {
     res.setHeader("Content-Type", "application/json");
-    res.setHeader("Access-Control-Allow-Origin", "*");
+
+    // CORS — allow configured origins or * in dev
+    const origin = req.headers.origin;
+    if (ALLOWED_ORIGINS.length > 0) {
+      if (origin && ALLOWED_ORIGINS.includes(origin)) {
+        res.setHeader("Access-Control-Allow-Origin", origin);
+      }
+    } else {
+      res.setHeader("Access-Control-Allow-Origin", "*"); // dev fallback
+    }
+    res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
+    res.setHeader("Access-Control-Allow-Headers", "Content-Type");
 
     if (req.method === "OPTIONS") {
       res.writeHead(200);
       return res.end();
+    }
+
+    // Rate limiting
+    const clientIp = req.headers["x-forwarded-for"]?.split(",")[0]?.trim() || req.socket.remoteAddress;
+    if (!rateLimit(clientIp)) {
+      res.writeHead(429);
+      return res.end(JSON.stringify({ ok: false, error: "rate_limit_exceeded" }));
     }
 
     const url = new URL(req.url, "http://localhost");
