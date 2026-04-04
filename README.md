@@ -1,6 +1,9 @@
-# Radix Guild
+# Radix Governance
 
-Community governance for Radix — propose ideas, vote on them, earn XP. All from Telegram.
+Governance infrastructure for the Radix community. Propose ideas, vote on them, earn XP — all from Telegram.
+
+**Radix Governance** = the system (badges, voting, proposals, XP, on-chain identity)
+**Radix Guild** = the first community using it (members, contributors, stewards)
 
 ## How It Works
 

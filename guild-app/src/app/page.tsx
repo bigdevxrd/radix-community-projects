@@ -19,8 +19,8 @@ function Dashboard() {
       {!connected ? (
         <Card className="bg-gradient-to-br from-card to-muted">
           <CardContent className="px-6 py-12 text-center">
-            <h1 className="text-2xl font-bold mb-3">Radix Guild</h1>
-            <p className="text-muted-foreground text-sm mb-6">Community governance infrastructure for Radix</p>
+            <h1 className="text-2xl font-bold mb-3">Radix Governance</h1>
+            <p className="text-muted-foreground text-sm mb-6">Governance infrastructure for the Radix community</p>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-lg mx-auto">
               {[
                 { title: "On-chain Badges", desc: "NFT membership in your wallet" },

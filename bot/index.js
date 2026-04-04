@@ -61,21 +61,21 @@ async function requireBadge(ctx) {
 
 bot.command("start", (ctx) => {
   ctx.reply(
-    "Welcome to the Radix Guild\n\n" +
-    "A community governance system for Radix. Propose ideas, vote on them, earn XP — all from Telegram.\n\n" +
-    "Your badge is a free on-chain NFT that gives you voting power. Higher XP = more influence.\n\n" +
-    "Get started in 3 steps:\n" +
+    "Radix Governance\n\n" +
+    "Governance infrastructure for the Radix community. Propose ideas, vote on them, earn XP — all from Telegram.\n\n" +
+    "The Radix Guild is the first community using this system. Your badge is a free on-chain NFT that gives you voting power.\n\n" +
+    "Get started:\n" +
     "1. /register <your_account_rdx1...> — link your wallet\n" +
     "2. Mint a free badge: " + PORTAL + "/mint\n" +
     "   (Connect wallet → enter a username → confirm in wallet)\n" +
     "3. Come back here and /proposals to see what to vote on\n\n" +
-    "/help for all commands"
+    "/help for all commands | /faq for questions"
   );
 });
 
 bot.command("help", (ctx) => {
   ctx.reply(
-    "Radix Guild Bot\n\n" +
+    "Radix Governance Bot\n\n" +
 
     "Getting Started:\n" +
     "/register <address> — Link your Radix Wallet\n" +
@@ -508,10 +508,12 @@ bot.command("welcome", async (ctx) => {
 // ── /faq ───────────────────────────────────────────────
 
 bot.command("faq", (ctx) => ctx.reply(
-  "Radix Guild — FAQ\n\n" +
+  "Radix Governance — FAQ\n\n" +
 
   "What is this?\n" +
-  "A community governance system for Radix. Propose ideas, vote on them, earn XP — all from Telegram.\n\n" +
+  "Radix Governance is the system — badges, voting, proposals, XP rewards.\n" +
+  "Radix Guild is the community — the people who use it.\n" +
+  "The Guild is the first community running on this governance infrastructure.\n\n" +
 
   "Do I need XRD to vote?\n" +
   "No. Voting is off-ledger (stored in the bot database). It's completely free.\n\n" +

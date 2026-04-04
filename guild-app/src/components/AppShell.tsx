@@ -33,7 +33,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <div className="max-w-4xl mx-auto px-4 sm:px-6 flex items-center justify-between h-14">
           <div className="flex items-center gap-2 sm:gap-3">
             <Link href="/" className="font-bold text-base text-foreground no-underline">
-              Radix Guild
+              Radix Governance
             </Link>
             {badge && (
               <Badge variant="secondary" className="hidden sm:inline-flex font-mono text-[11px]"

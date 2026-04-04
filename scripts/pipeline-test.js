@@ -36,7 +36,7 @@ async function fetchJson(url, opts) {
 }
 
 async function main() {
-  console.log("\n  Radix Guild Pipeline Test\n");
+  console.log("\n  Radix Governance Pipeline Test\n");
 
   // ── API Tests ──────────────────────────────────────
 
@@ -107,7 +107,7 @@ async function main() {
     const resp = await fetch(GUILD);
     assert(resp.ok, "should be 200");
     const html = await resp.text();
-    assert(html.includes("Radix Guild"), "should contain title");
+    assert(html.includes("Radix Governance"), "should contain title");
   });
 
   await test("GET /guild/proposals returns 200", async () => {

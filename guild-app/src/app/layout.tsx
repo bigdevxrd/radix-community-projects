@@ -3,8 +3,8 @@ import "./globals.css";
 import { Providers } from "./providers";
 
 export const metadata: Metadata = {
-  title: "Radix Guild",
-  description: "Community governance infrastructure for Radix",
+  title: "Radix Governance",
+  description: "Governance infrastructure for the Radix community",
 };
 
 export default function RootLayout({
