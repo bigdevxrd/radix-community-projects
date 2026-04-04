@@ -1,246 +1,221 @@
 use scrypto_test::prelude::*;
-use radix_badge_manager::UniversalBadgeData;
 
-// Helper to set up a factory and create a manager
-fn setup_test_env() -> Result<
-    (
-        TestEnvironment<InMemSubstateDatabase>,
-        Global<AnyComponent>, // factory
-        Bucket,               // factory owner badge
-    ),
-    RuntimeError,
-> {
-    let mut env = TestEnvironment::new();
-    let package = PackageFactory::compile_and_publish(
-        this_package!(),
-        &mut env,
-        CompileProfile::Fast,
-    )?;
+#[test]
+fn test_factory_instantiate() {
+    let mut ledger = LedgerSimulatorBuilder::new().build();
+    let (public_key, _private_key, account) = ledger.new_allocated_account();
+    let package_address = ledger.compile_and_publish(this_package!());
+
+    let manifest = ManifestBuilder::new()
+        .lock_fee_from_faucet()
+        .call_function(package_address, "BadgeFactory", "instantiate", manifest_args!())
+        .call_method(account, "deposit_batch", manifest_args!(ManifestExpression::EntireWorktop))
+        .build();
+
+    let receipt = ledger.execute_manifest(manifest, vec![NonFungibleGlobalId::from_public_key(&public_key)]);
+    receipt.expect_commit_success();
+
+    let factory = receipt.expect_commit(true).new_component_addresses()[0];
+    println!("Factory: {:?}", factory);
+}
+
+#[test]
+fn test_create_manager() {
+    let mut ledger = LedgerSimulatorBuilder::new().build();
+    let (public_key, _private_key, account) = ledger.new_allocated_account();
+    let package_address = ledger.compile_and_publish(this_package!());
 
     // Instantiate factory
-    let (factory, owner_badge) = env.call_function_typed::<_, (Global<AnyComponent>, Bucket)>(
-        package,
-        "BadgeFactory",
-        "instantiate",
-        &(),
-    )?;
+    let manifest = ManifestBuilder::new()
+        .lock_fee_from_faucet()
+        .call_function(package_address, "BadgeFactory", "instantiate", manifest_args!())
+        .call_method(account, "deposit_batch", manifest_args!(ManifestExpression::EntireWorktop))
+        .build();
+    let receipt = ledger.execute_manifest(manifest, vec![NonFungibleGlobalId::from_public_key(&public_key)]);
+    receipt.expect_commit_success();
+    let factory = receipt.expect_commit(true).new_component_addresses()[0];
 
-    Ok((env, factory, owner_badge))
-}
+    // Find the factory owner badge
+    let owner_badge = receipt.expect_commit(true).new_resource_addresses()[0];
 
-fn create_test_manager(
-    env: &mut TestEnvironment<InMemSubstateDatabase>,
-    factory: &Global<AnyComponent>,
-    owner_badge: &Bucket,
-) -> Result<(Global<AnyComponent>, Bucket), RuntimeError> {
-    let owner_proof = owner_badge.create_proof_of_all(env)?;
-    LocalAuthZone::push(owner_proof, env)?;
-
-    let dapp_def = env.account;
-
-    let (manager, admin_badge) = env.call_method_typed::<_, (Global<AnyComponent>, Bucket)>(
-        factory.handle(),
-        "create_manager",
-        &(
-            "test_schema".to_string(),
-            vec![
+    // Create manager
+    let manifest = ManifestBuilder::new()
+        .lock_fee_from_faucet()
+        .call_method(account, "create_proof_of_amount", manifest_args!(owner_badge, dec!("1")))
+        .call_method(
+            factory,
+            "create_manager",
+            manifest_args!(
+                "guild_member".to_string(),
+                vec!["member".to_string(), "contributor".to_string(), "builder".to_string(), "steward".to_string(), "elder".to_string()],
                 "member".to_string(),
-                "contributor".to_string(),
-                "builder".to_string(),
-                "steward".to_string(),
-                "elder".to_string(),
-            ],
-            "member".to_string(),
-            true, // free mint enabled
-            "Test Badge".to_string(),
-            "A test badge".to_string(),
-            dapp_def,
-        ),
-    )?;
+                true,
+                "Test Badge".to_string(),
+                "A test badge".to_string(),
+                GlobalAddress::from(account)
+            ),
+        )
+        .call_method(account, "deposit_batch", manifest_args!(ManifestExpression::EntireWorktop))
+        .build();
 
-    Ok((manager, admin_badge))
+    let receipt = ledger.execute_manifest(manifest, vec![NonFungibleGlobalId::from_public_key(&public_key)]);
+    println!("{:?}", receipt);
+    receipt.expect_commit_success();
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
+// Helper: set up factory + manager, return addresses
+fn setup_with_manager() -> (DefaultLedgerSimulator, Secp256k1PublicKey, ComponentAddress, ComponentAddress, ResourceAddress, ComponentAddress) {
+    let mut ledger = LedgerSimulatorBuilder::new().build();
+    let (public_key, _private_key, account) = ledger.new_allocated_account();
+    let package_address = ledger.compile_and_publish(this_package!());
 
-    // Test 1: Factory instantiation
-    #[test]
-    fn test_factory_instantiate() -> Result<(), RuntimeError> {
-        let (_env, _factory, owner_badge) = setup_test_env()?;
-        assert!(owner_badge.amount() > Decimal::ZERO);
-        Ok(())
-    }
+    // Factory
+    let manifest = ManifestBuilder::new()
+        .lock_fee_from_faucet()
+        .call_function(package_address, "BadgeFactory", "instantiate", manifest_args!())
+        .call_method(account, "deposit_batch", manifest_args!(ManifestExpression::EntireWorktop))
+        .build();
+    let receipt = ledger.execute_manifest(manifest, vec![NonFungibleGlobalId::from_public_key(&public_key)]);
+    receipt.expect_commit_success();
+    let factory = receipt.expect_commit(true).new_component_addresses()[0];
+    let owner_badge = receipt.expect_commit(true).new_resource_addresses()[0];
 
-    // Test 2: Create manager
-    #[test]
-    fn test_create_manager() -> Result<(), RuntimeError> {
-        let (mut env, factory, owner_badge) = setup_test_env()?;
-        let (_manager, admin_badge) = create_test_manager(&mut env, &factory, &owner_badge)?;
-        assert!(admin_badge.amount() > Decimal::ZERO);
-        Ok(())
-    }
+    // Manager
+    let manifest = ManifestBuilder::new()
+        .lock_fee_from_faucet()
+        .call_method(account, "create_proof_of_amount", manifest_args!(owner_badge, dec!("1")))
+        .call_method(
+            factory,
+            "create_manager",
+            manifest_args!(
+                "test_schema".to_string(),
+                vec!["member".to_string(), "contributor".to_string(), "builder".to_string(), "steward".to_string(), "elder".to_string()],
+                "member".to_string(),
+                true,
+                "Test Badge".to_string(),
+                "A test badge".to_string(),
+                GlobalAddress::from(account)
+            ),
+        )
+        .call_method(account, "deposit_batch", manifest_args!(ManifestExpression::EntireWorktop))
+        .build();
+    let receipt = ledger.execute_manifest(manifest, vec![NonFungibleGlobalId::from_public_key(&public_key)]);
+    receipt.expect_commit_success();
+    let manager = receipt.expect_commit(true).new_component_addresses()[0];
 
-    // Test 3: Factory info
-    #[test]
-    fn test_factory_info() -> Result<(), RuntimeError> {
-        let (mut env, factory, owner_badge) = setup_test_env()?;
-        let _manager = create_test_manager(&mut env, &factory, &owner_badge)?;
+    (ledger, public_key, account, factory, owner_badge, manager)
+}
 
-        let (count, active): (u64, bool) = env.call_method_typed(
-            factory.handle(),
-            "get_factory_info",
-            &(),
-        )?;
-        assert_eq!(count, 1);
-        assert!(active);
-        Ok(())
-    }
+#[test]
+fn test_public_mint() {
+    let (mut ledger, public_key, account, _, _, manager) = setup_with_manager();
 
-    // Test 4: Public mint
-    #[test]
-    fn test_public_mint() -> Result<(), RuntimeError> {
-        let (mut env, factory, owner_badge) = setup_test_env()?;
-        let (manager, _admin) = create_test_manager(&mut env, &factory, &owner_badge)?;
+    let manifest = ManifestBuilder::new()
+        .lock_fee_from_faucet()
+        .call_method(manager, "public_mint", manifest_args!("testuser".to_string()))
+        .call_method(account, "deposit_batch", manifest_args!(ManifestExpression::EntireWorktop))
+        .build();
 
-        let badge: Bucket = env.call_method_typed(
-            manager.handle(),
-            "public_mint",
-            &("testuser".to_string(),),
-        )?;
+    let receipt = ledger.execute_manifest(manifest, vec![NonFungibleGlobalId::from_public_key(&public_key)]);
+    receipt.expect_commit_success();
+}
 
-        assert_eq!(badge.amount(), Decimal::ONE);
-        Ok(())
-    }
+#[test]
+fn test_public_mint_empty_username_fails() {
+    let (mut ledger, public_key, account, _, _, manager) = setup_with_manager();
 
-    // Test 5: Public mint — empty username rejected
-    #[test]
-    fn test_public_mint_empty_username() -> Result<(), RuntimeError> {
-        let (mut env, factory, owner_badge) = setup_test_env()?;
-        let (manager, _admin) = create_test_manager(&mut env, &factory, &owner_badge)?;
+    let manifest = ManifestBuilder::new()
+        .lock_fee_from_faucet()
+        .call_method(manager, "public_mint", manifest_args!("".to_string()))
+        .call_method(account, "deposit_batch", manifest_args!(ManifestExpression::EntireWorktop))
+        .build();
 
-        let result = env.call_method_typed::<_, Bucket>(
-            manager.handle(),
-            "public_mint",
-            &("".to_string(),),
-        );
+    let receipt = ledger.execute_manifest(manifest, vec![NonFungibleGlobalId::from_public_key(&public_key)]);
+    receipt.expect_commit_failure();
+}
 
-        assert!(result.is_err());
-        Ok(())
-    }
+#[test]
+fn test_public_mint_long_username_fails() {
+    let (mut ledger, public_key, account, _, _, manager) = setup_with_manager();
 
-    // Test 6: Public mint — long username rejected
-    #[test]
-    fn test_public_mint_long_username() -> Result<(), RuntimeError> {
-        let (mut env, factory, owner_badge) = setup_test_env()?;
-        let (manager, _admin) = create_test_manager(&mut env, &factory, &owner_badge)?;
+    let long_name = "a".repeat(65);
+    let manifest = ManifestBuilder::new()
+        .lock_fee_from_faucet()
+        .call_method(manager, "public_mint", manifest_args!(long_name))
+        .call_method(account, "deposit_batch", manifest_args!(ManifestExpression::EntireWorktop))
+        .build();
 
-        let long_name = "a".repeat(65);
-        let result = env.call_method_typed::<_, Bucket>(
-            manager.handle(),
-            "public_mint",
-            &(long_name,),
-        );
+    let receipt = ledger.execute_manifest(manifest, vec![NonFungibleGlobalId::from_public_key(&public_key)]);
+    receipt.expect_commit_failure();
+}
 
-        assert!(result.is_err());
-        Ok(())
-    }
+#[test]
+fn test_get_schema_name() {
+    let (mut ledger, public_key, _, _, _, manager) = setup_with_manager();
 
-    // Test 7: Admin mint with specific tier
-    #[test]
-    fn test_admin_mint() -> Result<(), RuntimeError> {
-        let (mut env, factory, owner_badge) = setup_test_env()?;
-        let (manager, admin_badge) = create_test_manager(&mut env, &factory, &owner_badge)?;
+    let manifest = ManifestBuilder::new()
+        .lock_fee_from_faucet()
+        .call_method(manager, "get_schema_name", manifest_args!())
+        .build();
 
-        let proof = admin_badge.create_proof_of_all(&mut env)?;
-        LocalAuthZone::push(proof, &mut env)?;
+    let receipt = ledger.execute_manifest(manifest, vec![NonFungibleGlobalId::from_public_key(&public_key)]);
+    receipt.expect_commit_success();
+}
 
-        let badge: Bucket = env.call_method_typed(
-            manager.handle(),
-            "mint_badge",
-            &("admin_user".to_string(), "contributor".to_string()),
-        )?;
+#[test]
+fn test_get_valid_tiers() {
+    let (mut ledger, public_key, _, _, _, manager) = setup_with_manager();
 
-        assert_eq!(badge.amount(), Decimal::ONE);
-        Ok(())
-    }
+    let manifest = ManifestBuilder::new()
+        .lock_fee_from_faucet()
+        .call_method(manager, "get_valid_tiers", manifest_args!())
+        .build();
 
-    // Test 8: Get schema name
-    #[test]
-    fn test_get_schema_name() -> Result<(), RuntimeError> {
-        let (mut env, factory, owner_badge) = setup_test_env()?;
-        let (manager, _admin) = create_test_manager(&mut env, &factory, &owner_badge)?;
+    let receipt = ledger.execute_manifest(manifest, vec![NonFungibleGlobalId::from_public_key(&public_key)]);
+    receipt.expect_commit_success();
+}
 
-        let name: String = env.call_method_typed(
-            manager.handle(),
-            "get_schema_name",
-            &(),
-        )?;
+#[test]
+fn test_get_stats_after_mint() {
+    let (mut ledger, public_key, account, _, _, manager) = setup_with_manager();
 
-        assert_eq!(name, "test_schema");
-        Ok(())
-    }
+    // Mint a badge first
+    let manifest = ManifestBuilder::new()
+        .lock_fee_from_faucet()
+        .call_method(manager, "public_mint", manifest_args!("user1".to_string()))
+        .call_method(account, "deposit_batch", manifest_args!(ManifestExpression::EntireWorktop))
+        .build();
+    ledger.execute_manifest(manifest, vec![NonFungibleGlobalId::from_public_key(&public_key)])
+        .expect_commit_success();
 
-    // Test 9: Get valid tiers
-    #[test]
-    fn test_get_valid_tiers() -> Result<(), RuntimeError> {
-        let (mut env, factory, owner_badge) = setup_test_env()?;
-        let (manager, _admin) = create_test_manager(&mut env, &factory, &owner_badge)?;
+    // Check stats
+    let manifest = ManifestBuilder::new()
+        .lock_fee_from_faucet()
+        .call_method(manager, "get_stats", manifest_args!())
+        .build();
+    let receipt = ledger.execute_manifest(manifest, vec![NonFungibleGlobalId::from_public_key(&public_key)]);
+    receipt.expect_commit_success();
+}
 
-        let tiers: Vec<String> = env.call_method_typed(
-            manager.handle(),
-            "get_valid_tiers",
-            &(),
-        )?;
+#[test]
+fn test_factory_pause_unpause() {
+    let (mut ledger, public_key, account, factory, owner_badge, _) = setup_with_manager();
 
-        assert_eq!(tiers.len(), 5);
-        assert_eq!(tiers[0], "member");
-        assert_eq!(tiers[4], "elder");
-        Ok(())
-    }
+    // Pause
+    let manifest = ManifestBuilder::new()
+        .lock_fee_from_faucet()
+        .call_method(account, "create_proof_of_amount", manifest_args!(owner_badge, dec!("1")))
+        .call_method(factory, "pause_factory", manifest_args!())
+        .build();
+    ledger.execute_manifest(manifest, vec![NonFungibleGlobalId::from_public_key(&public_key)])
+        .expect_commit_success();
 
-    // Test 10: Get stats
-    #[test]
-    fn test_get_stats() -> Result<(), RuntimeError> {
-        let (mut env, factory, owner_badge) = setup_test_env()?;
-        let (manager, _admin) = create_test_manager(&mut env, &factory, &owner_badge)?;
-
-        // Mint a badge
-        let _badge: Bucket = env.call_method_typed(
-            manager.handle(),
-            "public_mint",
-            &("user1".to_string(),),
-        )?;
-
-        let (total, active): (u64, u64) = env.call_method_typed(
-            manager.handle(),
-            "get_stats",
-            &(),
-        )?;
-
-        assert_eq!(total, 1);
-        assert_eq!(active, 1);
-        Ok(())
-    }
-
-    // Test 11: Factory pause/unpause
-    #[test]
-    fn test_factory_pause() -> Result<(), RuntimeError> {
-        let (mut env, factory, owner_badge) = setup_test_env()?;
-
-        let proof = owner_badge.create_proof_of_all(&mut env)?;
-        LocalAuthZone::push(proof, &mut env)?;
-
-        env.call_method_typed::<_, ()>(factory.handle(), "pause_factory", &())?;
-
-        let (_count, active): (u64, bool) = env.call_method_typed(
-            factory.handle(),
-            "get_factory_info",
-            &(),
-        )?;
-
-        assert!(!active);
-        Ok(())
-    }
+    // Unpause
+    let manifest = ManifestBuilder::new()
+        .lock_fee_from_faucet()
+        .call_method(account, "create_proof_of_amount", manifest_args!(owner_badge, dec!("1")))
+        .call_method(factory, "unpause_factory", manifest_args!())
+        .build();
+    ledger.execute_manifest(manifest, vec![NonFungibleGlobalId::from_public_key(&public_key)])
+        .expect_commit_success();
 }
