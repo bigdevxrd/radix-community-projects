@@ -214,7 +214,7 @@ Break-even at Year 2 on the scaled cost structure.
 
 ## Team
 
-**Big Dev (bigdevxrd)** — Builder in the Radix ecosystem. Shipped the Sats DeFi trading platform, Badge Manager on mainnet, Guild portal and TG bot. Open source contributor.
+**Big Dev (bigdevxrd)** — Builder in the Radix ecosystem. Shipped DeFi trading tools, Badge Manager on mainnet, Governance dashboard and TG bot. Open source contributor.
 
 The Guild is designed to be community-maintained from day one. The framework is open. The repos are public. The invitation is standing: pick a manager, build it, propose it.
 

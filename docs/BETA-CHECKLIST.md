@@ -84,7 +84,7 @@ Use template in `docs/TESTER-INVITE.md` (DM version)
 
 ### Recommended
 - [ ] Custom domain (radixguild.com or similar)
-- [ ] Dedicated VPS (separate from Sats)
+- [ ] Dedicated VPS (guild-only)
 - [ ] Automated XP batch signer (cron job)
 - [ ] Monitoring/alerting
 

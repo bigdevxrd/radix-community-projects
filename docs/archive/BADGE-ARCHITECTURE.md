@@ -119,19 +119,19 @@ GuildBadgeManager
 - ❌ On-chain escrow (use manual escrow for MVP)
 - ❌ Grid game (gamification comes after governance works)
 - ❌ Agent manager (AI agents come later)
-- ❌ Custom portal (fix the existing one or use Sats dashboard)
+- ❌ Custom portal (fix the existing one or use governance dashboard)
 
 ## 9. What We DO Build
 
 1. **GuildBadgeManager** — Scrypto blueprint (one file, proven pattern)
-2. **Badge minting** — from a WORKING interface (Sats dashboard page, or direct manifest)
+2. **Badge minting** — from a WORKING interface (governance dashboard page, or direct manifest)
 3. **Badge reading** — Gateway API queries (already works in the portal)
 4. **XP updates** — admin method called by VPS signer
 5. **Integration with CrumbsUp** — badge resource as governance token (already done)
 
 ## 10. Next Steps
 
-1. **Fix the mint** — either fix the portal or add a mint page to the Sats dashboard
+1. **Fix the mint** — either fix the portal or add a mint page to the governance dashboard
 2. **Verify badge reading** — confirm the dashboard shows badge data after mint
 3. **Test voting on CrumbsUp** — confirm badge holders can vote
 4. **Add XP update script** — VPS signer script to award XP for verified actions
