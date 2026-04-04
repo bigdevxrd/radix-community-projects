@@ -6,8 +6,8 @@ const pendingProposals = new Map();
 
 function setupWizard(bot, db, requireBadge, buildYesNoKeyboard, buildPollKeyboard, endsLabel, queueXpReward) {
 
-  // Step 1: /propose starts the wizard
-  bot.command("propose", async (ctx) => {
+  // Step 1: /propose or /new starts the wizard
+  async function startWizard(ctx) {
     const user = await requireBadge(ctx);
     if (!user) return;
 
@@ -23,7 +23,9 @@ function setupWizard(bot, db, requireBadge, buildYesNoKeyboard, buildPollKeyboar
       "Step 1/4: What type?",
       { reply_markup: kb }
     );
-  });
+  }
+  bot.command("propose", startWizard);
+  bot.command("new", startWizard);
 
   // Step 1 callback: type selected
   bot.callbackQuery(/^wizard_type_(.+)$/, async (ctx) => {
