@@ -1,1 +1,0 @@
-class AddOnChainRecordingTrackingToProposals < ActiveRecord::Migration[6.0]\n  def change\n    add_column :proposals, :recorded_on_chain, :boolean, default: false\n    add_column :proposals, :on_chain_tx, :text\n    add_column :proposals, :on_chain_outcome_json, :text\n  end\nend
