@@ -1,4 +1,4 @@
-// Single source of truth for all addresses and config
+// Single source of truth for all addresses, config, and ecosystem links
 
 export const DAPP_DEF =
   process.env.NEXT_PUBLIC_DAPP_DEF ||
@@ -22,6 +22,16 @@ export const API_URL =
   process.env.NEXT_PUBLIC_API_URL ||
   "https://156-67-219-105.sslip.io/api";
 
+// ── Schemas ──
+
+export interface SchemaConfig {
+  manager: string;
+  badge: string;
+  adminBadge: string;
+  tiers: string[];
+  freeMint: boolean;
+}
+
 export const SCHEMAS: Record<string, SchemaConfig> = {
   guild_member: {
     manager: MANAGER,
@@ -39,22 +49,17 @@ export const SCHEMAS: Record<string, SchemaConfig> = {
   },
 };
 
-export interface SchemaConfig {
-  manager: string;
-  badge: string;
-  adminBadge: string;
-  tiers: string[];
-  freeMint: boolean;
-}
+// ── Tier Colors (CSS variable references) ──
+// BUG FIX: was var(--c-tier-*), CSS defines --g-tier-*
 
 export const TIER_COLORS: Record<string, string> = {
-  member: "var(--c-tier-member)",
-  contributor: "var(--c-tier-contributor)",
-  builder: "var(--c-tier-builder)",
-  steward: "var(--c-tier-steward)",
-  elder: "var(--c-tier-elder)",
-  admin: "var(--c-tier-elder)",
-  moderator: "var(--c-tier-steward)",
+  member: "var(--g-tier-member)",
+  contributor: "var(--g-tier-contributor)",
+  builder: "var(--g-tier-builder)",
+  steward: "var(--g-tier-steward)",
+  elder: "var(--g-tier-elder)",
+  admin: "var(--g-tier-elder)",
+  moderator: "var(--g-tier-steward)",
 };
 
 export const XP_THRESHOLDS: Record<string, number> = {
@@ -72,3 +77,35 @@ export const ROYALTIES = {
   update_xp: 0.1,
   update_extra_data: 0.1,
 };
+
+// ── Ecosystem Links (edit these arrays to add/remove integrations) ──
+
+export interface EcosystemLink {
+  name: string;
+  desc: string;
+  url: string;
+  pill: string;
+  status: string;
+}
+
+export const ECOSYSTEM_LINKS: EcosystemLink[] = [
+  { name: "RadixTalk", desc: "Community forum", url: "https://radixtalk.com", pill: "g-pill-blue", status: "Link" },
+  { name: "Radix Wiki", desc: "DAO Charter + ecosystem", url: "https://radix.wiki/ecosystem", pill: "g-pill-blue", status: "Link" },
+  { name: "CrumbsUp", desc: "Guild DAO governance", url: "https://www.crumbsup.io/#dao?id=4db790d7-4d75-49ed-a2e0-3514743809e0", pill: "g-pill-green", status: "Active" },
+  { name: "Muan Protocol", desc: "DAO infrastructure", url: "https://muanprotocol.com", pill: "g-pill-yellow", status: "Pending" },
+  { name: "Consultation v2", desc: "On-chain governance", url: "https://consultation.radixdlt.com", pill: "g-pill-yellow", status: "Planned" },
+  { name: "Astra AI", desc: "Astrolescent assistant", url: "https://astrolescent.com", pill: "g-pill-purple", status: "Planned" },
+];
+
+export const QUICK_ACTIONS = [
+  { label: "Vote on Proposals", href: "https://t.me/radix_guild_bot", desc: "Open TG bot", external: true },
+  { label: "View Proposals", href: "/proposals", desc: "Live results", external: false },
+  { label: "Manage Badges", href: "/admin", desc: "Admin panel", external: false },
+];
+
+export const RESOURCES = [
+  { name: "GitHub", url: "https://github.com/bigdevxrd/radix-community-projects", desc: "Source code (MIT)" },
+  { name: "Charter", url: "https://radix.wiki/ideas/radix-network-dao-charter", desc: "DAO Charter draft" },
+  { name: "Guild Discourse", url: "https://radix-guild.discourse.group", desc: "Discussion forum" },
+  { name: "MVD Discussion", url: "https://radixtalk.com/t/design-our-minimum-viable-dao-mvd/2258", desc: "Minimum Viable DAO" },
+];

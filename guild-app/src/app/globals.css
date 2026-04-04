@@ -9,9 +9,9 @@
 /* ── Dark Theme (default) ── */
 :root, [data-theme="dark"] {
   --g-base: #09090b;
-  --g-surface: #18181b;
-  --g-surface-2: #27272a;
-  --g-border: #3f3f46;
+  --g-surface: #1c1c22;
+  --g-surface-2: #2a2a32;
+  --g-border: #4a4a55;
   --g-border-focus: #52525b;
   --g-text: #f4f4f5;
   --g-text-2: #a1a1aa;
@@ -80,11 +80,13 @@ a:hover { color: var(--g-accent-hover); }
 /* Cards */
 .g-card {
   background: var(--g-surface);
-  border: 1px solid var(--g-border);
+  border: 2px solid var(--g-border);
   border-radius: 10px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.3);
 }
 .g-card-inner {
   background: var(--g-surface-2);
+  border: 1px solid var(--g-border);
   border-radius: 6px;
 }
 
@@ -146,6 +148,13 @@ a:hover { color: var(--g-accent-hover); }
 /* XP bar */
 .g-xp-track { background: var(--g-surface-2); }
 .g-xp-fill { background: var(--g-accent); }
+
+/* Hero */
+.g-hero {
+  background: linear-gradient(135deg, var(--g-surface) 0%, var(--g-surface-2) 100%);
+  border: 2px solid var(--g-border);
+  border-radius: 10px;
+}
 
 /* Alert */
 .g-alert-ok { background: var(--g-accent-dim); color: var(--g-accent); border: 1px solid rgba(0,228,159,0.2); }
