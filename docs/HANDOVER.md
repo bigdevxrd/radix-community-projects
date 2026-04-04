@@ -98,7 +98,7 @@ Host guild-vps
 **Restore from backup:**
 ```bash
 pm2 stop guild-bot
-cp /opt/guild/backups/rad-dao-YYYYMMDD.db /opt/guild/bot/rad-dao.db
+cp /opt/guild/backups/guild-YYYYMMDD.db /opt/guild/bot/guild.db
 pm2 start guild-bot
 ```
 

@@ -70,7 +70,7 @@ Domain will be added later — Caddy config is one-line change.
 |------|-------|
 | Bot | @radix_guild_bot |
 | Framework | Grammy v1.41.1 |
-| Database | SQLite (rad-dao.db) |
+| Database | SQLite (guild.db) |
 | Token | In /opt/guild/bot/.env |
 | Commands | /start /register /badge /propose /poll /temp /amend /cancel /proposals /results /history /stats /dao /help /source /charter /mvd /wiki /talk |
 

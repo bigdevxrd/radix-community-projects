@@ -133,8 +133,8 @@ Or manually update these files:
 | `docs/INFRASTRUCTURE.md` | Address table |
 
 VPS `.env` files:
-- `/opt/rad-dao/bot/.env` → `BADGE_NFT=resource_rdx1...`
-- `/opt/rad-dao/guild-app/.env.local` → `NEXT_PUBLIC_BADGE_NFT=...`, `NEXT_PUBLIC_MANAGER=...`
+- `/opt/guild/bot/.env` → `BADGE_NFT=resource_rdx1...`
+- `/opt/guild/guild-app/.env.local` → `NEXT_PUBLIC_BADGE_NFT=...`, `NEXT_PUBLIC_MANAGER=...`
 
 ## Step 7: Verify
 

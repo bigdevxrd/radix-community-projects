@@ -22,7 +22,7 @@
 - .env files contain only tokens, not in git
 - SSH on non-standard port (2222)
 - Caddy handles TLS automatically
-- All services run as non-root user (sats)
+- All services run as non-root user (guild)
 
 ## Immediate Fixes
 
@@ -40,7 +40,7 @@ Both Next.js and the API server should bind to localhost. Caddy reverse-proxies 
 
 | Item | Location | Last Backup |
 |------|----------|-------------|
-| Bot database | /opt/rad-dao/bot/backups/ | 2026-04-04 |
+| Bot database | /opt/guild/bot/backups/ | 2026-04-04 |
 | Bot code | GitHub (latest commit) | Current |
 | Scrypto code | GitHub | Current |
 | Portal code | GitHub | Current |
@@ -50,7 +50,7 @@ Both Next.js and the API server should bind to localhost. Caddy reverse-proxies 
 Add cron job for daily database backup:
 ```bash
 # Add to crontab
-0 3 * * * cp /opt/rad-dao/bot/rad-dao.db /opt/rad-dao/bot/backups/rad-dao.db.$(date +\%Y\%m\%d)
+0 3 * * * cp /opt/guild/bot/guild.db /opt/guild/bot/backups/guild.db.$(date +\%Y\%m\%d)
 # Keep last 7 days
-0 4 * * * find /opt/rad-dao/bot/backups -name "*.db.*" -mtime +7 -delete
+0 4 * * * find /opt/guild/bot/backups -name "*.db.*" -mtime +7 -delete
 ```

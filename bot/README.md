@@ -83,7 +83,7 @@ pm2 start index.js --name guild-bot  # production
 | Variable | Description | Default |
 |----------|-------------|---------|
 | TG_BOT_TOKEN | Bot token from @BotFather | Required |
-| BOT_DB_PATH | SQLite path | ./rad-dao.db |
+| BOT_DB_PATH | SQLite path | ./guild.db |
 | BADGE_NFT | Badge resource address | Mainnet guild_member |
 
 ## License

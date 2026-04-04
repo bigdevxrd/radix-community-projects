@@ -94,7 +94,7 @@ systemctl restart caddy
 cat > /opt/guild/backups/backup.sh <<'BACKUP'
 #!/bin/bash
 DATE=$(date +%Y%m%d_%H%M)
-cp /opt/guild/bot/rad-dao.db /opt/guild/backups/rad-dao-${DATE}.db 2>/dev/null || true
+cp /opt/guild/bot/guild.db /opt/guild/backups/guild-${DATE}.db 2>/dev/null || true
 cp /opt/guild/bot/.env /opt/guild/backups/bot-env-${DATE}.bak 2>/dev/null || true
 # Keep 7 days
 find /opt/guild/backups/ -name "*.db" -mtime +7 -delete

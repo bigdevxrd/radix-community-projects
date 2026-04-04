@@ -107,8 +107,8 @@ function main() {
 
   console.log("\n  Total: " + totalReplacements + " replacements across " + FILES.length + " files");
   console.log("\n  Remember to also update:");
-  console.log("    - VPS /opt/rad-dao/bot/.env (BADGE_NFT)");
-  console.log("    - VPS /opt/rad-dao/guild-app/.env.local (NEXT_PUBLIC_BADGE_NFT, NEXT_PUBLIC_MANAGER)");
+  console.log("    - VPS /opt/guild/bot/.env (BADGE_NFT)");
+  console.log("    - VPS /opt/guild/guild-app/.env.local (NEXT_PUBLIC_BADGE_NFT, NEXT_PUBLIC_MANAGER)");
   console.log("    - Memory file: .claude/projects/.../memory/project_mainnet_addresses.md");
   console.log();
 }

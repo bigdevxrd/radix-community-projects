@@ -1,7 +1,7 @@
 const Database = require("better-sqlite3");
 const path = require("path");
 
-const DB_PATH = process.env.BOT_DB_PATH || path.join(__dirname, "rad-dao.db");
+const DB_PATH = process.env.BOT_DB_PATH || path.join(__dirname, "guild.db");
 
 let db;
 

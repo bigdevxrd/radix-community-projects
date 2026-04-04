@@ -21,9 +21,9 @@ deploy_bot() {
   echo "[bot] Syncing..."
   rsync -avz --delete \
     --exclude node_modules \
-    --exclude rad-dao.db \
-    --exclude rad-dao.db-shm \
-    --exclude rad-dao.db-wal \
+    --exclude guild.db \
+    --exclude guild.db-shm \
+    --exclude guild.db-wal \
     --exclude .env \
     --exclude backups \
     -e ssh \
