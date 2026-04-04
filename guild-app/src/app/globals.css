@@ -82,11 +82,13 @@ a:hover { color: var(--g-accent-hover); }
   background: var(--g-surface);
   border: 1px solid var(--g-border);
   border-radius: 10px;
+  box-shadow: 0 0 0 1px var(--g-border);
 }
 .g-card-inner {
   background: var(--g-surface-2);
-  border: 1px solid var(--g-border);
   border-radius: 6px;
+  padding: 1px;
+  box-shadow: inset 0 0 0 1px var(--g-border);
 }
 
 /* Inputs */

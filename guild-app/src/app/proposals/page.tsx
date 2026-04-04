@@ -96,6 +96,12 @@ function ProposalsContent() {
                     })}
                   </div>
                 )}
+                {p.status === "active" && (
+                  <a href="https://t.me/radix_guild_bot" target="_blank"
+                    className="g-btn inline-block mt-3 px-4 py-1.5 text-xs no-underline">
+                    Vote in Telegram
+                  </a>
+                )}
               </CardBody>
             </Card>
           ))}
