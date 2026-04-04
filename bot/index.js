@@ -89,6 +89,10 @@ bot.command("help", (ctx) => {
     "/proposals - List active\n" +
     "/vote <id> - Open vote buttons for a proposal\n" +
     "/results <id> - Vote counts\n\n" +
+    "💰 Bounties:\n" +
+    "/bounties - List open bounties + XRD pool\n" +
+    "/bounties <id> - Bounty details\n" +
+    "/my_bounties - Your claimed & completed bounties\n\n" +
     "📊 Info:\n" +
     "/dao - CrumbsUp DAO\n" +
     "/cancel <id> - Cancel your proposal\n" +
@@ -513,6 +517,96 @@ bot.command("mvd", (ctx) => ctx.reply("Minimum Viable DAO discussion:\nhttps://r
 bot.command("wiki", (ctx) => ctx.reply("Radix Wiki:\nhttps://radix.wiki/ecosystem"));
 bot.command("talk", (ctx) => ctx.reply("RadixTalk forum:\nhttps://radixtalk.com"));
 
+// ── /bounties [id] — List open bounties or view one ─────
+
+const CATEGORY_EMOJI = { tutorial: "📚", design: "🎨", social: "📢", bug: "🐛", translation: "🌍", other: "💡" };
+
+function formatDate(unixTs) {
+  return new Date(unixTs * 1000).toISOString().slice(0, 10);
+}
+
+function daysLeft(endsAt) {
+  const diff = endsAt - Math.floor(Date.now() / 1000);
+  if (diff <= 0) return "expired";
+  const d = Math.floor(diff / 86400);
+  return d + " day" + (d === 1 ? "" : "s") + " left";
+}
+
+bot.command("bounties", (ctx) => {
+  const parts = ctx.message.text.split(" ");
+  const idArg = parseInt(parts[1]);
+
+  if (idArg) {
+    // Single bounty detail
+    const b = db.getBounty(idArg);
+    if (!b) return ctx.reply("Bounty #" + idArg + " not found.");
+    const emoji = CATEGORY_EMOJI[b.category] || "💡";
+    let text = emoji + " Bounty #" + b.id + ": " + b.title + "\n";
+    text += "Reward: " + b.reward_xrd + " XRD\n";
+    text += "Status: " + b.status + "\n";
+    text += "Category: " + b.category + "\n";
+    text += "Due: " + formatDate(b.ends_at) + " (" + daysLeft(b.ends_at) + ")\n";
+    if (b.description) text += "\n" + b.description + "\n";
+    if (b.claimed_by_address) text += "\nClaimed by: " + b.claimed_by_address.slice(0, 20) + "...";
+    if (b.crumbsup_url) text += "\n\nClaim on CrumbsUp:\n" + b.crumbsup_url;
+    return ctx.reply(text);
+  }
+
+  // List open bounties
+  const open = db.getOpenBounties(20);
+  if (open.length === 0) return ctx.reply("No open bounties right now.\n\nCheck back soon or /dao to visit the Guild DAO.");
+
+  const escrow = db.getEscrowWallet();
+  let text = "Active Bounties (" + open.length + " open | " + escrow.available_xrd.toFixed(0) + " XRD pool)\n\n";
+
+  open.forEach((b, i) => {
+    const emoji = CATEGORY_EMOJI[b.category] || "💡";
+    text += emoji + " " + (i + 1) + ". " + b.title + " (" + b.reward_xrd + " XRD) — Due: " + formatDate(b.ends_at) + "\n";
+    if (b.description) text += "   " + b.description.slice(0, 80) + (b.description.length > 80 ? "..." : "") + "\n";
+    if (b.crumbsup_url) text += "   " + b.crumbsup_url + "\n";
+    text += "\n";
+  });
+  text += "/bounties <id> for details";
+  ctx.reply(text);
+});
+
+// ── /my-bounties — Show user's claimed + completed bounties ─
+
+bot.command("my_bounties", async (ctx) => {
+  const user = db.getUser(ctx.from.id);
+  if (!user) return ctx.reply("Register first: /register <account_rdx1...>");
+
+  const all = db.getAllBounties(500);
+  const mine = all.filter(b => b.claimed_by_address === user.radix_address);
+  if (mine.length === 0) return ctx.reply("You haven't claimed any bounties yet.\n\n/bounties to see open bounties.");
+
+  const active = mine.filter(b => ["claimed", "submitted", "approved"].includes(b.status));
+  const completed = mine.filter(b => b.status === "paid");
+  const totalEarned = completed.reduce((sum, b) => sum + b.reward_xrd, 0);
+
+  let text = "Your Bounties:\n\n";
+  if (active.length > 0) {
+    text += "Active (" + active.length + "):\n";
+    active.forEach(b => {
+      const emoji = CATEGORY_EMOJI[b.category] || "💡";
+      text += emoji + " #" + b.id + ": " + b.title + " (" + b.reward_xrd + " XRD) — " + b.status + "\n";
+    });
+    text += "\n";
+  }
+  if (completed.length > 0) {
+    text += "Completed (" + completed.length + "):\n";
+    completed.forEach(b => {
+      const emoji = CATEGORY_EMOJI[b.category] || "💡";
+      text += emoji + " #" + b.id + ": " + b.title + " (" + b.reward_xrd + " XRD) ✅ PAID";
+      if (b.tx_hash_paid) text += " — TX: " + b.tx_hash_paid.slice(0, 20) + "...";
+      text += "\n";
+    });
+    text += "\n";
+  }
+  text += "Earned: " + totalEarned + " XRD total";
+  ctx.reply(text);
+});
+
 bot.on("message:text", (ctx) => {
   // Check if user is in wizard flow
   if (handleWizardText(ctx)) return;
@@ -593,6 +687,66 @@ setInterval(async () => {
     console.error("[AutoClose] Background task failed:", e.message);
   }
 }, 5 * 60 * 1000);
+
+// ── Daily bounty summary (every morning at 9 UTC) ────────
+
+const GUILD_CHAT_ID = process.env.GUILD_CHAT_ID ? parseInt(process.env.GUILD_CHAT_ID) : null;
+
+async function postDailyBountySummary() {
+  if (!GUILD_CHAT_ID) return;
+
+  const open = db.getOpenBounties(20);
+  const escrow = db.getEscrowWallet();
+
+  // Find recently approved (paid in last 24h)
+  const oneDayAgo = Math.floor(Date.now() / 1000) - 86400;
+  const all = db.getAllBounties(200);
+  const recentlyPaid = all.filter(b => b.status === "paid" && b.paid_at && b.paid_at >= oneDayAgo);
+
+  let text = "📋 Today's Bounty Updates\n\n";
+
+  if (recentlyPaid.length > 0) {
+    recentlyPaid.forEach(b => {
+      text += "✅ Approved: earned " + b.reward_xrd + " XRD for " + b.title + " #" + b.id + "\n";
+    });
+    text += "\n";
+  }
+
+  if (open.length > 0) {
+    text += "🔓 Open Right Now (" + open.length + "):\n";
+    open.forEach(b => {
+      text += "  • " + b.title + " (" + b.reward_xrd + " XRD) — " + daysLeft(b.ends_at) + "\n";
+    });
+    text += "\nTotal: " + escrow.available_xrd.toFixed(0) + " XRD available\n";
+  } else {
+    text += "No open bounties right now. Stay tuned!\n";
+  }
+
+  text += "\n/bounties to claim work →";
+
+  try {
+    await bot.api.sendMessage(GUILD_CHAT_ID, text);
+    console.log("[Bounty] Daily summary posted");
+  } catch (e) {
+    console.error("[Bounty] Failed to post daily summary:", e.message);
+  }
+}
+
+// Schedule: run at 9:00 UTC daily
+function scheduleDailySummary() {
+  const now = new Date();
+  const next9UTC = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 9, 0, 0, 0));
+  if (next9UTC <= now) next9UTC.setUTCDate(next9UTC.getUTCDate() + 1);
+  const msUntilNext = next9UTC - now;
+  setTimeout(() => {
+    postDailyBountySummary().catch(e => console.error("[Bounty] Cron error:", e.message));
+    setInterval(() => {
+      postDailyBountySummary().catch(e => console.error("[Bounty] Cron error:", e.message));
+    }, 24 * 60 * 60 * 1000);
+  }, msUntilNext);
+}
+
+scheduleDailySummary();
 
 // ── Start ───────────────────────────────────────────────
 
