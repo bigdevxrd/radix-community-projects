@@ -53,13 +53,13 @@ export const SCHEMAS: Record<string, SchemaConfig> = {
 // BUG FIX: was var(--c-tier-*), CSS defines --g-tier-*
 
 export const TIER_COLORS: Record<string, string> = {
-  member: "var(--g-tier-member)",
-  contributor: "var(--g-tier-contributor)",
-  builder: "var(--g-tier-builder)",
-  steward: "var(--g-tier-steward)",
-  elder: "var(--g-tier-elder)",
-  admin: "var(--g-tier-elder)",
-  moderator: "var(--g-tier-steward)",
+  member: "var(--guild-tier-member)",
+  contributor: "var(--guild-tier-contributor)",
+  builder: "var(--guild-tier-builder)",
+  steward: "var(--guild-tier-steward)",
+  elder: "var(--guild-tier-elder)",
+  admin: "var(--guild-tier-elder)",
+  moderator: "var(--guild-tier-steward)",
 };
 
 export const XP_THRESHOLDS: Record<string, number> = {

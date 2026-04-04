@@ -1,8 +1,12 @@
 "use client";
 import { useState } from "react";
 import { AppShell } from "@/components/AppShell";
-import { Card, CardHeader, CardBody } from "@/components/Card";
-import { StatusAlert } from "@/components/StatusAlert";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Separator } from "@/components/ui/separator";
 import { useWallet } from "@/hooks/useWallet";
 import { SCHEMAS, TIER_COLORS, ROYALTIES } from "@/lib/constants";
 import { lookupAllBadges } from "@/lib/gateway";
@@ -39,93 +43,97 @@ function AdminContent() {
     <div className="space-y-5">
       <div>
         <h1 className="text-xl font-bold">Badge Manager</h1>
-        <p className="g-text-2 text-sm mt-1">Manage Guild badges across all schemas</p>
+        <p className="text-muted-foreground text-sm mt-1">Manage Guild badges across all schemas</p>
       </div>
 
       {/* Badge Lookup */}
       <Card>
-        <CardHeader title="Look Up Badges" />
-        <CardBody>
+        <CardHeader className="pb-3"><CardTitle className="text-sm uppercase tracking-wide text-muted-foreground">Look Up Badges</CardTitle></CardHeader>
+        <CardContent className="space-y-3">
           <div className="flex gap-2">
-            <input value={lookupAddr} onChange={(e) => setLookupAddr(e.target.value)}
-              placeholder="account_rdx1..." className="g-input flex-1 px-3 py-2 text-[13px]" />
-            <button onClick={() => handleLookup(lookupAddr)} className="g-btn px-5 py-2 text-[13px]">Search</button>
+            <Input value={lookupAddr} onChange={(e) => setLookupAddr(e.target.value)} placeholder="account_rdx1..." className="font-mono text-[13px]" />
+            <Button onClick={() => handleLookup(lookupAddr)}>Search</Button>
           </div>
           {account && (
-            <button onClick={() => { setLookupAddr(account); handleLookup(account); }}
-              className="g-input mt-2 px-3 py-1 text-xs cursor-pointer">Check my badges</button>
+            <Button variant="ghost" size="sm" onClick={() => { setLookupAddr(account); handleLookup(account); }}>
+              Check my badges
+            </Button>
           )}
-          {loading && <p className="g-text-3 text-sm mt-3">Loading...</p>}
+          {loading && <p className="text-muted-foreground text-sm">Loading...</p>}
           {badges.length > 0 && (
-            <div className="mt-4">
+            <div className="space-y-0">
               {badges.map((b) => (
-                <div key={b.id} className="flex items-center justify-between py-3 g-divider">
+                <div key={b.id} className="flex items-center justify-between py-3 border-b last:border-0">
                   <div>
                     <div className="font-semibold text-sm">{b.issued_to}</div>
-                    <div className="text-xs g-text-3">{b.schema_name} | {b.id}</div>
+                    <div className="text-xs text-muted-foreground">{b.schema_name} | {b.id}</div>
                   </div>
                   <div className="text-right">
-                    <span className="g-pill" style={{
-                      background: `${TIER_COLORS[b.tier] || "var(--g-text-3)"}1a`,
-                      color: TIER_COLORS[b.tier] || "var(--g-text-3)",
-                    }}>{b.tier}</span>
-                    <div className="text-[11px] g-text-3 mt-1">XP: {b.xp} | {b.status}</div>
+                    <Badge style={{ backgroundColor: `${TIER_COLORS[b.tier]}20`, color: TIER_COLORS[b.tier], border: "none" }}>{b.tier}</Badge>
+                    <div className="text-[11px] text-muted-foreground mt-1">XP: {b.xp} | {b.status}</div>
                   </div>
                 </div>
               ))}
             </div>
           )}
-          {!loading && badges.length === 0 && lookupAddr && <p className="g-text-3 text-sm mt-3">No badges found.</p>}
-        </CardBody>
+          {!loading && badges.length === 0 && lookupAddr && <p className="text-muted-foreground text-sm">No badges found.</p>}
+        </CardContent>
       </Card>
 
       {/* Admin Actions */}
       <Card>
-        <CardHeader title="Admin Actions" />
-        <CardBody>
-          <p className="g-text-3 text-xs mb-4">Requires admin badge in connected wallet. Royalties apply.</p>
-          <div className="space-y-3">
-            <ActionForm label="Mint Role Badge" cost={ROYALTIES.mint} btnClass="g-btn-yellow"
-              fields={[{ name: "username", ph: "username" }, { name: "tier", ph: "", type: "select", opts: SCHEMAS.guild_role.tiers }]}
-              onSubmit={(v) => sendAdminTx(adminMintManifest(SCHEMAS.guild_role.manager, SCHEMAS.guild_role.adminBadge, v.username, v.tier, account!), "Minting")} />
-            <ActionForm label="Update Tier" cost={ROYALTIES.update_tier}
-              fields={[{ name: "badgeId", ph: "guild_member_1" }, { name: "newTier", ph: "", type: "select", opts: SCHEMAS.guild_member.tiers }]}
-              onSubmit={(v) => sendAdminTx(updateTierManifest(SCHEMAS.guild_member.manager, SCHEMAS.guild_member.adminBadge, v.badgeId, v.newTier, account!), "Updating tier")} />
-            <ActionForm label="Update XP" cost={ROYALTIES.update_xp}
-              fields={[{ name: "badgeId", ph: "guild_member_1" }, { name: "newXp", ph: "100", type: "number" }]}
-              onSubmit={(v) => sendAdminTx(updateXpManifest(SCHEMAS.guild_member.manager, SCHEMAS.guild_member.adminBadge, v.badgeId, parseInt(v.newXp), account!), "Updating XP")} />
-            <ActionForm label="Revoke Badge" cost={ROYALTIES.revoke} btnClass="g-btn-red"
-              fields={[{ name: "badgeId", ph: "guild_member_1" }, { name: "reason", ph: "Reason" }]}
-              onSubmit={(v) => sendAdminTx(revokeBadgeManifest(SCHEMAS.guild_member.manager, SCHEMAS.guild_member.adminBadge, v.badgeId, v.reason, account!), "Revoking")} />
-            <ActionForm label="Update Extra Data" cost={ROYALTIES.update_extra_data}
-              fields={[{ name: "badgeId", ph: "guild_member_1" }, { name: "data", ph: '{"role":"mod"}' }]}
-              onSubmit={(v) => sendAdminTx(updateExtraDataManifest(SCHEMAS.guild_member.manager, SCHEMAS.guild_member.adminBadge, v.badgeId, v.data, account!), "Updating")} />
-          </div>
-          <StatusAlert status={actionStatus} txId={actionTxId} error={actionError} />
-        </CardBody>
+        <CardHeader className="pb-3"><CardTitle className="text-sm uppercase tracking-wide text-muted-foreground">Admin Actions</CardTitle></CardHeader>
+        <CardContent className="space-y-3">
+          <p className="text-muted-foreground text-xs">Requires admin badge in connected wallet. Royalties apply.</p>
+          <Separator />
+          <ActionForm label="Mint Role Badge" cost={ROYALTIES.mint} variant="secondary"
+            fields={[{ name: "username", ph: "username" }, { name: "tier", ph: "", type: "select", opts: SCHEMAS.guild_role.tiers }]}
+            onSubmit={(v) => sendAdminTx(adminMintManifest(SCHEMAS.guild_role.manager, SCHEMAS.guild_role.adminBadge, v.username, v.tier, account!), "Minting")} />
+          <ActionForm label="Update Tier" cost={ROYALTIES.update_tier}
+            fields={[{ name: "badgeId", ph: "guild_member_bigdevxrd" }, { name: "newTier", ph: "", type: "select", opts: SCHEMAS.guild_member.tiers }]}
+            onSubmit={(v) => sendAdminTx(updateTierManifest(SCHEMAS.guild_member.manager, SCHEMAS.guild_member.adminBadge, v.badgeId, v.newTier, account!), "Updating tier")} />
+          <ActionForm label="Update XP" cost={ROYALTIES.update_xp}
+            fields={[{ name: "badgeId", ph: "guild_member_bigdevxrd" }, { name: "newXp", ph: "100", type: "number" }]}
+            onSubmit={(v) => sendAdminTx(updateXpManifest(SCHEMAS.guild_member.manager, SCHEMAS.guild_member.adminBadge, v.badgeId, parseInt(v.newXp), account!), "Updating XP")} />
+          <ActionForm label="Revoke Badge" cost={ROYALTIES.revoke} variant="destructive"
+            fields={[{ name: "badgeId", ph: "guild_member_bigdevxrd" }, { name: "reason", ph: "Reason" }]}
+            onSubmit={(v) => sendAdminTx(revokeBadgeManifest(SCHEMAS.guild_member.manager, SCHEMAS.guild_member.adminBadge, v.badgeId, v.reason, account!), "Revoking")} />
+          <ActionForm label="Update Extra Data" cost={ROYALTIES.update_extra_data}
+            fields={[{ name: "badgeId", ph: "guild_member_bigdevxrd" }, { name: "data", ph: '{"role":"mod"}' }]}
+            onSubmit={(v) => sendAdminTx(updateExtraDataManifest(SCHEMAS.guild_member.manager, SCHEMAS.guild_member.adminBadge, v.badgeId, v.data, account!), "Updating")} />
+
+          {(actionStatus || actionError) && (
+            <Alert variant={actionError ? "destructive" : "default"}>
+              <AlertDescription>
+                {actionError || actionStatus}
+                {actionTxId && <a href={`https://dashboard.radixdlt.com/transaction/${actionTxId}`} target="_blank" className="block mt-1 text-xs text-primary hover:underline">View on Dashboard</a>}
+              </AlertDescription>
+            </Alert>
+          )}
+        </CardContent>
       </Card>
 
-      {/* Schemas Overview */}
+      {/* Schemas */}
       <Card>
-        <CardHeader title="Badge Schemas" />
-        <CardBody>
+        <CardHeader className="pb-3"><CardTitle className="text-sm uppercase tracking-wide text-muted-foreground">Badge Schemas</CardTitle></CardHeader>
+        <CardContent>
           {Object.entries(SCHEMAS).map(([name, s]) => (
-            <div key={name} className="py-3 g-divider">
+            <div key={name} className="py-3 border-b last:border-0">
               <div className="flex justify-between">
                 <span className="font-semibold text-sm">{name}</span>
-                <span className={`text-xs ${s.freeMint ? "g-accent" : "g-yellow"}`}>{s.freeMint ? "Free mint" : "Admin only"}</span>
+                <Badge variant={s.freeMint ? "default" : "secondary"}>{s.freeMint ? "Free mint" : "Admin only"}</Badge>
               </div>
-              <div className="text-xs g-text-3 mt-1">Tiers: {s.tiers.join(" / ")} | Manager: {s.manager.slice(0, 25)}...</div>
+              <div className="text-xs text-muted-foreground mt-1">Tiers: {s.tiers.join(" / ")} | Manager: {s.manager.slice(0, 25)}...</div>
             </div>
           ))}
-        </CardBody>
+        </CardContent>
       </Card>
     </div>
   );
 }
 
-function ActionForm({ label, cost, fields, onSubmit, btnClass = "" }: {
-  label: string; cost: number; btnClass?: string;
+function ActionForm({ label, cost, fields, onSubmit, variant = "default" }: {
+  label: string; cost: number; variant?: "default" | "secondary" | "destructive";
   fields: { name: string; ph: string; type?: string; opts?: string[] }[];
   onSubmit: (v: Record<string, string>) => void;
 }) {
@@ -136,23 +144,24 @@ function ActionForm({ label, cost, fields, onSubmit, btnClass = "" }: {
   const ok = fields.every((f) => f.opts || vals[f.name]?.trim());
 
   return (
-    <div className="g-card-inner p-3.5 rounded-md">
+    <div className="bg-muted rounded-lg p-3.5">
       <div className="flex justify-between mb-2">
         <span className="text-[13px] font-semibold">{label}</span>
-        <span className="text-[11px] g-yellow font-mono">{cost} XRD</span>
+        <span className="text-[11px] text-yellow-500 font-mono">{cost} XRD</span>
       </div>
       <div className="flex gap-2 flex-wrap">
         {fields.map((f) => f.type === "select" ? (
           <select key={f.name} value={vals[f.name]} onChange={(e) => set(f.name, e.target.value)}
-            className="g-input px-3 py-2 text-[13px] w-36">{f.opts?.map((o) => <option key={o} value={o}>{o}</option>)}</select>
+            className="h-9 rounded-md border bg-background px-3 text-[13px] font-mono w-36">
+            {f.opts?.map((o) => <option key={o} value={o}>{o}</option>)}
+          </select>
         ) : (
-          <input key={f.name} type={f.type || "text"} value={vals[f.name]} onChange={(e) => set(f.name, e.target.value)}
-            placeholder={f.ph} className="g-input flex-1 min-w-[140px] px-3 py-2 text-[13px]" />
+          <Input key={f.name} type={f.type || "text"} value={vals[f.name]} onChange={(e) => set(f.name, e.target.value)}
+            placeholder={f.ph} className="flex-1 min-w-[140px] text-[13px] font-mono" />
         ))}
-        <button onClick={() => ok && onSubmit(vals)} disabled={!ok}
-          className={`g-btn ${btnClass} px-4 py-2 text-[13px] whitespace-nowrap ${!ok ? "opacity-50 cursor-not-allowed" : ""}`}>
+        <Button onClick={() => ok && onSubmit(vals)} disabled={!ok} variant={variant} size="sm">
           {label}
-        </button>
+        </Button>
       </div>
     </div>
   );

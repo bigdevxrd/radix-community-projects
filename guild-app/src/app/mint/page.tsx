@@ -2,10 +2,12 @@
 import { useState } from "react";
 import { AppShell } from "@/components/AppShell";
 import { BadgeCard } from "@/components/BadgeCard";
-import { BadgeSkeleton } from "@/components/LoadingSkeleton";
-import { StatusAlert } from "@/components/StatusAlert";
 import { TierProgression } from "@/components/TierProgression";
-import { Card, CardHeader, CardBody } from "@/components/Card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useWallet } from "@/hooks/useWallet";
 import { MANAGER } from "@/lib/constants";
 import { publicMintManifest } from "@/lib/manifests";
@@ -38,26 +40,28 @@ function MintContent() {
     return (
       <div className="text-center py-20">
         <h2 className="text-xl font-bold mb-2">Join the Guild</h2>
-        <p className="g-text-2 text-sm">Connect your wallet to mint a free badge.</p>
+        <p className="text-muted-foreground text-sm">Connect your wallet to mint a free badge.</p>
       </div>
     );
   }
 
-  if (badgeLoading) return <BadgeSkeleton />;
+  if (badgeLoading) {
+    return <Card><CardContent className="p-5 space-y-4"><Skeleton className="h-5 w-32" /><Skeleton className="h-14 w-full" /><Skeleton className="h-1.5 w-full" /></CardContent></Card>;
+  }
 
   if (badge) {
     return (
       <div className="space-y-5">
         <BadgeCard badge={badge} />
         <Card>
-          <CardBody className="pt-4">
+          <CardContent className="pt-4">
             <p className="text-sm font-semibold mb-2">Next Steps</p>
-            <div className="space-y-2 text-[13px] g-text-2">
-              <p>1. Open the <a href="https://t.me/radix_guild_bot" target="_blank" className="g-accent">Telegram Bot</a> and type <code className="font-mono g-text-3">/register</code> with your wallet address</p>
-              <p>2. Type <code className="font-mono g-text-3">/proposals</code> to see active governance votes</p>
+            <div className="space-y-2 text-[13px] text-muted-foreground">
+              <p>1. Open the <a href="https://t.me/radix_guild_bot" target="_blank" className="text-primary hover:underline">Telegram Bot</a> and type <code className="font-mono text-xs bg-muted px-1 rounded">/register</code> with your wallet address</p>
+              <p>2. Type <code className="font-mono text-xs bg-muted px-1 rounded">/proposals</code> to see active governance votes</p>
               <p>3. Vote on proposals to earn XP and level up your tier</p>
             </div>
-          </CardBody>
+          </CardContent>
         </Card>
       </div>
     );
@@ -66,33 +70,47 @@ function MintContent() {
   return (
     <div className="space-y-5">
       <Card>
-        <CardBody className="pt-5">
-          <label className="block text-[11px] g-text-3 uppercase tracking-wider mb-1.5">Username</label>
-          <p className="text-xs g-text-3 mb-2">Your governance identity. Stored on-chain with your badge.</p>
-          <input type="text" value={username} onChange={(e) => setUsername(e.target.value)}
-            placeholder="e.g. bigdevxrd" maxLength={64}
-            className="g-input w-full px-3.5 py-2.5 text-sm" />
-          <div className="text-[11px] g-text-3 mt-1">{username.length}/64 characters</div>
-          <button onClick={handleMint} disabled={minting || !username.trim()}
-            className="g-btn mt-4 w-full py-3 text-sm">
+        <CardContent className="pt-5 space-y-4">
+          <div>
+            <label className="block text-[11px] text-muted-foreground uppercase tracking-wider mb-1.5">Username</label>
+            <p className="text-xs text-muted-foreground mb-2">Your governance identity. Stored on-chain with your badge.</p>
+            <Input
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              placeholder="e.g. bigdevxrd"
+              maxLength={64}
+              className="font-mono"
+            />
+            <div className="text-[11px] text-muted-foreground mt-1">{username.length}/64 characters</div>
+          </div>
+          <Button onClick={handleMint} disabled={minting || !username.trim()} className="w-full">
             {minting ? "Minting..." : "Mint Guild Badge (Free)"}
-          </button>
-          <StatusAlert status={status} txId={txId} error={error} />
-        </CardBody>
+          </Button>
+          {(status || error) && (
+            <Alert variant={error ? "destructive" : "default"}>
+              <AlertDescription>
+                {error || status}
+                {txId && (
+                  <a href={`https://dashboard.radixdlt.com/transaction/${txId}`} target="_blank" className="block mt-1 text-xs text-primary hover:underline">
+                    View on Dashboard
+                  </a>
+                )}
+              </AlertDescription>
+            </Alert>
+          )}
+        </CardContent>
       </Card>
 
       <Card>
-        <CardHeader title="How It Works" />
-        <CardBody>
-          <div className="space-y-3 text-sm g-text-2">
+        <CardHeader className="pb-3"><CardTitle className="text-sm uppercase tracking-wide text-muted-foreground">How It Works</CardTitle></CardHeader>
+        <CardContent className="space-y-3">
+          <div className="space-y-2 text-sm text-muted-foreground">
             <p>Your badge is an on-chain NFT that lives in your Radix Wallet.</p>
             <p>Badge holders can propose ideas and vote in the Telegram governance group.</p>
             <p>Participating earns XP. XP determines your tier and voting weight.</p>
           </div>
-          <div className="mt-4">
-            <TierProgression />
-          </div>
-        </CardBody>
+          <TierProgression />
+        </CardContent>
       </Card>
     </div>
   );

@@ -1,158 +1,106 @@
 @import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap");
 @import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
 
 @theme {
   --font-sans: "Inter", system-ui, sans-serif;
   --font-mono: "JetBrains Mono", "SF Mono", monospace;
 }
 
-/* ── Dark Theme (default) ── */
-:root, [data-theme="dark"] {
-  --g-base: #09090b;
-  --g-surface: #27272a;
-  --g-surface-2: #3f3f46;
-  --g-border: #52525b;
-  --g-border-focus: #71717a;
-  --g-text: #f4f4f5;
-  --g-text-2: #a1a1aa;
-  --g-text-3: #71717a;
-  --g-accent: #00e49f;
-  --g-accent-hover: #00c88a;
-  --g-accent-dim: rgba(0, 228, 159, 0.12);
-  --g-red: #ef4444;
-  --g-yellow: #f59e0b;
-  --g-purple: #a78bfa;
-  --g-blue: #4ea8de;
-  --g-tier-member: #8888a0;
-  --g-tier-contributor: #4ea8de;
-  --g-tier-builder: #a78bfa;
-  --g-tier-steward: #f59e0b;
-  --g-tier-elder: #00e49f;
+@theme inline {
+  --font-heading: var(--font-sans);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
 }
 
-[data-theme="light"] {
-  --g-base: #f5f5f7;
-  --g-surface: #ffffff;
-  --g-surface-2: #f0f0f3;
-  --g-border: #d4d4d8;
-  --g-border-focus: #a1a1aa;
-  --g-text: #18181b;
-  --g-text-2: #52525b;
-  --g-text-3: #a1a1aa;
-  --g-accent: #059669;
-  --g-accent-hover: #047857;
-  --g-accent-dim: rgba(5, 150, 105, 0.1);
-  --g-red: #ef4444;
-  --g-yellow: #d97706;
-  --g-purple: #7c3aed;
-  --g-blue: #2563eb;
-  --g-tier-member: #71717a;
-  --g-tier-contributor: #2563eb;
-  --g-tier-builder: #7c3aed;
-  --g-tier-steward: #d97706;
-  --g-tier-elder: #059669;
+/* ── Light Theme ── */
+:root {
+  --background: oklch(0.985 0 0);
+  --foreground: oklch(0.145 0 0);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.145 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.145 0 0);
+  --primary: oklch(0.78 0.18 163);
+  --primary-foreground: oklch(0.145 0 0);
+  --secondary: oklch(0.97 0 0);
+  --secondary-foreground: oklch(0.205 0 0);
+  --muted: oklch(0.97 0 0);
+  --muted-foreground: oklch(0.556 0 0);
+  --accent: oklch(0.97 0 0);
+  --accent-foreground: oklch(0.205 0 0);
+  --destructive: oklch(0.577 0.245 27.325);
+  --border: oklch(0.922 0 0);
+  --input: oklch(0.922 0 0);
+  --ring: oklch(0.78 0.18 163);
+  --radius: 0.625rem;
+
+  --guild-tier-member: #71717a;
+  --guild-tier-contributor: #2563eb;
+  --guild-tier-builder: #7c3aed;
+  --guild-tier-steward: #d97706;
+  --guild-tier-elder: #059669;
 }
 
-/* ── Base ── */
-* { box-sizing: border-box; margin: 0; padding: 0; }
-html { background: var(--g-base); color: var(--g-text); }
-body { font-family: var(--font-sans); min-height: 100vh; line-height: 1.5; }
-a { color: var(--g-accent); text-decoration: none; }
-a:hover { color: var(--g-accent-hover); }
+/* ── Dark Theme ── */
+.dark {
+  --background: oklch(0.145 0 0);
+  --foreground: oklch(0.985 0 0);
+  --card: oklch(0.205 0 0);
+  --card-foreground: oklch(0.985 0 0);
+  --popover: oklch(0.205 0 0);
+  --popover-foreground: oklch(0.985 0 0);
+  --primary: oklch(0.78 0.18 163);
+  --primary-foreground: oklch(0.145 0 0);
+  --secondary: oklch(0.269 0 0);
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted: oklch(0.269 0 0);
+  --muted-foreground: oklch(0.708 0 0);
+  --accent: oklch(0.269 0 0);
+  --accent-foreground: oklch(0.985 0 0);
+  --destructive: oklch(0.704 0.191 22.216);
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 15%);
+  --ring: oklch(0.78 0.18 163);
 
-/* ── Themed Utility Classes ── */
-.g-base { background: var(--g-base); }
-.g-surface { background: var(--g-surface); }
-.g-surface-2 { background: var(--g-surface-2); }
-.g-border { border-color: var(--g-border); }
-.g-border-focus { border-color: var(--g-border-focus); }
-.g-text { color: var(--g-text); }
-.g-text-2 { color: var(--g-text-2); }
-.g-text-3 { color: var(--g-text-3); }
-.g-accent { color: var(--g-accent); }
-.g-accent-bg { background: var(--g-accent); }
-.g-accent-dim { background: var(--g-accent-dim); }
-.g-red { color: var(--g-red); }
-.g-yellow { color: var(--g-yellow); }
-.g-purple { color: var(--g-purple); }
-.g-blue { color: var(--g-blue); }
-
-/* Cards */
-.g-card {
-  background: var(--g-surface);
-  border-radius: 10px;
-}
-.g-card-inner {
-  background: var(--g-surface-2);
-  border-radius: 6px;
+  --guild-tier-member: #8888a0;
+  --guild-tier-contributor: #4ea8de;
+  --guild-tier-builder: #a78bfa;
+  --guild-tier-steward: #f59e0b;
+  --guild-tier-elder: #00e49f;
 }
 
-/* Inputs */
-.g-input {
-  background: var(--g-surface-2);
-  border: 1px solid transparent;
-  border-radius: 6px;
-  color: var(--g-text);
-  font-family: var(--font-mono);
-  outline: none;
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  html {
+    @apply font-sans;
+  }
 }
-.g-input:focus { border-color: var(--g-accent); }
-
-/* Buttons */
-.g-btn {
-  background: var(--g-accent);
-  color: #000;
-  border: none;
-  border-radius: 6px;
-  font-weight: 700;
-  cursor: pointer;
-}
-.g-btn:hover { background: var(--g-accent-hover); }
-.g-btn:disabled { background: var(--g-surface-2); color: var(--g-text-3); cursor: not-allowed; }
-.g-btn-yellow { background: var(--g-yellow); }
-.g-btn-red { background: var(--g-red); }
-
-/* Status pills */
-.g-pill {
-  display: inline-block;
-  padding: 1px 8px;
-  border-radius: 99px;
-  font-size: 10px;
-  font-weight: 700;
-}
-.g-pill-accent { background: var(--g-accent-dim); color: var(--g-accent); }
-.g-pill-green { background: rgba(0,228,159,0.1); color: var(--g-accent); }
-.g-pill-red { background: rgba(239,68,68,0.1); color: var(--g-red); }
-.g-pill-yellow { background: rgba(245,158,11,0.1); color: var(--g-yellow); }
-.g-pill-purple { background: rgba(167,139,250,0.1); color: var(--g-purple); }
-.g-pill-blue { background: rgba(78,168,222,0.1); color: var(--g-blue); }
-.g-pill-muted { background: var(--g-surface-2); color: var(--g-text-3); }
-
-/* Header border */
-.g-header {
-  border-bottom: 1px solid var(--g-surface);
-  background: var(--g-base);
-}
-
-/* Nav link */
-.g-nav-active { color: var(--g-accent); border-bottom: 2px solid var(--g-accent); }
-.g-nav-idle { color: var(--g-text-2); border-bottom: 2px solid transparent; }
-.g-nav-idle:hover { color: var(--g-text); }
-
-/* Dividers */
-.g-divider { border-bottom: 1px solid var(--g-border); }
-
-/* XP bar */
-.g-xp-track { background: var(--g-surface-2); }
-.g-xp-fill { background: var(--g-accent); }
-
-/* Hero */
-.g-hero {
-  background: linear-gradient(135deg, var(--g-surface) 0%, var(--g-surface-2) 100%);
-  border: 2px solid var(--g-border);
-  border-radius: 10px;
-}
-
-/* Alert */
-.g-alert-ok { background: var(--g-accent-dim); color: var(--g-accent); border: 1px solid rgba(0,228,159,0.2); }
-.g-alert-err { background: rgba(239,68,68,0.08); color: var(--g-red); border: 1px solid rgba(239,68,68,0.2); }
