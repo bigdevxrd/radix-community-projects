@@ -69,6 +69,7 @@ function startApi() {
           total_voters: db.getTotalVoters(),
           active_proposals: db.getActiveProposals().length,
           pending_xp_rewards: getXpQueue().length,
+          xp: require("./xp").getXpStats(),
         }
       }));
     }

@@ -1,11 +1,26 @@
-// XP rewards — awards XP on-chain after verified actions
-// Uses the VPS signer to call update_xp on the badge manager
+// XP rewards — persists to SQLite, survives restarts
+const Database = require("better-sqlite3");
+const path = require("path");
 
-const GATEWAY = "https://mainnet.radixdlt.com";
-const MANAGER = process.env.BADGE_MANAGER || "component_rdx1cqarn8x6gk0806qyc9eee4nh6arzkm90xvnk0edqgtcfgghx5m2v2w";
-const BADGE_NFT = process.env.BADGE_NFT || "resource_rdx1ntlzdss8nhd353h2lmu7d9cxhdajyzvstwp8kdnh53mk5vckfz9mj6";
+const DB_PATH = process.env.BOT_DB_PATH || path.join(__dirname, "..", "rad-dao.db");
 
-// XP amounts per action
+let db;
+
+function initXp() {
+  db = new Database(DB_PATH);
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS xp_rewards (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      radix_address TEXT NOT NULL,
+      action TEXT NOT NULL,
+      xp_amount INTEGER NOT NULL,
+      status TEXT DEFAULT 'pending',
+      created_at INTEGER DEFAULT (strftime('%s','now')),
+      applied_at INTEGER
+    );
+  `);
+}
+
 const XP_REWARDS = {
   vote: 10,
   propose: 25,
@@ -14,71 +29,47 @@ const XP_REWARDS = {
   amend: 15,
 };
 
-// Get current badge data for a wallet
-async function getBadgeNfId(radixAddress) {
-  try {
-    const resp = await fetch(GATEWAY + "/state/entity/details", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        addresses: [radixAddress],
-        aggregation_level: "Vault",
-        opt_ins: { non_fungible_include_nfids: true },
-      }),
-    });
-    const data = await resp.json();
-    const nfResources = data.items?.[0]?.non_fungible_resources?.items || [];
-    const badgeRes = nfResources.find(r => r.resource_address === BADGE_NFT);
-    if (!badgeRes) return null;
-    const nfIds = badgeRes.vaults?.items?.[0]?.items || [];
-    return nfIds[0] || null;
-  } catch (e) {
-    console.error("[XP] getBadgeNfId error:", e.message);
-    return null;
-  }
-}
-
-async function getCurrentXp(nfId) {
-  try {
-    const resp = await fetch(GATEWAY + "/state/non-fungible/data", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ resource_address: BADGE_NFT, non_fungible_ids: [nfId] }),
-    });
-    const data = await resp.json();
-    const fields = data.non_fungible_ids?.[0]?.data?.programmatic_json?.fields;
-    if (!fields) return 0;
-    return parseInt(fields[6]?.value || "0") || 0;
-  } catch (e) {
-    console.error("[XP] getCurrentXp error:", e.message);
-    return 0;
-  }
-}
-
-// Queue XP update — doesn't execute on-chain immediately
-// Batches XP changes and applies them periodically via VPS signer
-const xpQueue = new Map(); // radixAddress → { nfId, pendingXp }
-
 function queueXpReward(radixAddress, action) {
   const xp = XP_REWARDS[action] || 0;
   if (xp === 0) return;
+  if (!db) initXp();
 
-  const existing = xpQueue.get(radixAddress) || { pendingXp: 0 };
-  existing.pendingXp += xp;
-  xpQueue.set(radixAddress, existing);
+  db.prepare(
+    "INSERT INTO xp_rewards (radix_address, action, xp_amount) VALUES (?, ?, ?)"
+  ).run(radixAddress, action, xp);
 
-  console.log("[XP] Queued +" + xp + " for " + radixAddress.slice(0, 20) + "... (" + action + "). Pending: " + existing.pendingXp);
+  console.log("[XP] +" + xp + " for " + radixAddress.slice(0, 20) + "... (" + action + ")");
 }
 
 function getXpQueue() {
-  return Array.from(xpQueue.entries()).map(([addr, data]) => ({
-    address: addr,
-    pendingXp: data.pendingXp,
-  }));
+  if (!db) initXp();
+  const rows = db.prepare(
+    "SELECT radix_address, SUM(xp_amount) as pending_xp FROM xp_rewards WHERE status = 'pending' GROUP BY radix_address"
+  ).all();
+  return rows.map(r => ({ address: r.radix_address, pendingXp: r.pending_xp }));
 }
 
-function clearXpQueue() {
-  xpQueue.clear();
+function markXpApplied(radixAddress) {
+  if (!db) initXp();
+  const now = Math.floor(Date.now() / 1000);
+  db.prepare(
+    "UPDATE xp_rewards SET status = 'applied', applied_at = ? WHERE radix_address = ? AND status = 'pending'"
+  ).run(now, radixAddress);
 }
 
-module.exports = { XP_REWARDS, getBadgeNfId, getCurrentXp, queueXpReward, getXpQueue, clearXpQueue };
+function getXpStats() {
+  if (!db) initXp();
+  const pending = db.prepare("SELECT COUNT(*) as c FROM xp_rewards WHERE status = 'pending'").get();
+  const applied = db.prepare("SELECT COUNT(*) as c FROM xp_rewards WHERE status = 'applied'").get();
+  const total = db.prepare("SELECT SUM(xp_amount) as t FROM xp_rewards").get();
+  return {
+    pending: pending?.c || 0,
+    applied: applied?.c || 0,
+    totalXpAwarded: total?.t || 0,
+  };
+}
+
+// Initialize on load
+initXp();
+
+module.exports = { XP_REWARDS, queueXpReward, getXpQueue, markXpApplied, getXpStats };
