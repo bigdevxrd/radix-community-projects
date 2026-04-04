@@ -85,7 +85,7 @@ async function main() {
       'CALL_METHOD',
       '  Address("' + ACCOUNT + '")',
       '  "create_proof_of_amount"',
-      '  Address("resource_rdx1tkesmrn7ffmfgz5l0q6zls6rfsnlhfwcrd5hnzl2n6ymmwsft7hazn")',
+      '  Address("resource_rdx1t4v0kenpa22tdkvsfz8crmrdfnzg0ad6x2u8f9ak0wk73arlzd6c69")',
       '  Decimal("1")',
       ';',
       'CALL_METHOD',
