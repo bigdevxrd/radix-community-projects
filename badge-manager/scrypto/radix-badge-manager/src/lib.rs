@@ -193,9 +193,11 @@ mod badge_manager {
             .globalize()
         }
 
-        /// Free mint — anyone can call. Mints with default tier + newcomer level.
+        /// Free mint — anyone can call. Mints with default tier + member level.
         pub fn public_mint(&mut self, username: String) -> Bucket {
             assert!(self.free_mint_enabled, "Free minting is disabled for this manager");
+            assert!(!username.is_empty(), "Username cannot be empty");
+            assert!(username.len() <= 64, "Username too long (max 64 chars)");
             self.internal_mint(username, self.default_tier.clone())
         }
 
@@ -233,10 +235,10 @@ mod badge_manager {
         /// Update XP and auto-calculate level.
         pub fn update_xp(&mut self, badge_id: NonFungibleLocalId, new_xp: u64) {
             let new_level = match new_xp {
-                0..=99 => "newcomer",
+                0..=99 => "member",
                 100..=499 => "contributor",
                 500..=1999 => "builder",
-                2000..=9999 => "trusted",
+                2000..=9999 => "steward",
                 _ => "elder",
             }.to_string();
             let now = Clock::current_time_rounded_to_seconds().seconds_since_unix_epoch;
@@ -302,7 +304,7 @@ mod badge_manager {
                         status: "active".to_string(),
                         last_updated: now,
                         xp: 0u64,
-                        level: "newcomer".to_string(),
+                        level: "member".to_string(),
                         extra_data: "{}".to_string(),
                     },
                 )
