@@ -9,10 +9,10 @@
 /* ── Dark Theme (default) ── */
 :root, [data-theme="dark"] {
   --g-base: #09090b;
-  --g-surface: #1c1c22;
-  --g-surface-2: #2a2a32;
-  --g-border: #4a4a55;
-  --g-border-focus: #52525b;
+  --g-surface: #27272a;
+  --g-surface-2: #3f3f46;
+  --g-border: #52525b;
+  --g-border-focus: #71717a;
   --g-text: #f4f4f5;
   --g-text-2: #a1a1aa;
   --g-text-3: #71717a;
@@ -80,27 +80,23 @@ a:hover { color: var(--g-accent-hover); }
 /* Cards */
 .g-card {
   background: var(--g-surface);
-  border: 1px solid var(--g-border);
   border-radius: 10px;
-  box-shadow: 0 0 0 1px var(--g-border);
 }
 .g-card-inner {
   background: var(--g-surface-2);
   border-radius: 6px;
-  padding: 1px;
-  box-shadow: inset 0 0 0 1px var(--g-border);
 }
 
 /* Inputs */
 .g-input {
   background: var(--g-surface-2);
-  border: 1px solid var(--g-border);
+  border: 1px solid transparent;
   border-radius: 6px;
   color: var(--g-text);
   font-family: var(--font-mono);
   outline: none;
 }
-.g-input:focus { border-color: var(--g-border-focus); }
+.g-input:focus { border-color: var(--g-accent); }
 
 /* Buttons */
 .g-btn {
@@ -134,7 +130,7 @@ a:hover { color: var(--g-accent-hover); }
 
 /* Header border */
 .g-header {
-  border-bottom: 1px solid var(--g-border);
+  border-bottom: 1px solid var(--g-surface);
   background: var(--g-base);
 }
 
