@@ -3,19 +3,8 @@ const BADGE_NFT = process.env.BADGE_NFT || "resource_rdx1ntxy3j2zclysyr99h3ayrvh
 
 async function hasBadge(radixAddress) {
   try {
-    const resp = await fetch(`${GATEWAY}/state/entity/details`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        addresses: [radixAddress],
-        aggregation_level: "Vault",
-        opt_ins: { non_fungible_include_nfids: true },
-      }),
-    });
-    if (!resp.ok) return false;
-    const data = await resp.json();
-    const nfResources = data.items?.[0]?.non_fungible_resources?.items || [];
-    return nfResources.some((r) => r.resource_address === BADGE_NFT);
+    const badge = await getBadgeData(radixAddress);
+    return badge !== null && badge.status === "active";
   } catch (e) {
     console.error("[Gateway] hasBadge error:", e.message);
     return false;

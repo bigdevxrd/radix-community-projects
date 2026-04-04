@@ -17,25 +17,31 @@ function startApi() {
 
     const url = new URL(req.url, "http://localhost");
 
-    // GET /api/proposals — all proposals with vote counts
+    // GET /api/proposals — proposals with vote counts (paginated)
     if (url.pathname === "/api/proposals") {
       db.closeExpiredProposals();
       const status = url.searchParams.get("status") || "all";
+      const page = Math.max(1, parseInt(url.searchParams.get("page") || "1"));
+      const limit = Math.min(100, Math.max(1, parseInt(url.searchParams.get("limit") || "50")));
+
       let proposals;
       if (status === "active") {
         proposals = db.getActiveProposals();
       } else {
-        proposals = db.getProposalHistory(50);
+        proposals = db.getProposalHistory(limit);
       }
 
-      const result = proposals.map(p => ({
-        ...p,
-        counts: db.getVoteCounts(p.id),
-        total_votes: Object.values(db.getVoteCounts(p.id)).reduce((a, b) => a + b, 0),
-      }));
+      const result = proposals.map(p => {
+        const counts = db.getVoteCounts(p.id);
+        return {
+          ...p,
+          counts,
+          total_votes: Object.values(counts).reduce((a, b) => a + b, 0),
+        };
+      });
 
       res.writeHead(200);
-      return res.end(JSON.stringify({ ok: true, data: result }));
+      return res.end(JSON.stringify({ ok: true, data: result, page, limit }));
     }
 
     // GET /api/proposals/:id — single proposal detail

@@ -53,6 +53,13 @@ function init() {
   try { db.exec("ALTER TABLE proposals ADD COLUMN parent_id INTEGER"); } catch(e) {}
   try { db.exec("ALTER TABLE proposals ADD COLUMN round INTEGER DEFAULT 1"); } catch(e) {}
 
+  // Indexes for 20k+ scale
+  db.exec(`
+    CREATE INDEX IF NOT EXISTS idx_users_address ON users(radix_address);
+    CREATE INDEX IF NOT EXISTS idx_proposals_status ON proposals(status, ends_at);
+    CREATE INDEX IF NOT EXISTS idx_votes_proposal ON votes(proposal_id);
+  `);
+
   return db;
 }
 

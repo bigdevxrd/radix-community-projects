@@ -18,6 +18,8 @@ function initXp() {
       created_at INTEGER DEFAULT (strftime('%s','now')),
       applied_at INTEGER
     );
+    CREATE INDEX IF NOT EXISTS idx_xp_status ON xp_rewards(status);
+    CREATE INDEX IF NOT EXISTS idx_xp_address ON xp_rewards(radix_address, action, created_at);
   `);
 }
 
@@ -33,6 +35,13 @@ function queueXpReward(radixAddress, action) {
   const xp = XP_REWARDS[action] || 0;
   if (xp === 0) return;
   if (!db) initXp();
+
+  // Rate limit: max 1 reward per action per address per hour
+  const oneHourAgo = Math.floor(Date.now() / 1000) - 3600;
+  const existing = db.prepare(
+    "SELECT id FROM xp_rewards WHERE radix_address = ? AND action = ? AND created_at > ?"
+  ).get(radixAddress, action, oneHourAgo);
+  if (existing) return;
 
   db.prepare(
     "INSERT INTO xp_rewards (radix_address, action, xp_amount) VALUES (?, ?, ?)"
