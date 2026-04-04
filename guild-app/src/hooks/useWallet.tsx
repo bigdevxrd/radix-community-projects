@@ -57,9 +57,14 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
     }
 
     setBadgeLoading(true);
-    const result = await loadUserBadge(addr, BADGE_NFT);
-    setBadge(result);
-    setCachedBadge(addr, result);
+    try {
+      const result = await loadUserBadge(addr, BADGE_NFT);
+      setBadge(result);
+      setCachedBadge(addr, result);
+    } catch (e) {
+      console.error("Badge load failed:", e);
+      setBadge(null);
+    }
     setBadgeLoading(false);
   }, []);
 

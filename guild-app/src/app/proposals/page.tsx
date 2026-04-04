@@ -28,6 +28,7 @@ function ProposalsContent() {
   const [proposals, setProposals] = useState<Proposal[]>([]);
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
+  const [showArchived, setShowArchived] = useState(false);
 
   useEffect(() => {
     Promise.all([
@@ -39,6 +40,10 @@ function ProposalsContent() {
       setLoading(false);
     }).catch(() => setLoading(false));
   }, []);
+
+  const active = proposals.filter((p) => p.status === "active");
+  const archived = proposals.filter((p) => p.status !== "active");
+  const visible = showArchived ? proposals : active;
 
   return (
     <div className="space-y-5">
@@ -61,16 +66,28 @@ function ProposalsContent() {
         </div>
       )}
 
+      {/* Filter */}
+      <div className="flex items-center justify-between">
+        <span className="text-sm text-muted-foreground">
+          {active.length} active{archived.length > 0 ? `, ${archived.length} archived` : ""}
+        </span>
+        {archived.length > 0 && (
+          <Button variant="ghost" size="sm" onClick={() => setShowArchived(!showArchived)}>
+            {showArchived ? "Show Active Only" : "Show All"}
+          </Button>
+        )}
+      </div>
+
       {/* Proposals */}
       {loading ? (
         <div className="space-y-3">{[1,2,3].map(i => (
           <Card key={i}><CardContent className="p-4 space-y-3"><Skeleton className="h-4 w-48" /><Skeleton className="h-3 w-full" /><Skeleton className="h-2 w-full" /></CardContent></Card>
         ))}</div>
-      ) : proposals.length === 0 ? (
+      ) : visible.length === 0 ? (
         <p className="text-muted-foreground text-sm py-8 text-center">No proposals yet.</p>
       ) : (
         <div className="space-y-3">
-          {proposals.map((p) => (
+          {visible.map((p) => (
             <Card key={p.id}>
               <CardContent className="pt-4 pb-4">
                 <div className="flex items-start justify-between mb-2">

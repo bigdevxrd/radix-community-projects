@@ -12,7 +12,10 @@ module.exports = {
       watch: false,
       max_restarts: 10,
       restart_delay: 5000,
+      max_memory_restart: "500M",
       log_date_format: "YYYY-MM-DD HH:mm:ss",
+      error_file: "/opt/guild/logs/bot-error.log",
+      out_file: "/opt/guild/logs/bot-out.log",
     },
     {
       name: "guild-app",
@@ -23,7 +26,10 @@ module.exports = {
       watch: false,
       max_restarts: 10,
       restart_delay: 5000,
+      max_memory_restart: "500M",
       log_date_format: "YYYY-MM-DD HH:mm:ss",
+      error_file: "/opt/guild/logs/app-error.log",
+      out_file: "/opt/guild/logs/app-out.log",
     },
   ],
 };
