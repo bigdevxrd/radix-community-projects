@@ -82,8 +82,13 @@ bot.command("help", (ctx) => {
     "📊 Info:\n" +
     "/dao - CrumbsUp DAO\n" +
     "/cancel <id> - Cancel your proposal\n" +
-    "/history - Recent proposals\n\n" +
-    "/stats - Bot statistics"
+    "/history - Recent proposals\n" +
+    "/stats - Bot statistics\n\n" +
+    "Resources:\n" +
+    "/charter - DAO Charter\n" +
+    "/mvd - Minimum Viable DAO discussion\n" +
+    "/wiki - Radix Wiki\n" +
+    "/talk - RadixTalk forum"
   );
 });
 
@@ -427,6 +432,10 @@ bot.command("welcome", async (ctx) => {
 bot.command("mint", (ctx) => ctx.reply("Mint badge:\n" + PORTAL));
 bot.command("dao", (ctx) => ctx.reply("Guild DAO:\n" + DAO_URL));
 bot.command("source", (ctx) => ctx.reply("Source:\n" + GITHUB));
+bot.command("charter", (ctx) => ctx.reply("DAO Charter:\nhttps://radix.wiki/ideas/radix-network-dao-charter"));
+bot.command("mvd", (ctx) => ctx.reply("Minimum Viable DAO discussion:\nhttps://radixtalk.com/t/design-our-minimum-viable-dao-mvd/2258"));
+bot.command("wiki", (ctx) => ctx.reply("Radix Wiki:\nhttps://radix.wiki/ecosystem"));
+bot.command("talk", (ctx) => ctx.reply("RadixTalk forum:\nhttps://radixtalk.com"));
 
 bot.on("message:text", (ctx) => {
   // Only respond to unknown commands in private chat, not groups
