@@ -108,7 +108,6 @@ mod badge_manager {
         valid_tiers: Vec<String>,
         default_tier: String,
         free_mint_enabled: bool,
-        next_id: u64,
         total_minted: u64,
         total_revoked: u64,
     }
@@ -169,7 +168,6 @@ mod badge_manager {
                 valid_tiers,
                 default_tier,
                 free_mint_enabled,
-                next_id: 1u64,
                 total_minted: 0u64,
                 total_revoked: 0u64,
             }
@@ -288,9 +286,17 @@ mod badge_manager {
 
         fn internal_mint(&mut self, username: String, tier: String) -> Bucket {
             let now = Clock::current_time_rounded_to_seconds().seconds_since_unix_epoch;
+
+            // Username IS the NFT ID — duplicates naturally prevented by Scrypto
+            let sanitized = username.to_lowercase()
+                .chars()
+                .filter(|c| c.is_alphanumeric() || *c == '_' || *c == '-')
+                .collect::<String>();
+            assert!(!sanitized.is_empty(), "Username must contain valid characters");
+
             let id = StringNonFungibleLocalId::new(
-                format!("{}_{}", self.schema_name, self.next_id)
-            ).unwrap();
+                format!("{}_{}", self.schema_name, sanitized)
+            ).expect("Invalid NFT ID — username may already be taken");
             let local_id = NonFungibleLocalId::String(id);
 
             let badge = self.minter_vault.as_fungible().authorize_with_amount(1, || {
@@ -310,7 +316,6 @@ mod badge_manager {
                 )
             });
 
-            self.next_id += 1;
             self.total_minted += 1;
 
             Runtime::emit_event(BadgeMintedEvent {

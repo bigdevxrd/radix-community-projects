@@ -219,3 +219,49 @@ fn test_factory_pause_unpause() {
     ledger.execute_manifest(manifest, vec![NonFungibleGlobalId::from_public_key(&public_key)])
         .expect_commit_success();
 }
+
+#[test]
+fn test_duplicate_username_fails() {
+    let (mut ledger, public_key, account, _, _, manager) = setup_with_manager();
+
+    // First mint — should succeed
+    let manifest = ManifestBuilder::new()
+        .lock_fee_from_faucet()
+        .call_method(manager, "public_mint", manifest_args!("alice".to_string()))
+        .call_method(account, "deposit_batch", manifest_args!(ManifestExpression::EntireWorktop))
+        .build();
+    ledger.execute_manifest(manifest, vec![NonFungibleGlobalId::from_public_key(&public_key)])
+        .expect_commit_success();
+
+    // Second mint with same username — should fail (NFT ID already exists)
+    let manifest = ManifestBuilder::new()
+        .lock_fee_from_faucet()
+        .call_method(manager, "public_mint", manifest_args!("alice".to_string()))
+        .call_method(account, "deposit_batch", manifest_args!(ManifestExpression::EntireWorktop))
+        .build();
+    let receipt = ledger.execute_manifest(manifest, vec![NonFungibleGlobalId::from_public_key(&public_key)]);
+    receipt.expect_commit_failure();
+}
+
+#[test]
+fn test_case_insensitive_duplicate_fails() {
+    let (mut ledger, public_key, account, _, _, manager) = setup_with_manager();
+
+    // Mint "Alice"
+    let manifest = ManifestBuilder::new()
+        .lock_fee_from_faucet()
+        .call_method(manager, "public_mint", manifest_args!("Alice".to_string()))
+        .call_method(account, "deposit_batch", manifest_args!(ManifestExpression::EntireWorktop))
+        .build();
+    ledger.execute_manifest(manifest, vec![NonFungibleGlobalId::from_public_key(&public_key)])
+        .expect_commit_success();
+
+    // Mint "alice" (lowercase) — should fail (same ID after sanitization)
+    let manifest = ManifestBuilder::new()
+        .lock_fee_from_faucet()
+        .call_method(manager, "public_mint", manifest_args!("alice".to_string()))
+        .call_method(account, "deposit_batch", manifest_args!(ManifestExpression::EntireWorktop))
+        .build();
+    let receipt = ledger.execute_manifest(manifest, vec![NonFungibleGlobalId::from_public_key(&public_key)]);
+    receipt.expect_commit_failure();
+}
