@@ -67,20 +67,22 @@ bot.command("start", (ctx) => {
 
 bot.command("help", (ctx) => {
   ctx.reply(
-    "Radix Guild Bot\n\n" +
-    "Basics:\n" +
+    "📋 Radix Guild Bot\n\n" +
+    "👤 Getting Started:\n" +
     "/register <address> - Link wallet\n" +
     "/badge - Check your badge\n" +
     "/mint - Get a free badge\n\n" +
-    "Governance:\n" +
+    "🗳️ Governance:\n" +
     "/propose <title> - Yes/No/Amend vote\n" +
     "/poll <question> | opt1 | opt2 | opt3 - Multi-choice\n" +
     "/temp <question> - Quick temperature check\n" +
     "/amend <id> <new text> - Refine a passed proposal\n" +
     "/proposals - List active\n" +
     "/results <id> - Vote counts\n\n" +
-    "Other:\n" +
+    "📊 Info:\n" +
     "/dao - CrumbsUp DAO\n" +
+    "/cancel <id> - Cancel your proposal\n" +
+    "/history - Recent proposals\n\n" +
     "/stats - Bot statistics"
   );
 });
@@ -373,6 +375,37 @@ bot.command("stats", (ctx) => {
 });
 
 // ── Info commands ────────────────────────────────────────
+
+// ── /cancel ─────────────────────────────────────────────
+
+bot.command("cancel", async (ctx) => {
+  const parts = ctx.message.text.split(" ");
+  const id = parseInt(parts[1]);
+  if (!id) return ctx.reply("Usage: /cancel <proposal_id>");
+  const result = db.cancelProposal(id, ctx.from.id);
+  if (!result.ok) {
+    if (result.error === "not_found_or_not_owner") return ctx.reply("Not found or not your proposal.");
+    return ctx.reply("Cannot cancel: " + result.error);
+  }
+  ctx.reply("Proposal #" + id + " cancelled.");
+});
+
+// ── /history ────────────────────────────────────────────
+
+bot.command("history", (ctx) => {
+  const all = db.getProposalHistory(10);
+  if (all.length === 0) return ctx.reply("No proposals yet.");
+  let text = "Recent Proposals:\n\n";
+  all.forEach((p) => {
+    const counts = db.getVoteCounts(p.id);
+    const type = p.type === "poll" ? "Poll" : p.type === "temp" ? "Temp" : "Vote";
+    const se = p.status === "active" ? "🟢" : p.status === "cancelled" ? "❌" : "⏰";
+    const vs = Object.entries(counts).map(([k, v]) => k + ":" + v).join(" ") || "no votes";
+    text += se + " #" + p.id + " [" + type + "] " + p.title.slice(0, 50) + "\n";
+    text += "   " + vs + " | " + p.status + "\n\n";
+  });
+  ctx.reply(text);
+});
 
 bot.command("mint", (ctx) => ctx.reply("Mint badge:\n" + PORTAL));
 bot.command("dao", (ctx) => ctx.reply("Guild DAO:\n" + DAO_URL));
