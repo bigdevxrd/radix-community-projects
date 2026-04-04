@@ -75,30 +75,37 @@ bot.command("start", (ctx) => {
 
 bot.command("help", (ctx) => {
   ctx.reply(
-    "📋 Radix Guild Bot\n\n" +
-    "👤 Getting Started:\n" +
-    "/register <address> - Link wallet\n" +
-    "/badge - Check your badge\n" +
-    "/mint - Get a free badge\n\n" +
-    "🗳️ Governance:\n" +
-    "/new - Guided proposal wizard (recommended)\n" +
-    "/propose <title> - Quick Yes/No/Amend vote\n" +
-    "/poll <question> | opt1 | opt2 | opt3 - Multi-choice\n" +
-    "/temp <question> - Quick temperature check\n" +
-    "/amend <id> <new text> - Refine a passed proposal\n" +
-    "/proposals - List active\n" +
-    "/vote <id> - Open vote buttons for a proposal\n" +
-    "/results <id> - Vote counts\n\n" +
-    "📊 Info:\n" +
-    "/dao - CrumbsUp DAO\n" +
-    "/cancel <id> - Cancel your proposal\n" +
-    "/history - Recent proposals\n" +
-    "/stats - Bot statistics\n\n" +
-    "Resources:\n" +
-    "/charter - DAO Charter\n" +
-    "/mvd - Minimum Viable DAO discussion\n" +
-    "/wiki - Radix Wiki\n" +
-    "/talk - RadixTalk forum"
+    "Radix Guild Bot\n\n" +
+
+    "Getting Started:\n" +
+    "/register <address> — Link your Radix Wallet\n" +
+    "/mint — Get a free badge (on-chain NFT)\n" +
+    "/badge — Check your badge, tier, and XP\n" +
+    "/wallet — Badge + wallet info\n\n" +
+
+    "Governance (badge required):\n" +
+    "/new — Guided proposal wizard\n" +
+    "/propose <title> — Quick Yes/No/Amend vote\n" +
+    "/poll <q> | opt1 | opt2 — Multi-choice\n" +
+    "/temp <question> — Temperature check\n" +
+    "/amend <id> <text> — Refine a passed proposal\n\n" +
+
+    "View + Manage:\n" +
+    "/proposals — Active proposals\n" +
+    "/results <id> — Vote counts\n" +
+    "/history — Recent proposals\n" +
+    "/cancel <id> — Cancel your proposal\n" +
+    "/stats — Bot statistics\n\n" +
+
+    "Help + Resources:\n" +
+    "/faq — Frequently asked questions\n" +
+    "/dao — CrumbsUp DAO page\n" +
+    "/charter — DAO Charter\n" +
+    "/wiki — Radix Wiki\n" +
+    "/talk — RadixTalk forum\n" +
+    "/source — GitHub repo\n\n" +
+
+    "Voting is free — no XRD required."
   );
 });
 
@@ -112,11 +119,12 @@ bot.command("register", (ctx) => {
   }
   db.registerUser(ctx.from.id, address, ctx.from.username || ctx.from.first_name);
   ctx.reply(
-    "Registered! Wallet linked.\n\n" +
-    "Next: Mint your free badge:\n" +
+    "Wallet linked.\n\n" +
+    "Voting is FREE — no XRD required. You can /proposals and vote right away.\n\n" +
+    "Want to earn XP and level up? Mint a free badge:\n" +
     PORTAL + "/mint\n\n" +
-    "Connect your Radix Wallet, enter a username, and confirm the transaction. It's free.\n\n" +
-    "After minting, wait ~30 seconds then /badge to verify."
+    "After minting, wait ~30s then /badge to check.\n" +
+    "Questions? /faq"
   );
 });
 
@@ -496,6 +504,69 @@ bot.command("welcome", async (ctx) => {
   );
   try { await ctx.pinChatMessage(msg.message_id); } catch(e) {}
 });
+
+// ── /faq ───────────────────────────────────────────────
+
+bot.command("faq", (ctx) => ctx.reply(
+  "Radix Guild — FAQ\n\n" +
+
+  "What is this?\n" +
+  "A community governance system for Radix. Propose ideas, vote on them, earn XP — all from Telegram.\n\n" +
+
+  "Do I need XRD to vote?\n" +
+  "No. Voting is off-ledger (stored in the bot database). It's completely free.\n\n" +
+
+  "Do I need XRD to mint a badge?\n" +
+  "No. Badge minting is free (0 XRD). You just need a Radix Wallet to sign the transaction.\n\n" +
+
+  "What's a badge?\n" +
+  "An on-chain NFT in your Radix Wallet. It's your governance identity — username, tier, XP, and level stored on the Radix ledger.\n\n" +
+
+  "How do I earn XP?\n" +
+  "Vote (+10 XP), propose (+25 XP), create a poll (+25 XP), temperature check (+10 XP), amend (+15 XP). XP is written on-chain periodically.\n\n" +
+
+  "What do tiers do?\n" +
+  "Higher tier = more voting weight.\n" +
+  "Member (1x) / Contributor (2x) / Builder (3x) / Steward (5x) / Elder (10x)\n\n" +
+
+  "Can I transfer my badge?\n" +
+  "The NFT is transferable, but XP won't follow — it resets on the new wallet.\n\n" +
+
+  "What's the difference between Guild and Radix Governance?\n" +
+  "Radix Governance = network-level decisions (all XRD holders vote via Consultation).\n" +
+  "Radix Guild = community coordination (badge holders vote here in Telegram).\n\n" +
+
+  "Is this open source?\n" +
+  "Yes. MIT licensed: " + GITHUB
+));
+
+// ── /wallet ────────────────────────────────────────────
+
+bot.command("wallet", async (ctx) => {
+  const user = db.getUser(ctx.from.id);
+  if (!user) return ctx.reply("Register first: /register <account_rdx1...>");
+  const badge = await getBadgeData(user.radix_address);
+  const tierWeights = { member: "1x", contributor: "2x", builder: "3x", steward: "5x", elder: "10x" };
+
+  let msg = "Wallet: " + user.radix_address.slice(0, 25) + "...\n\n";
+
+  if (badge) {
+    msg += "Badge: " + badge.id + "\n" +
+      "Name: " + badge.issued_to + "\n" +
+      "Tier: " + badge.tier + " (" + (tierWeights[badge.tier] || "1x") + " vote weight)\n" +
+      "XP: " + badge.xp + " | Level: " + badge.level + "\n" +
+      "Status: " + badge.status + "\n\n";
+  } else {
+    msg += "No badge found. Mint one (free): " + PORTAL + "/mint\n\n";
+  }
+
+  msg += "Voting is free — no XRD required.\n" +
+    "Your badge is an on-chain NFT in your Radix Wallet.";
+
+  ctx.reply(msg);
+});
+
+// ── /mint + resources ──────────────────────────────────
 
 bot.command("mint", (ctx) => ctx.reply(
   "Mint your free Guild badge:\n" +

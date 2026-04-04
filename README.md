@@ -17,6 +17,20 @@ Tiers: Member (1x) → Contributor (2x) → Builder (3x) → Steward (5x) → El
 - **Dashboard:** [Guild Dashboard](https://156-67-219-105.sslip.io/guild)
 - **CrumbsUp DAO:** [Guild on CrumbsUp](https://www.crumbsup.io/#dao?id=4db790d7-4d75-49ed-a2e0-3514743809e0)
 
+## How Voting Works
+
+| What | Where | Cost | On-chain? |
+|------|-------|------|-----------|
+| **Badge minting** | Dashboard | Free (0 XRD) | Yes — NFT in your wallet |
+| **Voting** | Telegram bot | Free | No — stored in bot database |
+| **Proposals** | Telegram bot | Free | No — stored in bot database |
+| **XP updates** | Admin batch signer | Free to user | Yes — written on-chain periodically |
+
+**Radix Governance** = network-level decisions (all XRD holders, via Consultation v2)
+**Radix Guild** = community coordination (badge holders, via Telegram bot)
+
+The TG bot handles temperature checks and community proposals. On-chain governance (Consultation v2) is planned for formal ratification in Phase 4.
+
 ## Architecture
 
 ```
@@ -40,13 +54,13 @@ Badge Manager (on-chain, Scrypto)
 
 | Directory | What | Status |
 |-----------|------|--------|
-| [badge-manager/](./badge-manager) | Scrypto smart contracts | Live on Mainnet (v3) |
+| [badge-manager/](./badge-manager) | Scrypto smart contracts | Live on Mainnet (v4) |
 | [bot/](./bot) | Telegram governance bot | Active (20+ commands) |
 | [guild-app/](./guild-app) | Next.js dashboard | Active (4 pages) |
 | [scripts/](./scripts) | Pipeline tests, deploy, XP signer | Active (19 tests) |
 | [docs/](./docs) | Infrastructure, handover, inception | Complete |
 
-## Mainnet Addresses (v3)
+## Mainnet Addresses (v4)
 
 | Entity | Address |
 |--------|---------|
@@ -66,7 +80,7 @@ See [CONTRIBUTING.md](./CONTRIBUTING.md) for setup instructions, code style, and
 ## Test Coverage
 
 - **19 pipeline tests** — API, dashboard, Gateway, data integrity
-- **9 Scrypto tests** — factory, manager, mint, validation
+- **11 Scrypto tests** — factory, manager, mint, validation, duplicate prevention
 
 ```bash
 node scripts/pipeline-test.js    # Integration tests
