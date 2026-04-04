@@ -412,7 +412,10 @@ bot.command("dao", (ctx) => ctx.reply("Guild DAO:\n" + DAO_URL));
 bot.command("source", (ctx) => ctx.reply("Source:\n" + GITHUB));
 
 bot.on("message:text", (ctx) => {
-  if (ctx.message.text.startsWith("/")) ctx.reply("Unknown command. /help");
+  // Only respond to unknown commands in private chat, not groups
+  if (ctx.message.text.startsWith("/") && ctx.chat.type === "private") {
+    ctx.reply("Unknown command. /help");
+  }
 });
 
 bot.start();
