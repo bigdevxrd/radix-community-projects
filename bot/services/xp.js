@@ -36,12 +36,8 @@ function queueXpReward(radixAddress, action) {
   if (xp === 0) return { queued: false };
   if (!db) initXp();
 
-  // Rate limit: max 1 reward per action per address per hour
-  const oneHourAgo = Math.floor(Date.now() / 1000) - 3600;
-  const existing = db.prepare(
-    "SELECT id FROM xp_rewards WHERE radix_address = ? AND action = ? AND created_at > ?"
-  ).get(radixAddress, action, oneHourAgo);
-  if (existing) return { queued: false };
+  // No time-based rate limit — votes are already deduplicated
+  // by DB constraint (one vote per user per proposal)
 
   db.prepare(
     "INSERT INTO xp_rewards (radix_address, action, xp_amount) VALUES (?, ?, ?)"
