@@ -5,6 +5,9 @@ import { Providers } from "./providers";
 export const metadata: Metadata = {
   title: "Radix Governance",
   description: "Governance infrastructure for the Radix community",
+  icons: {
+    icon: "/favicon.svg",
+  },
 };
 
 export default function RootLayout({

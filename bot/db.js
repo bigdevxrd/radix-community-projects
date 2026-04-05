@@ -472,6 +472,161 @@ function getGameLeaderboard(limit = 10) {
   return db.prepare("SELECT * FROM game_state ORDER BY total_bonus_xp DESC LIMIT ?").all(limit);
 }
 
+// ── Analytics ──────────────────────────────────────────
+
+function getAnalyticsSummary() {
+  const totalVoters = getTotalVoters();
+  const totalProposals = getTotalProposals();
+  const passed = db.prepare("SELECT COUNT(*) as c FROM proposals WHERE status = 'passed'").get().c;
+  const passRate = totalProposals > 0 ? Math.round((passed / totalProposals) * 100) : 0;
+  const xpDistributed = db.prepare("SELECT COALESCE(SUM(total_bonus_xp), 0) as t FROM game_state").get().t || 0;
+  const bountiesPaid = db.prepare("SELECT COUNT(*) as c FROM bounties WHERE status = 'paid'").get().c;
+  const avgVotes = totalProposals > 0
+    ? (() => {
+        const r = db.prepare("SELECT COUNT(*) as c FROM votes").get();
+        return Math.round((r.c / totalProposals) * 10) / 10;
+      })()
+    : 0;
+  const charter = getCharterStatus();
+  const p1 = db.prepare("SELECT COUNT(*) as c FROM charter_params WHERE phase = 1").get().c;
+  const p1r = db.prepare("SELECT COUNT(*) as c FROM charter_params WHERE phase = 1 AND status = 'resolved'").get().c;
+  const p2 = db.prepare("SELECT COUNT(*) as c FROM charter_params WHERE phase = 2").get().c;
+  const p2r = db.prepare("SELECT COUNT(*) as c FROM charter_params WHERE phase = 2 AND status = 'resolved'").get().c;
+  const p3 = db.prepare("SELECT COUNT(*) as c FROM charter_params WHERE phase = 3").get().c;
+  const p3r = db.prepare("SELECT COUNT(*) as c FROM charter_params WHERE phase = 3 AND status = 'resolved'").get().c;
+  return {
+    total_voters: totalVoters,
+    total_proposals: totalProposals,
+    pass_rate: passRate,
+    xp_distributed: xpDistributed,
+    bounties_paid: bountiesPaid,
+    avg_votes_per_proposal: avgVotes,
+    charter_progress: {
+      phase_1: { total: p1, resolved: p1r },
+      phase_2: { total: p2, resolved: p2r },
+      phase_3: { total: p3, resolved: p3r },
+    },
+  };
+}
+
+function getProposalsTimeline() {
+  const rows = db.prepare(`
+    SELECT
+      strftime('%Y-%m', datetime(created_at, 'unixepoch')) as month,
+      COUNT(*) as total,
+      SUM(CASE WHEN status = 'passed' THEN 1 ELSE 0 END) as passed,
+      SUM(CASE WHEN status = 'failed' THEN 1 ELSE 0 END) as failed,
+      SUM(CASE WHEN status = 'needs_amendment' THEN 1 ELSE 0 END) as amended
+    FROM proposals
+    GROUP BY month
+    ORDER BY month DESC
+    LIMIT 12
+  `).all();
+  return rows;
+}
+
+function getVotersHistogram() {
+  const buckets = [
+    { range: "0-5", min: 0, max: 5 },
+    { range: "5-10", min: 5, max: 10 },
+    { range: "10-20", min: 10, max: 20 },
+    { range: "20-50", min: 20, max: 50 },
+    { range: "50+", min: 50, max: 99999 },
+  ];
+  const counts = db.prepare(`
+    SELECT tg_id, COUNT(*) as vote_count FROM votes GROUP BY tg_id
+  `).all();
+
+  // Single pass: bucket each voter once (O(n+m) vs O(n*m))
+  const bucketCounts = new Array(buckets.length).fill(0);
+  for (const row of counts) {
+    for (let i = 0; i < buckets.length; i++) {
+      if (row.vote_count >= buckets[i].min && row.vote_count < buckets[i].max) {
+        bucketCounts[i]++;
+        break;
+      }
+    }
+  }
+
+  return buckets.map((b, i) => ({ range: b.range, count: bucketCounts[i] }));
+}
+
+function getXpDistribution() {
+  const byWeek = db.prepare(`
+    SELECT
+      strftime('%Y-W%W', datetime(created_at, 'unixepoch')) as week,
+      COUNT(*) as total,
+      SUM(total_bonus_xp) as xp
+    FROM game_state
+    WHERE total_bonus_xp > 0
+    GROUP BY week
+    ORDER BY week DESC
+    LIMIT 12
+  `).all();
+  const topEarners = db.prepare(`
+    SELECT radix_address as address, total_bonus_xp as total
+    FROM game_state
+    ORDER BY total_bonus_xp DESC
+    LIMIT 10
+  `).all();
+  return { by_week: byWeek, top_earners: topEarners };
+}
+
+function getCharterProgressAnalytics() {
+  const phases = [1, 2, 3];
+  const result = {};
+  let prevDone = true;
+  for (const phase of phases) {
+    const total = db.prepare("SELECT COUNT(*) as c FROM charter_params WHERE phase = ?").get(phase).c;
+    const resolved = db.prepare("SELECT COUNT(*) as c FROM charter_params WHERE phase = ? AND status = 'resolved'").get(phase).c;
+    const percent = total > 0 ? Math.round((resolved / total) * 100) : 0;
+    const ready = prevDone;
+    const blockers = ready ? [] : [`Phase ${phase - 1} not complete`];
+    const nextRow = db.prepare(
+      "SELECT param_key FROM charter_params WHERE phase = ? AND status = 'tbd' LIMIT 1"
+    ).get(phase);
+    result[`phase_${phase}`] = {
+      total, resolved, percent, ready, blockers,
+      next_to_vote: nextRow?.param_key || null,
+      reason: resolved === total ? `Phase ${phase} complete` : undefined,
+    };
+    prevDone = resolved === total;
+  }
+  return result;
+}
+
+function getTopVoters(limit = 10) {
+  const rows = db.prepare(`
+    SELECT
+      v.radix_address as address,
+      COUNT(*) as votes,
+      MAX(v.voted_at) as last_vote
+    FROM votes v
+    GROUP BY v.radix_address
+    ORDER BY votes DESC
+    LIMIT ?
+  `).all(limit);
+  return rows.map(r => ({
+    ...r,
+    streak: 0,
+    last_vote: r.last_vote ? new Date(r.last_vote * 1000).toISOString() : null,
+  }));
+}
+
+function getProposalOutcome(proposalId) {
+  const proposal = db.prepare("SELECT * FROM proposals WHERE id = ?").get(proposalId);
+  if (!proposal) return null;
+  const counts = getVoteCounts(proposalId);
+  const totalVotes = Object.values(counts).reduce((a, b) => a + b, 0);
+  const votes = db.prepare(
+    "SELECT radix_address, vote, voted_at FROM votes WHERE proposal_id = ? ORDER BY voted_at ASC"
+  ).all(proposalId);
+  const charterParam = proposal.charter_param
+    ? db.prepare("SELECT * FROM charter_params WHERE param_key = ?").get(proposal.charter_param)
+    : null;
+  return { proposal, counts, total_votes: totalVotes, votes, charter_param: charterParam };
+}
+
 module.exports = {
   init,
   getUser, registerUser,
@@ -483,6 +638,9 @@ module.exports = {
   createBounty, getBounty, getOpenBounties, getAllBounties, assignBounty, submitBounty, verifyBounty, payBounty,
   fundEscrow, getEscrowBalance, getBountyTransactions, getBountyStats,
   rollDice, recordRoll, getGameState, getGameLeaderboard, ROLL_BONUSES,
+  getAnalyticsSummary, getProposalsTimeline, getVotersHistogram,
+  getXpDistribution, getCharterProgressAnalytics, getTopVoters,
+  getProposalOutcome,
 };
 
 function cancelProposal(proposalId, tgId) {

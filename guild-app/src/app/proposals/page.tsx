@@ -205,6 +205,11 @@ function ProposalsContent() {
                     <Button variant="default" size="sm" className="mt-3">Vote in Telegram</Button>
                   </a>
                 )}
+                {p.status !== "active" && (
+                  <a href={`/proposals/${p.id}/outcomes`} className="mt-3 inline-block">
+                    <Button variant="ghost" size="sm" className="text-[11px]">View Outcome</Button>
+                  </a>
+                )}
               </CardContent>
             </Card>
           ))}

@@ -1,6 +1,10 @@
 "use client";
 import { useState } from "react";
 import { AppShell } from "@/components/AppShell";
+import { AdminNav } from "@/components/admin/AdminNav";
+import { MetricCard } from "@/components/MetricCard";
+import { ProtectedRoute, LoadingState } from "@/components/ProtectedRoute";
+import { useAdminStats } from "@/hooks/useAdmin";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,6 +16,50 @@ import { SCHEMAS, TIER_COLORS, ROYALTIES } from "@/lib/constants";
 import { lookupAllBadges } from "@/lib/gateway";
 import { adminMintManifest, updateTierManifest, updateXpManifest, revokeBadgeManifest, updateExtraDataManifest } from "@/lib/manifests";
 import type { BadgeInfo } from "@/lib/types";
+import Link from "next/link";
+
+function AdminDashboard() {
+  const { stats, loading } = useAdminStats();
+
+  return (
+    <div className="space-y-4 mb-6">
+      <div>
+        <h1 className="text-xl font-bold">Admin Control Panel</h1>
+        <p className="text-muted-foreground text-sm mt-1">Manage all Phase 3 governance systems</p>
+      </div>
+
+      {loading ? (
+        <LoadingState rows={1} />
+      ) : (
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+          <MetricCard label="Active Proposals" value={stats?.pending_proposals ?? 0} />
+          <MetricCard label="Unresolved Charter" value={stats?.unresolved_charter ?? 0} />
+          <MetricCard label="XP Queue" value={stats?.xp_queue ?? 0} />
+        </div>
+      )}
+
+      <div className="grid sm:grid-cols-3 gap-2">
+        {[
+          { href: "/admin/proposals", label: "Proposal Manager", icon: "📋" },
+          { href: "/admin/charter", label: "Charter Params", icon: "📜" },
+          { href: "/admin/xp", label: "XP Rewards", icon: "⭐" },
+          { href: "/admin/bounties", label: "Bounties", icon: "💰" },
+          { href: "/admin/health", label: "System Health", icon: "🩺" },
+          { href: "/analytics", label: "Public Analytics", icon: "📊" },
+        ].map((item) => (
+          <Link key={item.href} href={item.href}>
+            <Card className="hover:border-primary/50 transition-colors cursor-pointer">
+              <CardContent className="px-3 py-2 flex items-center gap-2">
+                <span>{item.icon}</span>
+                <span className="text-xs font-medium">{item.label}</span>
+              </CardContent>
+            </Card>
+          </Link>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 function AdminContent() {
   const { account, rdt } = useWallet();
@@ -41,10 +89,10 @@ function AdminContent() {
 
   return (
     <div className="space-y-5">
-      <div>
-        <h1 className="text-xl font-bold">Badge Manager</h1>
-        <p className="text-muted-foreground text-sm mt-1">Manage Guild badges across all schemas</p>
-      </div>
+      <AdminDashboard />
+
+      <Separator />
+      <div className="text-xs text-muted-foreground uppercase tracking-widest font-semibold">Badge Manager</div>
 
       {/* Badge Lookup */}
       <Card>
@@ -168,5 +216,12 @@ function ActionForm({ label, cost, fields, onSubmit, variant = "default" }: {
 }
 
 export default function AdminPage() {
-  return <AppShell><AdminContent /></AppShell>;
+  return (
+    <AppShell>
+      <AdminNav />
+      <ProtectedRoute>
+        <AdminContent />
+      </ProtectedRoute>
+    </AppShell>
+  );
 }
