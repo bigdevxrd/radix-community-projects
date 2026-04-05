@@ -88,7 +88,8 @@ function HealthDashboard() {
   const [loading, setLoading] = useState(true);
   const [lastRefresh, setLastRefresh] = useState(Date.now());
   const [apiMs, setApiMs] = useState<number | null>(null);
-  const startTs = 1712000000;
+  // Approximate start timestamp used for uptime display (bot deploy reference date: 2024-04-01)
+  const startTs = 1711929600;
 
   const measure = useCallback(async () => {
     setLoading(true);

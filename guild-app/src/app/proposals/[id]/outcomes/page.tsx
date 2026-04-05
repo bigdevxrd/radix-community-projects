@@ -40,8 +40,9 @@ function VoteTable({
   const [search, setSearch] = useState("");
   const [sort, setSort] = useState<"time" | "vote">("time");
 
+  const lowerSearch = search.toLowerCase();
   const filtered = votes
-    .filter((v) => !search || v.radix_address.toLowerCase().includes(search.toLowerCase()) || v.vote.toLowerCase().includes(search.toLowerCase()))
+    .filter((v) => !lowerSearch || v.radix_address.toLowerCase().includes(lowerSearch) || v.vote.toLowerCase().includes(lowerSearch))
     .sort((a, b) => sort === "time" ? b.voted_at - a.voted_at : a.vote.localeCompare(b.vote));
 
   return (

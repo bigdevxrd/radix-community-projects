@@ -536,10 +536,19 @@ function getVotersHistogram() {
   const counts = db.prepare(`
     SELECT tg_id, COUNT(*) as vote_count FROM votes GROUP BY tg_id
   `).all();
-  return buckets.map(b => ({
-    range: b.range,
-    count: counts.filter(r => r.vote_count >= b.min && r.vote_count < b.max).length,
-  }));
+
+  // Single pass: bucket each voter once (O(n+m) vs O(n*m))
+  const bucketCounts = new Array(buckets.length).fill(0);
+  for (const row of counts) {
+    for (let i = 0; i < buckets.length; i++) {
+      if (row.vote_count >= buckets[i].min && row.vote_count < buckets[i].max) {
+        bucketCounts[i]++;
+        break;
+      }
+    }
+  }
+
+  return buckets.map((b, i) => ({ range: b.range, count: bucketCounts[i] }));
 }
 
 function getXpDistribution() {

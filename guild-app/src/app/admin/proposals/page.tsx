@@ -214,7 +214,7 @@ function ProposalManager() {
 
   async function bulkArchive() {
     const passed = proposals.filter((p) => p.status === "passed");
-    await Promise.all(
+    const results = await Promise.allSettled(
       passed.map((p) =>
         fetch(`${API_URL}/admin/proposals/${p.id}`, {
           method: "POST",
@@ -223,6 +223,10 @@ function ProposalManager() {
         })
       )
     );
+    const failed = results.filter((r) => r.status === "rejected").length;
+    if (failed > 0) {
+      console.error(`${failed} archive operations failed`);
+    }
     load();
   }
 
