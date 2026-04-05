@@ -126,6 +126,20 @@ function init() {
   // Seed escrow wallet singleton
   db.prepare("INSERT OR IGNORE INTO escrow_wallet (id) VALUES (1)").run();
 
+  // Grid game state
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS game_state (
+      radix_address TEXT PRIMARY KEY,
+      total_rolls INTEGER DEFAULT 0,
+      total_bonus_xp INTEGER DEFAULT 0,
+      streak_days INTEGER DEFAULT 0,
+      last_roll_date TEXT,
+      last_roll_value INTEGER DEFAULT 0,
+      jackpots INTEGER DEFAULT 0
+    );
+    CREATE INDEX IF NOT EXISTS idx_game_address ON game_state(radix_address);
+  `);
+
   // Indexes for 20k+ scale
   db.exec(`
     CREATE INDEX IF NOT EXISTS idx_users_address ON users(radix_address);
@@ -406,6 +420,53 @@ function getBountyStats() {
   return { open, assigned, submitted, verified, paid, totalPaid, escrow };
 }
 
+// ── Grid Game ──────────────────────────────────────────
+// Weighted dice: 1=30%, 2=25%, 3=20%, 4=13%, 5=8%, 6=4%
+
+const ROLL_WEIGHTS = [30, 25, 20, 13, 8, 4]; // must sum to 100
+const ROLL_BONUSES = [0, 5, 10, 25, 50, 100]; // XP bonus per roll
+
+function rollDice() {
+  const rand = Math.random() * 100;
+  let cumulative = 0;
+  for (let i = 0; i < ROLL_WEIGHTS.length; i++) {
+    cumulative += ROLL_WEIGHTS[i];
+    if (rand < cumulative) return i + 1; // 1-6
+  }
+  return 1;
+}
+
+function recordRoll(radixAddress, rollValue) {
+  const bonus = ROLL_BONUSES[rollValue - 1] || 0;
+  const today = new Date().toISOString().slice(0, 10);
+
+  const existing = db.prepare("SELECT * FROM game_state WHERE radix_address = ?").get(radixAddress);
+  if (!existing) {
+    db.prepare(
+      "INSERT INTO game_state (radix_address, total_rolls, total_bonus_xp, streak_days, last_roll_date, last_roll_value, jackpots) VALUES (?, 1, ?, 1, ?, ?, ?)"
+    ).run(radixAddress, bonus, today, rollValue, rollValue === 6 ? 1 : 0);
+  } else {
+    const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+    const newStreak = existing.last_roll_date === yesterday ? existing.streak_days + 1 :
+                      existing.last_roll_date === today ? existing.streak_days : 1;
+    db.prepare(
+      "UPDATE game_state SET total_rolls = total_rolls + 1, total_bonus_xp = total_bonus_xp + ?, streak_days = ?, last_roll_date = ?, last_roll_value = ?, jackpots = jackpots + ? WHERE radix_address = ?"
+    ).run(bonus, newStreak, today, rollValue, rollValue === 6 ? 1 : 0, radixAddress);
+  }
+
+  return { roll: rollValue, bonus };
+}
+
+function getGameState(radixAddress) {
+  return db.prepare("SELECT * FROM game_state WHERE radix_address = ?").get(radixAddress) || {
+    total_rolls: 0, total_bonus_xp: 0, streak_days: 0, last_roll_value: 0, jackpots: 0,
+  };
+}
+
+function getGameLeaderboard(limit = 10) {
+  return db.prepare("SELECT * FROM game_state ORDER BY total_bonus_xp DESC LIMIT ?").all(limit);
+}
+
 module.exports = {
   init,
   getUser, registerUser,
@@ -416,6 +477,7 @@ module.exports = {
   getCharterParams, getCharterParam, resolveCharterParam, getCharterStatus, getReadyParams,
   createBounty, getBounty, getOpenBounties, getAllBounties, assignBounty, submitBounty, verifyBounty, payBounty,
   fundEscrow, getEscrowBalance, getBountyTransactions, getBountyStats,
+  rollDice, recordRoll, getGameState, getGameLeaderboard, ROLL_BONUSES,
 };
 
 function cancelProposal(proposalId, tgId) {

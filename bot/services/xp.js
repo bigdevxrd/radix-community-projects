@@ -33,7 +33,7 @@ const XP_REWARDS = {
 
 function queueXpReward(radixAddress, action) {
   const xp = XP_REWARDS[action] || 0;
-  if (xp === 0) return;
+  if (xp === 0) return { queued: false };
   if (!db) initXp();
 
   // Rate limit: max 1 reward per action per address per hour
@@ -41,13 +41,27 @@ function queueXpReward(radixAddress, action) {
   const existing = db.prepare(
     "SELECT id FROM xp_rewards WHERE radix_address = ? AND action = ? AND created_at > ?"
   ).get(radixAddress, action, oneHourAgo);
-  if (existing) return;
+  if (existing) return { queued: false };
 
   db.prepare(
     "INSERT INTO xp_rewards (radix_address, action, xp_amount) VALUES (?, ?, ?)"
   ).run(radixAddress, action, xp);
 
-  console.log("[XP] +" + xp + " for " + radixAddress.slice(0, 20) + "... (" + action + ")");
+  // Grid game: roll the dice
+  const mainDb = require("../db");
+  const roll = mainDb.rollDice();
+  const bonus = mainDb.ROLL_BONUSES[roll - 1] || 0;
+  mainDb.recordRoll(radixAddress, roll);
+
+  if (bonus > 0) {
+    db.prepare(
+      "INSERT INTO xp_rewards (radix_address, action, xp_amount) VALUES (?, ?, ?)"
+    ).run(radixAddress, "roll_bonus", bonus);
+  }
+
+  console.log("[XP] +" + xp + " for " + radixAddress.slice(0, 20) + "... (" + action + ") | Roll: " + roll + " (+" + bonus + " bonus)");
+
+  return { queued: true, xp, roll, bonus };
 }
 
 function getXpQueue() {

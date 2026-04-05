@@ -341,10 +341,13 @@ bot.on("callback_query:data", async (ctx) => {
     await ctx.editMessageReplyMarkup({ reply_markup: keyboard });
   } catch (e) { /* message might not be editable */ }
 
-  // Queue XP reward for voting
-  queueXpReward(user.radix_address, "vote");
+  // Queue XP reward + dice roll
+  const reward = queueXpReward(user.radix_address, "vote");
+  const rollMsg = reward.queued && reward.roll
+    ? (reward.roll === 6 ? " JACKPOT! Roll 6 (+" + reward.bonus + " bonus XP)" : " Roll " + reward.roll + (reward.bonus > 0 ? " (+" + reward.bonus + " bonus)" : ""))
+    : "";
 
-  ctx.answerCallbackQuery({ text: "Vote recorded: " + voteChoice + " (+10 XP). /badge to check your XP." });
+  ctx.answerCallbackQuery({ text: "Vote: " + voteChoice + " (+10 XP)" + rollMsg });
 });
 
 // ── /proposals ──────────────────────────────────────────
@@ -606,6 +609,41 @@ bot.command("bounty", async (ctx) => {
   ctx.reply("Bounty commands:\n/bounty list — open bounties\n/bounty stats — stats + escrow\n/bounty create <xrd> <title>\n/bounty claim <id>\n/bounty submit <id> <pr_url>\n/bounty verify <id> (admin)\n/bounty pay <id> <tx_hash> (admin)\n/bounty fund <xrd> <tx_hash> (admin)");
 });
 
+// ── /game ──────────────────────────────────────────────
+
+bot.command("game", async (ctx) => {
+  const user = db.getUser(ctx.from.id);
+  if (!user) return ctx.reply("Register first: /register <account_rdx1...>");
+  const game = db.getGameState(user.radix_address);
+  const rollNames = ["", "Miss", "Small", "Nice", "Great", "Epic", "JACKPOT"];
+
+  let msg = "Grid Game Stats\n\n" +
+    "Total rolls: " + game.total_rolls + "\n" +
+    "Bonus XP earned: " + game.total_bonus_xp + "\n" +
+    "Streak: " + game.streak_days + " days\n" +
+    "Jackpots: " + game.jackpots + "\n";
+
+  if (game.last_roll_value) {
+    msg += "Last roll: " + game.last_roll_value + " (" + rollNames[game.last_roll_value] + ")\n";
+  }
+
+  msg += "\nEvery governance action = 1 dice roll.\n" +
+    "Roll 1: +0 | Roll 2: +5 | Roll 3: +10\n" +
+    "Roll 4: +25 | Roll 5: +50 | Roll 6: +100 (JACKPOT!)";
+
+  ctx.reply(msg);
+});
+
+bot.command("leaderboard", (ctx) => {
+  const top = db.getGameLeaderboard(10);
+  if (top.length === 0) return ctx.reply("No game data yet. Vote or propose to earn rolls!");
+  let msg = "Leaderboard — Top Bonus XP\n\n";
+  top.forEach((g, i) => {
+    msg += (i + 1) + ". " + g.radix_address.slice(0, 20) + "... — " + g.total_bonus_xp + " XP (" + g.total_rolls + " rolls, " + g.jackpots + " jackpots)\n";
+  });
+  ctx.reply(msg);
+});
+
 // ── /charter ───────────────────────────────────────────
 
 bot.command("charter", (ctx) => {
@@ -787,8 +825,36 @@ async function checkExpiredProposals() {
       console.log("[AutoClose] Posted to RadixTalk:", rtPost.url);
     }
 
+    // ── Pipeline auto-advancement ──
+    if (result === "passed" || result === "completed") {
+      // Resolve charter param if linked
+      if (proposal.charter_param) {
+        const value = extractWinningValue(proposal, counts, total);
+        db.resolveCharterParam(proposal.charter_param, value, proposal.id);
+        const paramTitle = db.getCharterParam(proposal.charter_param)?.title || proposal.charter_param;
+        if (proposal.tg_chat_id) {
+          try {
+            await bot.api.sendMessage(proposal.tg_chat_id,
+              "Charter resolved: " + paramTitle + " = " + value + "\n" +
+              "Use /charter to see progress."
+            );
+          } catch(e) {}
+        }
+        console.log("[Charter] " + proposal.charter_param + " = " + value);
+      }
+    }
+
     console.log("[AutoClose] Proposal #" + proposal.id + " → " + result);
   }
+}
+
+function extractWinningValue(proposal, counts, total) {
+  if (proposal.type === "yesno") {
+    return (counts.for || 0) > (counts.against || 0) ? "approved" : "rejected";
+  }
+  // For polls, return option with most votes
+  const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+  return sorted[0]?.[0] || "unknown";
 }
 
 // Check every 5 minutes

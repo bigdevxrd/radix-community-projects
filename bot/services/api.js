@@ -79,6 +79,21 @@ function startApi() {
       return res.end(JSON.stringify({ ok: true, data: result, page, limit }));
     }
 
+    // GET /api/game/:address — game state for an address
+    const gameMatch = url.pathname.match(/^\/api\/game\/(account_rdx1[a-z0-9]+)$/);
+    if (gameMatch) {
+      const game = db.getGameState(gameMatch[1]);
+      res.writeHead(200);
+      return res.end(JSON.stringify({ ok: true, data: game }));
+    }
+
+    // GET /api/leaderboard — top game players
+    if (url.pathname === "/api/leaderboard") {
+      const top = db.getGameLeaderboard(20);
+      res.writeHead(200);
+      return res.end(JSON.stringify({ ok: true, data: top }));
+    }
+
     // GET /api/bounties — bounty list + stats
     if (url.pathname === "/api/bounties") {
       const bounties = db.getAllBounties();
