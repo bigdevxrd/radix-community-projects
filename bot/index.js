@@ -97,12 +97,18 @@ bot.command("help", (ctx) => {
     "/cancel <id> — Cancel your proposal\n" +
     "/stats — Bot statistics\n\n" +
 
+    "Bounties:\n" +
+    "/bounty list — Open bounties\n" +
+    "/bounty create <xrd> <title> — Create bounty\n" +
+    "/bounty claim <id> — Claim a bounty\n" +
+    "/bounty stats — Stats + escrow balance\n\n" +
+
     "Help + Resources:\n" +
     "/faq — Frequently asked questions\n" +
+    "/readme — Project overview + links\n" +
+    "/support — Get help + report bugs\n" +
+    "/charter — DAO Charter progress\n" +
     "/dao — CrumbsUp DAO page\n" +
-    "/charter — DAO Charter\n" +
-    "/wiki — Radix Wiki\n" +
-    "/talk — RadixTalk forum\n" +
     "/source — GitHub repo\n\n" +
 
     "Voting is free — no XRD required."
@@ -794,6 +800,33 @@ bot.command("charter", (ctx) => ctx.reply("DAO Charter:\nhttps://radix.wiki/idea
 bot.command("mvd", (ctx) => ctx.reply("Minimum Viable DAO discussion:\nhttps://radixtalk.com/t/design-our-minimum-viable-dao-mvd/2258"));
 bot.command("wiki", (ctx) => ctx.reply("Radix Wiki:\nhttps://radix.wiki/ecosystem"));
 bot.command("talk", (ctx) => ctx.reply("RadixTalk forum:\nhttps://radixtalk.com"));
+
+bot.command("readme", (ctx) => ctx.reply(
+  "Radix Governance\n\n" +
+  "Governance infrastructure for the Radix community.\n\n" +
+  "Radix Governance = the system (badges, voting, bounties, XP)\n" +
+  "Radix Guild = the first community using it\n\n" +
+  "What's live:\n" +
+  "• On-chain badges (free mint)\n" +
+  "• 20 governance proposals (6 active)\n" +
+  "• 32 charter decisions with dependency tracking\n" +
+  "• Bounty + escrow system\n" +
+  "• Dashboard with decision tree\n\n" +
+  "GitHub: " + GITHUB + "\n" +
+  "Dashboard: " + PORTAL + "\n" +
+  "Charter: radix.wiki/ideas/radix-network-dao-charter\n\n" +
+  "MIT licensed. Open source. Built by Big Dev."
+));
+
+bot.command("support", (ctx) => ctx.reply(
+  "Need help?\n\n" +
+  "• /faq — frequently asked questions\n" +
+  "• /help — all bot commands\n" +
+  "• /readme — project overview + links\n\n" +
+  "Report bugs: " + GITHUB + "/issues\n" +
+  "Contact: @bigdevxrd (Telegram DM)\n\n" +
+  "This is a beta — feedback welcome!"
+));
 
 // ── Welcome new members ────────────────────────────────
 
