@@ -130,7 +130,7 @@ Everything is free. No XRD required to participate.
 
 | What | Where |
 |------|-------|
-| Telegram Bot | [@radix_guild_bot](https://t.me/radix_guild_bot) |
+| Telegram Bot | [@radix_guild_bot](https://t.me/rad_gov) |
 | Dashboard | [Radix Governance](https://72-62-195-141.sslip.io/guild) |
 | DAO Charter | [radix.wiki](https://radix.wiki/ideas/radix-network-dao-charter) |
 | CrumbsUp DAO | [Guild on CrumbsUp](https://www.crumbsup.io/#dao?id=4db790d7-4d75-49ed-a2e0-3514743809e0) |
