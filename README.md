@@ -7,6 +7,7 @@ Community transition is disorderly - working on this together should be a breeze
 I am trying to make this ‘orderly’ dream come true!  
 
 How:
+
 We made a TG bot that helps with decision making - web3 integration asap. The first proposal used for example purposes is the current DAO MVD discussion on RadixTalk (https://radix.wiki/ideas/radix-network-dao-charter).
 The proposal has been broken into logical procession for logical voting order - some issues have dependencies - this needs review - example only.
 The badge system is not fully deployed - We tried to design something that had everything to get the community started  - system is ready and waiting on proposals and approvals to develop it further. Note: there are a lot of elements I included in the repo (ie Grid Game) as features or side projects as part of my bigger ‘Radix Guild’ project.
