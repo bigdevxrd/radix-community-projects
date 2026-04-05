@@ -421,9 +421,9 @@ function getBountyStats() {
 }
 
 // ── Grid Game ──────────────────────────────────────────
-// Weighted dice: 1=30%, 2=25%, 3=20%, 4=13%, 5=8%, 6=4%
+// Weighted dice: base (1-3) = 60%, bonus (4-5) = 30%, jackpot (6) = 10%
 
-const ROLL_WEIGHTS = [30, 25, 20, 13, 8, 4]; // must sum to 100
+const ROLL_WEIGHTS = [20, 20, 20, 15, 15, 10]; // must sum to 100
 const ROLL_BONUSES = [0, 5, 10, 25, 50, 100]; // XP bonus per roll
 
 function rollDice() {
