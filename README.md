@@ -118,7 +118,7 @@ If nobody votes, nothing happens. The system is ready. The question is whether t
 ## Get Started (3 minutes)
 
 ```
-Step 1:  Open @radix_guild_bot in Telegram
+Step 1:  Open @rad_gov in Telegram
 Step 2:  /register account_rdx1...
 Step 3:  Mint badge (free): dashboard link in bot
 Step 4:  /proposals → vote on the 6 foundation decisions
