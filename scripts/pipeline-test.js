@@ -187,6 +187,139 @@ async function main() {
     assert(stats.data.total_proposals === proposals.data.length, "proposal count mismatch");
   });
 
+  // ── Charter Tests ──────────────────────────────────
+
+  console.log("\n  Charter:");
+
+  await test("GET /api/charter returns status object", async () => {
+    const data = await fetchJson(API + "/charter");
+    assert(data.ok === true);
+    const s = data.data.status;
+    assert(typeof s.total === "number", "status.total should be number");
+    assert(typeof s.resolved === "number", "status.resolved should be number");
+    assert(typeof s.voting === "number", "status.voting should be number");
+    assert(typeof s.tbd === "number", "status.tbd should be number");
+  });
+
+  await test("GET /api/charter returns params array", async () => {
+    const data = await fetchJson(API + "/charter");
+    assert(Array.isArray(data.data.params), "params should be array");
+    assert(data.data.params.length >= 20, "should have at least 20 charter params");
+  });
+
+  await test("Charter params have required fields", async () => {
+    const data = await fetchJson(API + "/charter");
+    data.data.params.forEach(p => {
+      assert(p.param_key, "param_key required");
+      assert(p.title, "title required");
+      assert(p.category, "category required");
+      assert(typeof p.phase === "number", "phase should be number");
+      assert(p.status, "status required");
+    });
+  });
+
+  await test("Charter ready params are unresolved", async () => {
+    const data = await fetchJson(API + "/charter");
+    assert(Array.isArray(data.data.ready), "ready should be array");
+    data.data.ready.forEach(p => {
+      assert(p.status !== "resolved", "ready params should not be resolved");
+    });
+  });
+
+  // ── Bounty Tests ───────────────────────────────────
+
+  console.log("\n  Bounties:");
+
+  await test("GET /api/bounties returns stats", async () => {
+    const data = await fetchJson(API + "/bounties");
+    assert(data.ok === true);
+    const s = data.data.stats;
+    assert(typeof s.open === "number", "stats.open should be number");
+    assert(typeof s.assigned === "number", "stats.assigned should be number");
+    assert(typeof s.submitted === "number", "stats.submitted should be number");
+    assert(typeof s.verified === "number", "stats.verified should be number");
+    assert(typeof s.paid === "number", "stats.paid should be number");
+  });
+
+  await test("GET /api/bounties returns bounties array", async () => {
+    const data = await fetchJson(API + "/bounties");
+    assert(Array.isArray(data.data.bounties), "bounties should be array");
+  });
+
+  await test("Escrow stats have required fields", async () => {
+    const data = await fetchJson(API + "/bounties");
+    const e = data.data.stats.escrow;
+    assert(typeof e.funded === "number", "escrow.funded should be number");
+    assert(typeof e.released === "number", "escrow.released should be number");
+    assert(typeof e.available === "number", "escrow.available should be number");
+  });
+
+  await test("GET /api/escrow returns balance + transactions", async () => {
+    const data = await fetchJson(API + "/escrow");
+    assert(data.ok === true);
+    assert(typeof data.data.balance === "number" || typeof data.data.balance === "object", "balance should exist");
+    assert(Array.isArray(data.data.transactions), "transactions should be array");
+  });
+
+  // ── Game Tests ─────────────────────────────────────
+
+  console.log("\n  Game:");
+
+  await test("GET /api/game/:address returns game state", async () => {
+    const data = await fetchJson(API + "/game/" + TEST_ACCOUNT);
+    assert(data.ok === true);
+    // May have data or null — both valid
+  });
+
+  await test("GET /api/game/unknown returns empty state", async () => {
+    const data = await fetchJson(API + "/game/account_rdx1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq");
+    assert(data.ok === true);
+    // Should return null or empty object for unknown address
+  });
+
+  await test("GET /api/leaderboard returns array", async () => {
+    const data = await fetchJson(API + "/leaderboard");
+    assert(data.ok === true);
+    assert(Array.isArray(data.data), "data should be array");
+  });
+
+  await test("Leaderboard entries have required fields", async () => {
+    const data = await fetchJson(API + "/leaderboard");
+    if (data.data.length > 0) {
+      data.data.forEach(e => {
+        assert(e.radix_address, "radix_address required");
+        assert(typeof e.total_rolls === "number", "total_rolls should be number");
+        assert(typeof e.total_bonus_xp === "number", "total_bonus_xp should be number");
+      });
+    }
+  });
+
+  await test("Leaderboard is sorted by bonus XP descending", async () => {
+    const data = await fetchJson(API + "/leaderboard");
+    for (let i = 1; i < data.data.length; i++) {
+      assert(data.data[i - 1].total_bonus_xp >= data.data[i].total_bonus_xp, "should be sorted desc");
+    }
+  });
+
+  // ── Dashboard Pages ────────────────────────────────
+
+  console.log("\n  Dashboard (extended):");
+
+  await test("GET /guild/leaderboard returns 200", async () => {
+    const resp = await fetch(GUILD + "/leaderboard");
+    assert(resp.ok, "should be 200");
+  });
+
+  await test("All dashboard pages contain expected HTML", async () => {
+    const pages = ["", "/proposals", "/admin", "/mint", "/leaderboard"];
+    for (const p of pages) {
+      const resp = await fetch(GUILD + p);
+      assert(resp.ok, p + " should return 200");
+      const html = await resp.text();
+      assert(html.includes("</html>"), p + " should be valid HTML");
+    }
+  });
+
   // ── Summary ────────────────────────────────────────
 
   console.log("\n  Results: " + passed + " passed, " + failed + " failed");
