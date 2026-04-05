@@ -8,6 +8,8 @@ import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import { API_URL } from "@/lib/constants";
 
+import { CardHeader, CardTitle } from "@/components/ui/card";
+
 interface Proposal {
   id: number; title: string; type: string; status: string;
   created_at: number; ends_at: number;
@@ -16,6 +18,12 @@ interface Proposal {
 interface Stats {
   total_proposals: number; total_voters: number;
   active_proposals: number; pending_xp_rewards: number;
+}
+interface CharterStatus {
+  total: number; resolved: number; voting: number; tbd: number;
+}
+interface CharterParam {
+  param_key: string; title: string; category: string; phase: number; status: string;
 }
 
 const STATUS_VARIANT: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
@@ -27,6 +35,7 @@ const STATUS_VARIANT: Record<string, "default" | "secondary" | "destructive" | "
 function ProposalsContent() {
   const [proposals, setProposals] = useState<Proposal[]>([]);
   const [stats, setStats] = useState<Stats | null>(null);
+  const [charter, setCharter] = useState<{ status: CharterStatus; ready: CharterParam[]; params: CharterParam[] } | null>(null);
   const [loading, setLoading] = useState(true);
   const [showArchived, setShowArchived] = useState(false);
 
@@ -34,9 +43,11 @@ function ProposalsContent() {
     Promise.all([
       fetch(API_URL + "/proposals").then((r) => r.json()),
       fetch(API_URL + "/stats").then((r) => r.json()),
-    ]).then(([p, s]) => {
+      fetch(API_URL + "/charter").then((r) => r.json()),
+    ]).then(([p, s, c]) => {
       setProposals(p.data || []);
       setStats(s.data || null);
+      setCharter(c?.data || null);
       setLoading(false);
     }).catch(() => setLoading(false));
   }, []);
@@ -64,6 +75,79 @@ function ProposalsContent() {
             </Card>
           ))}
         </div>
+      )}
+
+      {/* DAO MVD Decision Tree */}
+      {charter && (
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm uppercase tracking-wide text-muted-foreground">DAO Setup — Decision Map</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {/* Progress */}
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-muted-foreground">{charter.status.resolved} of {charter.status.total} decisions made</span>
+              <span className="font-mono text-primary font-bold">{Math.round((charter.status.resolved / charter.status.total) * 100)}%</span>
+            </div>
+            <Progress value={(charter.status.resolved / charter.status.total) * 100} className="h-2" />
+
+            {/* Decision Flow */}
+            <div className="space-y-2">
+              {[
+                { phase: 1, label: "STEP 1: Foundation", desc: "Charter, quorum, voting rules", icon: "🏛️" },
+                { phase: 2, label: "STEP 2: Configuration", desc: "Treasury, elections, timing", icon: "⚙️" },
+                { phase: 3, label: "STEP 3: Operations", desc: "First election, first fund", icon: "🚀" },
+              ].map((step) => {
+                const params = charter.params?.filter((p: CharterParam) => p.phase === step.phase) || [];
+                const resolved = params.filter((p: CharterParam) => p.status === "resolved").length;
+                const total = params.length;
+                const ready = charter.ready?.filter((p: CharterParam) => p.phase === step.phase).length || 0;
+                const pct = total > 0 ? Math.round((resolved / total) * 100) : 0;
+                const isActive = ready > 0;
+                const isDone = resolved === total && total > 0;
+
+                return (
+                  <div key={step.phase} className={`rounded-lg p-3 ${isDone ? "bg-primary/10" : isActive ? "bg-muted" : "bg-muted/50 opacity-60"}`}>
+                    <div className="flex items-center justify-between mb-1">
+                      <div className="flex items-center gap-2">
+                        <span className="text-base">{step.icon}</span>
+                        <span className={`text-sm font-semibold ${isDone ? "text-primary" : ""}`}>{step.label}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {ready > 0 && <Badge variant="default" className="text-[9px]">{ready} ready</Badge>}
+                        <span className="text-xs font-mono text-muted-foreground">{resolved}/{total}</span>
+                      </div>
+                    </div>
+                    <div className="text-xs text-muted-foreground">{step.desc}</div>
+                    {!isActive && !isDone && step.phase > 1 && (
+                      <div className="text-[10px] text-muted-foreground mt-1">Blocked — waiting for Step {step.phase - 1}</div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Ready to vote */}
+            {charter.ready && charter.ready.length > 0 && (
+              <div>
+                <div className="text-xs font-semibold text-muted-foreground mb-1.5">Ready to vote now:</div>
+                <div className="space-y-1">
+                  {charter.ready.slice(0, 6).map((p: CharterParam) => (
+                    <div key={p.param_key} className="flex items-center justify-between text-xs py-1 border-b last:border-0">
+                      <span>{p.title}</span>
+                      <Badge variant="outline" className="text-[9px] font-mono">{p.param_key}</Badge>
+                    </div>
+                  ))}
+                </div>
+                <div className="mt-2">
+                  <a href="https://t.me/radix_guild_bot" target="_blank">
+                    <Button variant="default" size="sm" className="w-full">Vote in Telegram</Button>
+                  </a>
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
       )}
 
       {/* Filter */}
