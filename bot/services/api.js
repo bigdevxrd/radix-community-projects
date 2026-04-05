@@ -188,6 +188,54 @@ function startApi() {
       }
     }
 
+    // GET /api/analytics/summary
+    if (url.pathname === "/api/analytics/summary") {
+      res.writeHead(200);
+      return res.end(JSON.stringify({ ok: true, data: db.getAnalyticsSummary() }));
+    }
+
+    // GET /api/analytics/proposals-timeline
+    if (url.pathname === "/api/analytics/proposals-timeline") {
+      res.writeHead(200);
+      return res.end(JSON.stringify({ ok: true, data: db.getProposalsTimeline() }));
+    }
+
+    // GET /api/analytics/voters-histogram
+    if (url.pathname === "/api/analytics/voters-histogram") {
+      res.writeHead(200);
+      return res.end(JSON.stringify({ ok: true, data: db.getVotersHistogram() }));
+    }
+
+    // GET /api/analytics/xp-distribution
+    if (url.pathname === "/api/analytics/xp-distribution") {
+      res.writeHead(200);
+      return res.end(JSON.stringify({ ok: true, data: db.getXpDistribution() }));
+    }
+
+    // GET /api/analytics/charter-progress
+    if (url.pathname === "/api/analytics/charter-progress") {
+      res.writeHead(200);
+      return res.end(JSON.stringify({ ok: true, data: db.getCharterProgressAnalytics() }));
+    }
+
+    // GET /api/analytics/top-voters
+    if (url.pathname === "/api/analytics/top-voters") {
+      res.writeHead(200);
+      return res.end(JSON.stringify({ ok: true, data: db.getTopVoters() }));
+    }
+
+    // GET /api/proposals/:id/outcomes — outcome detail for a specific proposal
+    if (url.pathname.match(/^\/api\/proposals\/\d+\/outcomes$/)) {
+      const id = parseInt(url.pathname.split("/")[3]);
+      const outcome = db.getProposalOutcome(id);
+      if (!outcome) {
+        res.writeHead(404);
+        return res.end(JSON.stringify({ ok: false, error: "not_found" }));
+      }
+      res.writeHead(200);
+      return res.end(JSON.stringify({ ok: true, data: outcome }));
+    }
+
     res.writeHead(404);
     res.end(JSON.stringify({ ok: false, error: "not_found" }));
   });
