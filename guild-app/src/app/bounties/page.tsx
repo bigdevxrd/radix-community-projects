@@ -21,6 +21,11 @@ interface BountyStats {
   verified: number; paid: number; totalPaid: number;
   escrow: { funded: number; released: number; available: number };
 }
+interface EscrowTx {
+  id: number; bounty_id: number | null; tx_type: string;
+  amount_xrd: number; tx_hash: string | null;
+  description: string; created_at: number;
+}
 
 const STATUS_COLORS: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
   open: "default", assigned: "secondary", submitted: "outline", verified: "outline", paid: "default",
@@ -33,20 +38,23 @@ const STATUS_TEXT_COLORS: Record<string, string> = {
 function BountiesContent() {
   const [bounties, setBounties] = useState<Bounty[]>([]);
   const [stats, setStats] = useState<BountyStats | null>(null);
+  const [transactions, setTransactions] = useState<EscrowTx[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [filter, setFilter] = useState("all");
+  const [showTxs, setShowTxs] = useState(false);
 
   const fetchData = () => {
     setLoading(true); setError(false);
-    fetch(API_URL + "/bounties")
-      .then(r => r.json())
-      .then(d => {
-        setBounties(d.data?.bounties || []);
-        setStats(d.data?.stats || null);
-        setLoading(false);
-      })
-      .catch(() => { setError(true); setLoading(false); });
+    Promise.all([
+      fetch(API_URL + "/bounties").then(r => r.json()),
+      fetch(API_URL + "/escrow").then(r => r.json()).catch(() => null),
+    ]).then(([d, e]) => {
+      setBounties(d.data?.bounties || []);
+      setStats(d.data?.stats || null);
+      setTransactions(e?.data?.transactions || []);
+      setLoading(false);
+    }).catch(() => { setError(true); setLoading(false); });
   };
 
   useEffect(() => { fetchData(); }, []);
@@ -105,6 +113,40 @@ function BountiesContent() {
             </div>
           </CardContent>
         </Card>
+      )}
+
+      {/* Escrow Transactions */}
+      {transactions.length > 0 && (
+        <div>
+          <Button variant="ghost" size="sm" onClick={() => setShowTxs(!showTxs)}
+            className="text-xs text-muted-foreground">
+            {showTxs ? "Hide" : "Show"} Transaction History ({transactions.length})
+          </Button>
+          {showTxs && (
+            <Card className="mt-2">
+              <CardContent className="pt-3 pb-3">
+                <div className="space-y-0">
+                  {transactions.slice(0, 20).map(tx => (
+                    <div key={tx.id} className="flex items-center justify-between py-2 border-b last:border-0 text-xs">
+                      <div className="flex items-center gap-2">
+                        <Badge variant={tx.tx_type === "deposit" ? "default" : "secondary"} className="text-[9px]">
+                          {tx.tx_type}
+                        </Badge>
+                        <span className="text-muted-foreground">{tx.description}</span>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <span className={`font-mono font-bold ${tx.tx_type === "deposit" ? "text-primary" : "text-muted-foreground"}`}>
+                          {tx.tx_type === "deposit" ? "+" : "-"}{tx.amount_xrd} XRD
+                        </span>
+                        <span className="text-muted-foreground">{new Date(tx.created_at * 1000).toLocaleDateString()}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </div>
       )}
 
       {/* Filter */}
