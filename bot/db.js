@@ -147,6 +147,48 @@ function init() {
     CREATE INDEX IF NOT EXISTS idx_votes_proposal ON votes(proposal_id);
   `);
 
+  // CV2 + CrumbsUp federation migrations (safe for existing DBs)
+  try { db.exec("ALTER TABLE proposals ADD COLUMN cv2_synced BOOLEAN DEFAULT 0"); } catch(e) {}
+  try { db.exec("ALTER TABLE proposals ADD COLUMN cv2_id TEXT"); } catch(e) {}
+  try { db.exec("ALTER TABLE proposals ADD COLUMN cv2_url TEXT"); } catch(e) {}
+  try { db.exec("ALTER TABLE proposals ADD COLUMN cv2_sync_timestamp INTEGER"); } catch(e) {}
+  try { db.exec("ALTER TABLE proposals ADD COLUMN cv2_last_vote_count INTEGER DEFAULT 0"); } catch(e) {}
+  try { db.exec("ALTER TABLE proposals ADD COLUMN crumbsup_synced BOOLEAN DEFAULT 0"); } catch(e) {}
+  try { db.exec("ALTER TABLE proposals ADD COLUMN crumbsup_id TEXT"); } catch(e) {}
+  try { db.exec("ALTER TABLE proposals ADD COLUMN crumbsup_url TEXT"); } catch(e) {}
+  try { db.exec("ALTER TABLE proposals ADD COLUMN crumbsup_sync_timestamp INTEGER"); } catch(e) {}
+
+  // CV2 vote sync log
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS cv2_vote_sync (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      proposal_id INTEGER NOT NULL,
+      cv2_id TEXT NOT NULL,
+      direction TEXT,
+      vote_delta INTEGER,
+      synced_at INTEGER DEFAULT (strftime('%s','now')),
+      FOREIGN KEY (proposal_id) REFERENCES proposals(id)
+    );
+
+    CREATE TABLE IF NOT EXISTS crumbsup_sync_log (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      proposal_id INTEGER,
+      crumbsup_id TEXT,
+      event_type TEXT,
+      direction TEXT,
+      synced_at INTEGER DEFAULT (strftime('%s','now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS crumbsup_members (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      radix_address TEXT UNIQUE,
+      crumbsup_user_id TEXT UNIQUE,
+      xp_score INTEGER DEFAULT 0,
+      reputation_score INTEGER DEFAULT 0,
+      synced_at INTEGER DEFAULT (strftime('%s','now'))
+    );
+  `);
+
   return db;
 }
 
@@ -472,6 +514,83 @@ function getGameLeaderboard(limit = 10) {
   return db.prepare("SELECT * FROM game_state ORDER BY total_bonus_xp DESC LIMIT ?").all(limit);
 }
 
+// ── CV2 Federation ─────────────────────────────────────
+
+function markProposalCv2Synced(proposalId, cv2Id, cv2Url) {
+  const now = Math.floor(Date.now() / 1000);
+  db.prepare(
+    "UPDATE proposals SET cv2_synced = 1, cv2_id = ?, cv2_url = ?, cv2_sync_timestamp = ? WHERE id = ?"
+  ).run(cv2Id, cv2Url, now, proposalId);
+}
+
+function updateCv2VoteCount(cv2Id, voteCount) {
+  db.prepare(
+    "UPDATE proposals SET cv2_last_vote_count = ? WHERE cv2_id = ?"
+  ).run(voteCount, cv2Id);
+}
+
+function getProposalIdByCv2Id(cv2Id) {
+  const row = db.prepare("SELECT id FROM proposals WHERE cv2_id = ?").get(cv2Id);
+  return row ? row.id : null;
+}
+
+function getSyncedCv2Proposals() {
+  return db.prepare(
+    "SELECT id, title, status, cv2_id, cv2_url, cv2_synced, cv2_last_vote_count FROM proposals WHERE cv2_synced = 1 ORDER BY created_at DESC"
+  ).all();
+}
+
+function logCv2VoteSync(proposalId, cv2Id, direction, voteDelta) {
+  db.prepare(
+    "INSERT INTO cv2_vote_sync (proposal_id, cv2_id, direction, vote_delta) VALUES (?, ?, ?, ?)"
+  ).run(proposalId, cv2Id, direction, voteDelta || 1);
+}
+
+function getVotesWithAddresses(proposalId) {
+  return db.prepare(
+    "SELECT tg_id, radix_address, vote FROM votes WHERE proposal_id = ?"
+  ).all(proposalId);
+}
+
+// ── CrumbsUp Federation ─────────────────────────────────
+
+function markProposalCrumbsUpSynced(proposalId, crumbsupId, crumbsupUrl) {
+  const now = Math.floor(Date.now() / 1000);
+  db.prepare(
+    "UPDATE proposals SET crumbsup_synced = 1, crumbsup_id = ?, crumbsup_url = ?, crumbsup_sync_timestamp = ? WHERE id = ?"
+  ).run(crumbsupId, crumbsupUrl, now, proposalId);
+}
+
+function getProposalIdByCrumbsUpId(crumbsupId) {
+  const row = db.prepare("SELECT id FROM proposals WHERE crumbsup_id = ?").get(crumbsupId);
+  return row ? row.id : null;
+}
+
+function getSyncedCrumbsUpProposals() {
+  return db.prepare(
+    "SELECT id, title, status, crumbsup_id, crumbsup_url, crumbsup_synced FROM proposals WHERE crumbsup_synced = 1 ORDER BY created_at DESC"
+  ).all();
+}
+
+function logCrumbsUpSync(proposalId, crumbsupId, eventType, direction) {
+  db.prepare(
+    "INSERT INTO crumbsup_sync_log (proposal_id, crumbsup_id, event_type, direction) VALUES (?, ?, ?, ?)"
+  ).run(proposalId, crumbsupId, eventType, direction);
+}
+
+function upsertCrumbsUpMember(radixAddress, crumbsupUserId, xpScore, reputationScore) {
+  const now = Math.floor(Date.now() / 1000);
+  db.prepare(
+    "INSERT OR REPLACE INTO crumbsup_members (radix_address, crumbsup_user_id, xp_score, reputation_score, synced_at) VALUES (?, ?, ?, ?, ?)"
+  ).run(radixAddress, crumbsupUserId, xpScore, reputationScore, now);
+}
+
+function getCrumbsUpMembers(limit = 50) {
+  return db.prepare(
+    "SELECT * FROM crumbsup_members ORDER BY xp_score DESC LIMIT ?"
+  ).all(limit);
+}
+
 module.exports = {
   init,
   getUser, registerUser,
@@ -483,6 +602,13 @@ module.exports = {
   createBounty, getBounty, getOpenBounties, getAllBounties, assignBounty, submitBounty, verifyBounty, payBounty,
   fundEscrow, getEscrowBalance, getBountyTransactions, getBountyStats,
   rollDice, recordRoll, getGameState, getGameLeaderboard, ROLL_BONUSES,
+  // CV2
+  markProposalCv2Synced, updateCv2VoteCount, getProposalIdByCv2Id,
+  getSyncedCv2Proposals, logCv2VoteSync, getVotesWithAddresses,
+  // CrumbsUp
+  markProposalCrumbsUpSynced, getProposalIdByCrumbsUpId,
+  getSyncedCrumbsUpProposals, logCrumbsUpSync,
+  upsertCrumbsUpMember, getCrumbsUpMembers,
 };
 
 function cancelProposal(proposalId, tgId) {

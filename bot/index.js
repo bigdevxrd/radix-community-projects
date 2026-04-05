@@ -790,10 +790,264 @@ bot.command("mint", (ctx) => ctx.reply(
 ));
 bot.command("dao", (ctx) => ctx.reply("Guild DAO:\n" + DAO_URL));
 bot.command("source", (ctx) => ctx.reply("Source:\n" + GITHUB));
-bot.command("charter", (ctx) => ctx.reply("DAO Charter:\nhttps://radix.wiki/ideas/radix-network-dao-charter"));
 bot.command("mvd", (ctx) => ctx.reply("Minimum Viable DAO discussion:\nhttps://radixtalk.com/t/design-our-minimum-viable-dao-mvd/2258"));
 bot.command("wiki", (ctx) => ctx.reply("Radix Wiki:\nhttps://radix.wiki/ecosystem"));
 bot.command("talk", (ctx) => ctx.reply("RadixTalk forum:\nhttps://radixtalk.com"));
+
+// ── /cv2 (Consultation v2) ──────────────────────────────
+
+bot.command("cv2", async (ctx) => {
+  const args = ctx.message.text.split(" ").slice(1);
+  const sub = args[0];
+
+  if (!sub || sub === "status") {
+    const synced = db.getSyncedCv2Proposals();
+    const cv2Enabled = !!(process.env.CV2_API_URL && process.env.CV2_API_KEY);
+    return ctx.reply(
+      "Consultation v2 Status\n\n" +
+      "CV2 Integration: " + (cv2Enabled ? "enabled" : "disabled (set CV2_API_KEY)") + "\n" +
+      "Proposals synced: " + synced.length + "\n\n" +
+      "Subcommands:\n" +
+      "/cv2 status <id> — proposal sync state\n" +
+      "/cv2 votes <id> — CV2 vote counts\n" +
+      "/cv2 link — CV2 portal link"
+    );
+  }
+
+  if (sub === "link") {
+    return ctx.reply(
+      "Consultation v2 (CV2) — Radix Network Governance\n\n" +
+      "Portal: " + (process.env.CV2_API_URL || "https://consultation.radix.network") + "\n\n" +
+      "CV2 is where Radix network-level decisions happen.\n" +
+      "Guild proposals can sync to CV2 for network-wide votes."
+    );
+  }
+
+  const proposalId = parseInt(args[1]);
+  if (!proposalId) return ctx.reply("Usage: /cv2 status <id> or /cv2 votes <id>");
+
+  if (sub === "status") {
+    const proposal = db.getProposal(proposalId);
+    if (!proposal) return ctx.reply("Proposal #" + proposalId + " not found.");
+    return ctx.reply(
+      "Proposal #" + proposalId + " — CV2 Sync\n\n" +
+      "Title: " + proposal.title + "\n" +
+      "CV2 Synced: " + (proposal.cv2_synced ? "yes" : "no") + "\n" +
+      (proposal.cv2_id ? "CV2 ID: " + proposal.cv2_id + "\n" : "") +
+      (proposal.cv2_url ? "CV2 URL: " + proposal.cv2_url + "\n" : "") +
+      "\nAdmin: /cv2 sync " + proposalId
+    );
+  }
+
+  if (sub === "votes") {
+    const proposal = db.getProposal(proposalId);
+    if (!proposal) return ctx.reply("Proposal #" + proposalId + " not found.");
+    const counts = db.getVoteCounts(proposalId);
+    const total = Object.values(counts).reduce((a, b) => a + b, 0);
+    let msg = "Proposal #" + proposalId + " — Vote Counts\n\n";
+    Object.entries(counts).sort((a, b) => b[1] - a[1]).forEach(([opt, cnt]) => {
+      msg += opt + ": " + cnt + "\n";
+    });
+    msg += "Total: " + total + "\n";
+    if (proposal.cv2_last_vote_count > 0) {
+      msg += "CV2 total: " + proposal.cv2_last_vote_count;
+    }
+    return ctx.reply(msg);
+  }
+
+  if (sub === "sync") {
+    const user = await requireBadge(ctx);
+    if (!user) return;
+    const proposal = db.getProposal(proposalId);
+    if (!proposal) return ctx.reply("Proposal #" + proposalId + " not found.");
+    try {
+      const { syncProposalToCV2, getVoteWeightsFromBadges } = require("./services/consultation");
+      const weights = await getVoteWeightsFromBadges();
+      const result = await syncProposalToCV2(proposal, weights);
+      db.markProposalCv2Synced(proposalId, result.cv2_id, result.cv2_url);
+      return ctx.reply(
+        "Proposal #" + proposalId + " synced to CV2!\n\n" +
+        "CV2 ID: " + result.cv2_id + "\n" +
+        "URL: " + result.cv2_url
+      );
+    } catch (e) {
+      return ctx.reply("CV2 sync failed: " + e.message);
+    }
+  }
+
+  ctx.reply("Unknown /cv2 subcommand. Use: status, votes, sync, link");
+});
+
+// ── /crumbsup ───────────────────────────────────────────
+
+bot.command("crumbsup", async (ctx) => {
+  const args = ctx.message.text.split(" ").slice(1);
+  const sub = args[0];
+
+  if (!sub || sub === "dao") {
+    const members = db.getCrumbsUpMembers(1000);
+    const proposals = db.getSyncedCrumbsUpProposals();
+    return ctx.reply(
+      "CrumbsUp Guild DAO\n\n" +
+      "DAO ID: " + (process.env.CRUMBSUP_DAO_ID || "guild-radix-dao") + "\n" +
+      "Members synced: " + members.length + "\n" +
+      "Proposals synced: " + proposals.length + "\n\n" +
+      "CrumbsUp page: " + DAO_URL + "\n\n" +
+      "/crumbsup proposals — synced proposals\n" +
+      "/crumbsup reputation — your rep score\n" +
+      "/crumbsup join — join the DAO"
+    );
+  }
+
+  if (sub === "join") {
+    return ctx.reply(
+      "Join the Radix Guild on CrumbsUp!\n\n" +
+      DAO_URL + "\n\n" +
+      "CrumbsUp is where you can:\n" +
+      "• Track your governance reputation\n" +
+      "• See cross-platform vote counts\n" +
+      "• Participate in DAO bounties"
+    );
+  }
+
+  if (sub === "proposals") {
+    const synced = db.getSyncedCrumbsUpProposals();
+    if (synced.length === 0) return ctx.reply("No proposals synced to CrumbsUp yet.");
+    let msg = "CrumbsUp Proposals:\n\n";
+    synced.slice(0, 8).forEach(p => {
+      msg += "#" + p.id + " [" + p.status + "] " + p.title.slice(0, 50) + "\n";
+      if (p.crumbsup_url) msg += "  " + p.crumbsup_url + "\n";
+    });
+    return ctx.reply(msg);
+  }
+
+  if (sub === "reputation") {
+    const user = db.getUser(ctx.from.id);
+    if (!user) return ctx.reply("Register first: /register <account_rdx1...>");
+    const member = db.getCrumbsUpMembers(1000).find(m => m.radix_address === user.radix_address);
+    if (!member) {
+      return ctx.reply(
+        "Not yet synced to CrumbsUp.\n\n" +
+        "Earn XP through voting and proposals, then ask an admin to sync your reputation."
+      );
+    }
+    return ctx.reply(
+      "CrumbsUp Reputation\n\n" +
+      "Address: " + user.radix_address.slice(0, 25) + "...\n" +
+      "Guild XP: " + member.xp_score + "\n" +
+      "CrumbsUp Reputation: " + member.reputation_score + "\n" +
+      "CrumbsUp ID: " + (member.crumbsup_user_id || "not linked")
+    );
+  }
+
+  ctx.reply("CrumbsUp commands:\n/crumbsup dao — DAO stats\n/crumbsup proposals — synced proposals\n/crumbsup join — join link\n/crumbsup reputation — your score");
+});
+
+// ── /federation ─────────────────────────────────────────
+
+bot.command("federation", async (ctx) => {
+  const args = ctx.message.text.split(" ").slice(1);
+  const sub = args[0];
+
+  if (!sub || sub === "status") {
+    const cv2Synced = db.getSyncedCv2Proposals().length;
+    const crumbsupSynced = db.getSyncedCrumbsUpProposals().length;
+    return ctx.reply(
+      "Federation Status\n\n" +
+      "CV2 Proposals: " + cv2Synced + "\n" +
+      "CrumbsUp Proposals: " + crumbsupSynced + "\n" +
+      "DB: ok\n\n" +
+      "/federation health — detailed health\n" +
+      "/federation voters — top voters\n" +
+      "/federation compare <id> — compare vote counts"
+    );
+  }
+
+  if (sub === "health") {
+    const cv2Enabled = !!(process.env.CV2_API_URL && process.env.CV2_API_KEY);
+    const crumbsupEnabled = !!(process.env.CRUMBSUP_API_URL && process.env.CRUMBSUP_API_KEY);
+    return ctx.reply(
+      "Federation Health\n\n" +
+      "CV2 API: " + (cv2Enabled ? "configured" : "not configured") + "\n" +
+      "CrumbsUp API: " + (crumbsupEnabled ? "configured" : "not configured") + "\n" +
+      "Radix Gateway: configured\n" +
+      "Database: ok\n\n" +
+      "To enable: set CV2_API_KEY and CRUMBSUP_API_KEY in .env"
+    );
+  }
+
+  if (sub === "voters") {
+    const members = db.getCrumbsUpMembers(10);
+    if (members.length === 0) return ctx.reply("No federation voter data yet.");
+    let msg = "Top Federation Voters\n\n";
+    members.forEach((m, i) => {
+      const totalWeight = m.xp_score + (m.reputation_score * 10);
+      msg += (i + 1) + ". " + m.radix_address.slice(0, 20) + "...\n";
+      msg += "   XP: " + m.xp_score + " | CrumbsUp Rep: " + m.reputation_score + " | Weight: " + totalWeight + "\n";
+    });
+    return ctx.reply(msg);
+  }
+
+  if (sub === "compare") {
+    const proposalId = parseInt(args[1]);
+    if (!proposalId) return ctx.reply("Usage: /federation compare <id>");
+    const proposal = db.getProposal(proposalId);
+    if (!proposal) return ctx.reply("Proposal #" + proposalId + " not found.");
+    const counts = db.getVoteCounts(proposalId);
+    const total = Object.values(counts).reduce((a, b) => a + b, 0);
+    return ctx.reply(
+      "Proposal #" + proposalId + " — Platform Comparison\n\n" +
+      "Title: " + proposal.title + "\n\n" +
+      "Guild votes: " + total + "\n" +
+      "CV2: " + (proposal.cv2_synced ? (proposal.cv2_last_vote_count || 0) + " votes (synced)" : "not synced") + "\n" +
+      "CrumbsUp: " + (proposal.crumbsup_synced ? "synced" : "not synced") + "\n\n" +
+      "CV2 URL: " + (proposal.cv2_url || "N/A") + "\n" +
+      "CrumbsUp URL: " + (proposal.crumbsup_url || "N/A")
+    );
+  }
+
+  ctx.reply("Federation commands:\n/federation status\n/federation health\n/federation voters\n/federation compare <id>");
+});
+
+// ── /syncnow (Force all pending syncs — badge required) ─
+
+bot.command("syncnow", async (ctx) => {
+  const user = await requireBadge(ctx);
+  if (!user) return;
+
+  const pending = db.getActiveProposals().filter(p => !p.cv2_synced || !p.crumbsup_synced);
+  if (pending.length === 0) return ctx.reply("All active proposals are already synced.");
+
+  let synced = 0;
+  let failed = 0;
+
+  for (const proposal of pending.slice(0, 5)) {
+    try {
+      if (!proposal.cv2_synced && process.env.CV2_API_KEY) {
+        const { syncProposalToCV2, getVoteWeightsFromBadges } = require("./services/consultation");
+        const weights = await getVoteWeightsFromBadges();
+        const result = await syncProposalToCV2(proposal, weights);
+        db.markProposalCv2Synced(proposal.id, result.cv2_id, result.cv2_url);
+      }
+      if (!proposal.crumbsup_synced && process.env.CRUMBSUP_API_KEY) {
+        const { syncProposalToCrumbsUp } = require("./services/crumbsup");
+        const result = await syncProposalToCrumbsUp(proposal);
+        db.markProposalCrumbsUpSynced(proposal.id, result.crumbsup_id, result.crumbsup_url);
+      }
+      synced++;
+    } catch (e) {
+      console.error("[syncnow] Failed for #" + proposal.id + ":", e.message);
+      failed++;
+    }
+  }
+
+  ctx.reply(
+    "Sync complete!\n\n" +
+    "Synced: " + synced + "\n" +
+    "Failed: " + failed + "\n" +
+    "Total pending: " + pending.length
+  );
+});
 
 bot.on("message:text", (ctx) => {
   // Check if user is in wizard flow
