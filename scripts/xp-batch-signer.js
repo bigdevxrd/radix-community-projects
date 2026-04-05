@@ -12,8 +12,7 @@
  * 2. The .env must have RADIX_ACCOUNT_ADDRESS set to the signer account.
  */
 
-require("dotenv").config({ path: process.env.SIGNER_ENV || "/opt/guild/signer/.env" });
-const { signAndSubmit, waitForCommit } = require(process.env.SIGNER_MODULE || "/opt/guild/signer/src/radix/signer");
+const { signAndSubmit, waitForCommit } = require("./signer");
 
 const API_URL = process.env.BOT_API_URL || "http://localhost:3003";
 const MANAGER = "component_rdx1czexylvvm0q4uhwpjaqmlznj9sd3y2jnmmah6qug9lm9sfm3tyrtva";
