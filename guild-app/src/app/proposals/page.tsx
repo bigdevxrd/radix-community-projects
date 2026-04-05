@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { AppShell } from "@/components/AppShell";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -204,6 +205,13 @@ function ProposalsContent() {
                   <a href="https://t.me/radix_guild_bot" target="_blank">
                     <Button variant="default" size="sm" className="mt-3">Vote in Telegram</Button>
                   </a>
+                )}
+                {p.status !== "active" && (
+                  <div className="mt-3">
+                    <Link href={`/proposals/${p.id}/outcomes`}>
+                      <Button variant="outline" size="sm" className="text-xs">View Outcome ↗</Button>
+                    </Link>
+                  </div>
                 )}
               </CardContent>
             </Card>

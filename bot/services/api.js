@@ -2,6 +2,7 @@
 const http = require("http");
 const db = require("../db");
 const { hasBadge, getBadgeData } = require("./gateway");
+const { getXpStats, getXpQueue } = require("./xp");
 
 const API_PORT = parseInt(process.env.API_PORT || "3003");
 const ALLOWED_ORIGINS = (process.env.CORS_ORIGINS || "").split(",").filter(Boolean);
@@ -135,14 +136,12 @@ function startApi() {
 
     // GET /api/xp-queue — pending XP rewards
     if (url.pathname === "/api/xp-queue") {
-      const { getXpQueue } = require("./xp");
       res.writeHead(200);
       return res.end(JSON.stringify({ ok: true, data: getXpQueue() }));
     }
 
     // GET /api/stats
     if (url.pathname === "/api/stats") {
-      const { getXpQueue } = require("./xp");
       res.writeHead(200);
       return res.end(JSON.stringify({
         ok: true,
@@ -151,7 +150,7 @@ function startApi() {
           total_voters: db.getTotalVoters(),
           active_proposals: db.getActiveProposals().length,
           pending_xp_rewards: getXpQueue().length,
-          xp: require("./xp").getXpStats(),
+          xp: getXpStats(),
         }
       }));
     }
@@ -186,6 +185,54 @@ function startApi() {
         res.writeHead(500);
         return res.end(JSON.stringify({ ok: false, error: "gateway_error" }));
       }
+    }
+
+    // GET /api/analytics/summary — key metrics
+    if (url.pathname === "/api/analytics/summary") {
+      const xpStats = getXpStats();
+      res.writeHead(200);
+      return res.end(JSON.stringify({
+        ok: true,
+        data: {
+          total_voters: db.getTotalVoters(),
+          total_proposals: db.getTotalProposals(),
+          xp_distributed: xpStats.totalXpAwarded,
+          bounties_paid: db.getBountyStats().paid,
+          avg_votes_per_proposal: db.getAvgVotesPerProposal(),
+          outcomes: db.getOutcomesDistribution(),
+        }
+      }));
+    }
+
+    // GET /api/analytics/proposals-timeline — proposals over time
+    if (url.pathname === "/api/analytics/proposals-timeline") {
+      const timeline = db.getProposalsTimeline();
+      res.writeHead(200);
+      return res.end(JSON.stringify({ ok: true, data: timeline }));
+    }
+
+    // GET /api/analytics/voters-histogram — vote distribution
+    if (url.pathname === "/api/analytics/voters-histogram") {
+      const histogram = db.getVotersHistogram();
+      const topVoters = db.getTopVoters(10);
+      res.writeHead(200);
+      return res.end(JSON.stringify({ ok: true, data: { histogram, top_voters: topVoters } }));
+    }
+
+    // GET /api/analytics/xp-distribution — XP awards data
+    if (url.pathname === "/api/analytics/xp-distribution") {
+      const stats = getXpStats();
+      const queue = getXpQueue();
+      res.writeHead(200);
+      return res.end(JSON.stringify({ ok: true, data: { stats, top_pending: queue.slice(0, 10) } }));
+    }
+
+    // GET /api/analytics/charter-progress — phase 1/2/3 completion
+    if (url.pathname === "/api/analytics/charter-progress") {
+      const phases = db.getCharterProgressByPhase();
+      const overall = db.getCharterStatus();
+      res.writeHead(200);
+      return res.end(JSON.stringify({ ok: true, data: { phases, overall } }));
     }
 
     res.writeHead(404);
