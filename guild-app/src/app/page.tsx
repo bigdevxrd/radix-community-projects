@@ -12,27 +12,47 @@ import { useWallet } from "@/hooks/useWallet";
 import { API_URL, ECOSYSTEM_LINKS, RESOURCES } from "@/lib/constants";
 import Link from "next/link";
 
+interface GameState {
+  total_rolls: number; total_bonus_xp: number; streak_days: number;
+  last_roll_value: number; jackpots: number;
+}
+
 interface DashboardData {
   stats: { total_proposals: number; active_proposals: number; total_voters: number; pending_xp_rewards: number } | null;
   charter: { status: { total: number; resolved: number; voting: number; tbd: number }; ready: { param_key: string; title: string }[] } | null;
   bounties: { stats: { open: number; assigned: number; submitted: number; verified: number; paid: number; totalPaid: number; escrow: { funded: number; released: number; available: number } }; bounties: { id: number; title: string; reward_xrd: number; status: string }[] } | null;
+  game: GameState | null;
 }
 
 function Dashboard() {
   const { account, connected, badge, badgeLoading } = useWallet();
-  const [data, setData] = useState<DashboardData>({ stats: null, charter: null, bounties: null });
+  const [data, setData] = useState<DashboardData>({ stats: null, charter: null, bounties: null, game: null });
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
 
-  useEffect(() => {
+  const fetchData = () => {
+    setLoading(true); setError(false);
     Promise.all([
       fetch(API_URL + "/stats").then(r => r.json()).catch(() => null),
       fetch(API_URL + "/charter").then(r => r.json()).catch(() => null),
       fetch(API_URL + "/bounties").then(r => r.json()).catch(() => null),
     ]).then(([s, c, b]) => {
-      setData({ stats: s?.data || null, charter: c?.data || null, bounties: b?.data || null });
+      const allNull = !s?.data && !c?.data && !b?.data;
+      if (allNull) setError(true);
+      setData(prev => ({ ...prev, stats: s?.data || null, charter: c?.data || null, bounties: b?.data || null }));
       setLoading(false);
-    });
-  }, []);
+    }).catch(() => { setError(true); setLoading(false); });
+  };
+
+  useEffect(() => { fetchData(); }, []);
+
+  // Fetch game state when account is available
+  useEffect(() => {
+    if (!account) return;
+    fetch(API_URL + "/game/" + account).then(r => r.json())
+      .then(g => setData(prev => ({ ...prev, game: g?.data || null })))
+      .catch(() => {});
+  }, [account]);
 
   return (
     <div className="space-y-5">
@@ -76,6 +96,16 @@ function Dashboard() {
             <h2 className="text-lg font-bold mb-2">Become a Member</h2>
             <p className="text-muted-foreground text-sm mb-5">Free on-chain badge. Your badge is your vote.</p>
             <Link href="/mint"><Button>Mint Your Badge</Button></Link>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Error State */}
+      {error && !loading && (
+        <Card>
+          <CardContent className="py-8 text-center">
+            <p className="text-muted-foreground text-sm mb-3">Failed to load dashboard data</p>
+            <Button variant="outline" size="sm" onClick={fetchData}>Retry</Button>
           </CardContent>
         </Card>
       )}
@@ -173,6 +203,38 @@ function Dashboard() {
                     </div>
                   </div>
                 ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Game Stats */}
+      {connected && data.game && data.game.total_rolls > 0 && (
+        <Card>
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-sm uppercase tracking-wide text-muted-foreground">Dice Game</CardTitle>
+              <Link href="/leaderboard"><Button variant="ghost" size="sm">Leaderboard</Button></Link>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              {[
+                { label: "Rolls", value: data.game.total_rolls, color: "text-foreground" },
+                { label: "Bonus XP", value: data.game.total_bonus_xp, color: "text-primary" },
+                { label: "Streak", value: data.game.streak_days + "d", color: "text-yellow-500" },
+                { label: "Jackpots", value: data.game.jackpots, color: data.game.jackpots > 0 ? "text-primary" : "text-muted-foreground" },
+              ].map(s => (
+                <div key={s.label} className="bg-muted rounded-lg px-3 py-2.5">
+                  <div className="text-[10px] text-muted-foreground uppercase tracking-wider">{s.label}</div>
+                  <div className={`text-lg font-bold font-mono ${s.color}`}>{s.value}</div>
+                </div>
+              ))}
+            </div>
+            {data.game.last_roll_value > 0 && (
+              <div className="mt-2 text-xs text-muted-foreground">
+                Last roll: {data.game.last_roll_value} ({["", "Miss", "Small", "Nice", "Great", "Epic", "JACKPOT"][data.game.last_roll_value]})
               </div>
             )}
           </CardContent>

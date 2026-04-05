@@ -50,9 +50,9 @@ function AdminContent() {
       <Card>
         <CardHeader className="pb-3"><CardTitle className="text-sm uppercase tracking-wide text-muted-foreground">Look Up Badges</CardTitle></CardHeader>
         <CardContent className="space-y-3">
-          <div className="flex gap-2">
-            <Input value={lookupAddr} onChange={(e) => setLookupAddr(e.target.value)} placeholder="account_rdx1..." className="font-mono text-[13px]" />
-            <Button onClick={() => handleLookup(lookupAddr)}>Search</Button>
+          <div className="flex flex-col sm:flex-row gap-2">
+            <Input value={lookupAddr} onChange={(e) => setLookupAddr(e.target.value)} placeholder="account_rdx1..." className="font-mono text-[13px] flex-1" />
+            <Button onClick={() => handleLookup(lookupAddr)} className="sm:w-auto w-full">Search</Button>
           </div>
           {account && (
             <Button variant="ghost" size="sm" onClick={() => { setLookupAddr(account); handleLookup(account); }}>

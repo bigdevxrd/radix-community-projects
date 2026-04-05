@@ -24,6 +24,7 @@ interface CharterStatus {
 }
 interface CharterParam {
   param_key: string; title: string; category: string; phase: number; status: string;
+  proposal_type?: string; options?: string; param_value?: string;
 }
 
 const STATUS_VARIANT: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
@@ -37,9 +38,11 @@ function ProposalsContent() {
   const [stats, setStats] = useState<Stats | null>(null);
   const [charter, setCharter] = useState<{ status: CharterStatus; ready: CharterParam[]; params: CharterParam[] } | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
   const [showArchived, setShowArchived] = useState(false);
 
-  useEffect(() => {
+  const fetchData = () => {
+    setLoading(true); setError(false);
     Promise.all([
       fetch(API_URL + "/proposals").then((r) => r.json()),
       fetch(API_URL + "/stats").then((r) => r.json()),
@@ -49,8 +52,10 @@ function ProposalsContent() {
       setStats(s.data || null);
       setCharter(c?.data || null);
       setLoading(false);
-    }).catch(() => setLoading(false));
-  }, []);
+    }).catch(() => { setError(true); setLoading(false); });
+  };
+
+  useEffect(() => { fetchData(); }, []);
 
   const active = proposals.filter((p) => p.status === "active");
   const archived = proposals.filter((p) => p.status !== "active");
@@ -58,6 +63,16 @@ function ProposalsContent() {
 
   return (
     <div className="space-y-5">
+      {/* Error State */}
+      {error && !loading && (
+        <Card>
+          <CardContent className="py-8 text-center">
+            <p className="text-muted-foreground text-sm mb-3">Failed to load proposals</p>
+            <Button variant="outline" size="sm" onClick={fetchData}>Retry</Button>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Stats */}
       {stats && (
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -130,16 +145,28 @@ function ProposalsContent() {
             {/* Ready to vote */}
             {charter.ready && charter.ready.length > 0 && (
               <div>
-                <div className="text-xs font-semibold text-muted-foreground mb-1.5">Ready to vote now:</div>
-                <div className="space-y-1">
-                  {charter.ready.slice(0, 6).map((p: CharterParam) => (
-                    <div key={p.param_key} className="flex items-center justify-between text-xs py-1 border-b last:border-0">
-                      <span>{p.title}</span>
-                      <Badge variant="outline" className="text-[9px] font-mono">{p.param_key}</Badge>
-                    </div>
-                  ))}
+                <div className="text-xs font-semibold text-muted-foreground mb-2">Ready to vote ({charter.ready.length}):</div>
+                <div className="space-y-2">
+                  {charter.ready.slice(0, 6).map((p: CharterParam) => {
+                    const opts = p.options ? JSON.parse(p.options) as string[] : null;
+                    return (
+                      <div key={p.param_key} className="bg-muted rounded-lg p-3">
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-sm font-semibold">{p.title}</span>
+                          <Badge variant="outline" className="text-[9px] font-mono">{p.proposal_type || "poll"}</Badge>
+                        </div>
+                        {opts && (
+                          <div className="flex flex-wrap gap-1.5 mt-1.5">
+                            {opts.map((o: string) => (
+                              <Badge key={o} variant="secondary" className="text-[10px]">{o}</Badge>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
-                <div className="mt-2">
+                <div className="mt-3">
                   <a href="https://t.me/rad_gov" target="_blank">
                     <Button variant="default" size="sm" className="w-full">Vote in Telegram</Button>
                   </a>
