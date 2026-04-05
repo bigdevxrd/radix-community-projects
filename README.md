@@ -1,95 +1,145 @@
 # Radix Governance
 
-Governance infrastructure for the Radix community. Propose ideas, vote on them, earn XP — all from Telegram.
+## The Problem
 
-**Radix Governance** = the system (badges, voting, proposals, XP, on-chain identity)
-**Radix Guild** = the first community using it (members, contributors, stewards)
+The Radix community has no way to make decisions together. Ideas float in Telegram, never get voted on, and nothing gets done. No framework, no accountability, no rewards for contributing.
 
-## How It Works
+## The Solution
 
-1. **Mint a free badge** — an on-chain NFT in your Radix Wallet
-2. **Register in the TG bot** — link your wallet to your Telegram account
-3. **Propose and vote** — create proposals, vote with inline buttons
-4. **Earn XP** — voting and proposing earn XP. Higher XP = higher tier = more voting weight
+A governance system that turns ideas into decisions into funded actions — all from Telegram.
 
-Tiers: Member (1x) → Contributor (2x) → Builder (3x) → Steward (5x) → Elder (10x)
+```
+💡 Idea → 🗳️ Vote → ✅ Decision → 💰 Fund → 🔨 Build → ✔️ Verify → 🎁 Reward
+```
 
-## Get Started
+**Radix Governance** = the system (badges, voting, bounties, XP, escrow)
+**Radix Guild** = the first community using it
 
-- **Telegram Bot:** [@radix_guild_bot](https://t.me/radix_guild_bot)
-- **Dashboard:** [Guild Dashboard](https://156-67-219-105.sslip.io/guild)
-- **CrumbsUp DAO:** [Guild on CrumbsUp](https://www.crumbsup.io/#dao?id=4db790d7-4d75-49ed-a2e0-3514743809e0)
+## Get Started (3 minutes)
+
+```
+Step 1:  Open @radix_guild_bot in Telegram
+Step 2:  /register account_rdx1...     ← link your wallet
+Step 3:  Mint badge (free):            ← dashboard link in bot
+Step 4:  /proposals                    ← vote on what matters
+```
+
+Everything is free. No XRD required to vote.
+
+## One Job Right Now: Set Up the DAO
+
+32 governance parameters need community votes. 6 are ready today — no dependencies, no blockers.
+
+```
+STEP 1: FOUNDATION (vote now — 6 decisions)
+┌──────────────────────────────────────────────┐
+│  1. Adopt the Charter?          [YES/NO]     │
+│  2. RAC seat count?             [3/5/7/9]    │
+│  3. Quorum minimum?             [3/10/25]    │
+│  4. Voting period?              [48h/72h/7d] │
+│  5. Approval threshold?         [>50%/>60%]  │
+│  6. Amendment threshold?        [>60%/>66%]  │
+└──────────────────────────────────────────────┘
+         │ passes
+         ▼
+STEP 2: CONFIGURATION (20 decisions auto-unlock)
+┌──────────────────────────────────────────────┐
+│  Treasury limits, election rules, timing,    │
+│  reputation system, enforcement rules        │
+│  ⚠️ Blocked until Step 1 completes          │
+└──────────────────────────────────────────────┘
+         │ passes
+         ▼
+STEP 3: OPERATIONS (6 decisions)
+┌──────────────────────────────────────────────┐
+│  First RAC election, first bounty fund,      │
+│  infrastructure hosting approval             │
+└──────────────────────────────────────────────┘
+         │ passes
+         ▼
+STEP 4: FREE REIGN
+┌──────────────────────────────────────────────┐
+│  Anyone can propose, vote, build, earn.      │
+│  The DAO governs itself.                     │
+└──────────────────────────────────────────────┘
+```
+
+Type `/charter` in the bot to see progress. Full details: [docs/MVD-SETUP.md](./docs/MVD-SETUP.md)
+
+## What's Built
+
+| System | What It Does | Status |
+|--------|-------------|--------|
+| **Badges** | On-chain NFT identity (free mint) | Live on mainnet |
+| **Voting** | Propose + vote in Telegram (free) | Live |
+| **Charter** | 32 governance decisions tracked with dependencies | Live |
+| **Bounties** | Create → claim → submit → verify → pay | Live |
+| **Escrow** | Treasury tracking (fund, release, audit trail) | Live |
+| **Dice Game** | Every action = dice roll = bonus XP | Live |
+| **Dashboard** | Badge viewer, proposals, bounties, charter progress | Live |
+| **Badge API** | Public REST endpoints for any dApp | Live |
 
 ## How Voting Works
 
-| What | Where | Cost | On-chain? |
-|------|-------|------|-----------|
-| **Badge minting** | Dashboard | Free (0 XRD) | Yes — NFT in your wallet |
-| **Voting** | Telegram bot | Free | No — stored in bot database |
-| **Proposals** | Telegram bot | Free | No — stored in bot database |
-| **XP updates** | Admin batch signer | Free to user | Yes — written on-chain periodically |
+| What | Cost | On-chain? |
+|------|------|-----------|
+| Mint a badge | Free | Yes — NFT in your wallet |
+| Vote on proposals | Free | No — off-chain (instant) |
+| Earn XP | Free | Batch-written on-chain |
+| Create bounties | Free | No — tracked in bot |
+| Fund escrow | XRD | Tracked per-transaction |
 
-**Radix Governance** = network-level decisions (all XRD holders, via Consultation v2)
-**Radix Guild** = community coordination (badge holders, via Telegram bot)
+## Tiers & Voting Weight
 
-The TG bot handles temperature checks and community proposals. On-chain governance (Consultation v2) is planned for formal ratification in Phase 4.
+| Tier | XP Required | Vote Weight |
+|------|-------------|-------------|
+| Member | 0 | 1x |
+| Contributor | 100 | 2x |
+| Builder | 500 | 3x |
+| Steward | 2,000 | 5x |
+| Elder | 10,000 | 10x |
 
-## Architecture
+Every governance action earns XP + a dice roll (bonus XP: 0-100).
 
+## Links
+
+| What | Where |
+|------|-------|
+| Telegram Bot | [@radix_guild_bot](https://t.me/radix_guild_bot) |
+| Dashboard | [Guild Dashboard](https://156-67-219-105.sslip.io/guild) |
+| CrumbsUp DAO | [Guild on CrumbsUp](https://www.crumbsup.io/#dao?id=4db790d7-4d75-49ed-a2e0-3514743809e0) |
+| DAO Charter | [radix.wiki](https://radix.wiki/ideas/radix-network-dao-charter) |
+
+## For Developers
+
+### Deploy Your Own
+See [docs/INCEPTION.md](./docs/INCEPTION.md) — complete guide from zero to running governance system.
+
+### Architecture
 ```
-Telegram Bot (primary UX)
-  ├── Proposals, voting, XP, badge verification
-  ├── REST API: /api/proposals, /api/badge/:address
-  └── SQLite: proposals, votes, users, XP rewards
-
-Dashboard (signing bridge + badge viewer)
-  ├── Next.js 16, Tailwind v4, Radix dApp Toolkit
-  ├── Badge minting, tier progression, proposals
-  └── Admin: badge lookup, update tier/XP/revoke
-
-Badge Manager (on-chain, Scrypto)
-  ├── BadgeFactory → creates BadgeManagers
-  ├── BadgeManager → mints/manages NFT badges
-  └── Royalties enabled, 9/9 unit tests passing
+Telegram Bot ──→ SQLite (proposals, votes, bounties, XP, game)
+     │              │
+     ├── Badge API ─┤──→ Radix Gateway API ──→ On-chain badges
+     │              │
+Dashboard ──────────┘──→ shadcn/ui + Next.js 16
 ```
 
-## Project Structure
+### Project Structure
+| Directory | What |
+|-----------|------|
+| [badge-manager/](./badge-manager) | Scrypto smart contracts (v4, mainnet) |
+| [bot/](./bot) | Telegram bot (30+ commands) |
+| [guild-app/](./guild-app) | Next.js dashboard (shadcn/ui) |
+| [scripts/](./scripts) | Pipeline tests, deploy, XP signer |
+| [docs/](./docs) | 15 documentation files |
 
-| Directory | What | Status |
-|-----------|------|--------|
-| [badge-manager/](./badge-manager) | Scrypto smart contracts | Live on Mainnet (v4) |
-| [bot/](./bot) | Telegram governance bot | Active (20+ commands) |
-| [guild-app/](./guild-app) | Next.js dashboard | Active (4 pages) |
-| [scripts/](./scripts) | Pipeline tests, deploy, XP signer | Active (19 tests) |
-| [docs/](./docs) | Infrastructure, handover, inception | Complete |
+### Test Coverage
+- 19 pipeline tests (API, dashboard, Gateway, data integrity)
+- 11 Scrypto tests (factory, manager, mint, validation, duplicates)
 
-## Mainnet Addresses (v4)
-
-| Entity | Address |
-|--------|---------|
-| Package | `package_rdx1phm53al5ztrfw8k5wa3qc5pllwfyeqgl4spjcy83ymgw8jhngx7vu3` |
-| BadgeFactory | `component_rdx1cqxdsz6d3zjsjx7shk2fgg8dazmrknygvqsa4943yw0yz4e69taxhg` |
-| Guild Member Manager | `component_rdx1czexylvvm0q4uhwpjaqmlznj9sd3y2jnmmah6qug9lm9sfm3tyrtva` |
-| Member Badge NFT | `resource_rdx1n22rq94kh6ugwnrvc65m2pwhle3s6ez6j7702vkn2ctkaxemz4ppwl` |
-
-## Deploy Your Own
-
-See [docs/INCEPTION.md](./docs/INCEPTION.md) for a complete step-by-step guide to deploy your own Guild from scratch.
-
-## Contributing
-
-See [CONTRIBUTING.md](./CONTRIBUTING.md) for setup instructions, code style, and how to earn XP.
-
-## Test Coverage
-
-- **19 pipeline tests** — API, dashboard, Gateway, data integrity
-- **11 Scrypto tests** — factory, manager, mint, validation, duplicate prevention
-
-```bash
-node scripts/pipeline-test.js    # Integration tests
-cargo test                        # Scrypto tests (VPS/Linux only)
-```
+### Contributing
+See [CONTRIBUTING.md](./CONTRIBUTING.md) for setup and how to earn XP.
 
 ## License
 
-MIT
+MIT — use it, fork it, build on it.
