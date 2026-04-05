@@ -20,7 +20,7 @@ export const ADMIN_BADGE =
 
 export const API_URL =
   process.env.NEXT_PUBLIC_API_URL ||
-  "https://156-67-219-105.sslip.io/api";
+  "https://72-62-195-141.sslip.io/api";
 
 // ── Schemas ──
 

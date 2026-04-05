@@ -4,8 +4,8 @@
  * Run: node scripts/pipeline-test.js
  */
 
-const API = process.env.API_URL || "https://156-67-219-105.sslip.io/api";
-const GUILD = process.env.GUILD_URL || "https://156-67-219-105.sslip.io/guild";
+const API = process.env.API_URL || "https://72-62-195-141.sslip.io/api";
+const GUILD = process.env.GUILD_URL || "https://72-62-195-141.sslip.io/guild";
 const GATEWAY = "https://mainnet.radixdlt.com";
 const BADGE_NFT = "resource_rdx1n22rq94kh6ugwnrvc65m2pwhle3s6ez6j7702vkn2ctkaxemz4ppwl";
 const MANAGER = "component_rdx1czexylvvm0q4uhwpjaqmlznj9sd3y2jnmmah6qug9lm9sfm3tyrtva";
