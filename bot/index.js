@@ -4,6 +4,7 @@ const db = require("./db");
 const { hasBadge, getBadgeData } = require("./services/gateway");
 const { queueXpReward, getXpQueue } = require("./services/xp");
 const { setupWizard, setupSkipDesc, pendingProposals } = require("./wizard");
+const { setupGuidedWizards, wizardStates } = require("./wizards");
 
 const TOKEN = process.env.TG_BOT_TOKEN;
 if (!TOKEN) { console.error("Set TG_BOT_TOKEN in .env"); process.exit(1); }
@@ -60,17 +61,34 @@ async function requireBadge(ctx) {
 // ── /start + /help ──────────────────────────────────────
 
 bot.command("start", (ctx) => {
-  ctx.reply(
-    "Radix Governance\n\n" +
-    "Governance infrastructure for the Radix community. Propose ideas, vote on them, earn XP — all from Telegram.\n\n" +
-    "The Radix Guild is the first community using this system. Your badge is a free on-chain NFT that gives you voting power.\n\n" +
-    "Get started:\n" +
-    "1. /register <your_account_rdx1...> — link your wallet\n" +
-    "2. Mint a free badge: " + PORTAL + "/mint\n" +
-    "   (Connect wallet → enter a username → confirm in wallet)\n" +
-    "3. Come back here and /proposals to see what to vote on\n\n" +
-    "/help for all commands | /faq for questions"
-  );
+  if (ctx.chat.type === "private") {
+    // Guided onboarding in DMs
+    const user = db.getUser(ctx.from.id);
+    const kb = new InlineKeyboard();
+    if (!user) {
+      kb.text("Step 1: Link Wallet", "onboard_register").row();
+    } else {
+      kb.text("Step 2: Mint Badge", "onboard_mint").row();
+    }
+    kb.text("View Proposals", "onboard_proposals");
+
+    ctx.reply(
+      "Welcome to Radix Governance\n\n" +
+      "Propose ideas, vote on them, earn XP — all from Telegram.\n\n" +
+      "Your badge is a free on-chain NFT that gives you voting power.\n\n" +
+      (user ? "Wallet linked: " + user.radix_address.slice(0, 20) + "...\n\n" : "") +
+      "Follow the steps below to get started.",
+      { reply_markup: kb }
+    );
+  } else {
+    // Simple text in groups
+    ctx.reply(
+      "Radix Governance\n\n" +
+      "DM me to get started: @rad_gov\n" +
+      "Or: /register <account_rdx1...> then /proposals\n\n" +
+      "/help for commands | /faq for questions"
+    );
+  }
 });
 
 bot.command("help", (ctx) => {
@@ -161,6 +179,7 @@ bot.command("badge", async (ctx) => {
 
 const handleWizardText = setupWizard(bot, db, requireBadge, buildYesNoKeyboard, buildPollKeyboard, endsLabel, queueXpReward);
 setupSkipDesc(bot, pendingProposals);
+const handleGuidedText = setupGuidedWizards(bot, db, PORTAL, requireBadge, queueXpReward);
 
 // ── /propose (Yes/No/Amend) — quick mode ────────────────
 
@@ -520,7 +539,24 @@ bot.command("bounty", async (ctx) => {
   const args = ctx.message.text.split(" ").slice(1);
   const sub = args[0];
 
-  if (!sub || sub === "list") {
+  if (!sub) {
+    // Show guided menu
+    const stats = db.getBountyStats();
+    const kb = new InlineKeyboard()
+      .text("View Bounties (" + stats.open + " open)", "bounty_view_start")
+      .row()
+      .text("Create Bounty", "bounty_create_start")
+      .text("Claim Bounty", "bounty_claim_start");
+
+    return ctx.reply(
+      "Bounty Board\n\n" +
+      "Open: " + stats.open + " | In Progress: " + stats.assigned + " | Paid: " + stats.paid + "\n" +
+      "Escrow: " + stats.escrow.available + " XRD available",
+      { reply_markup: kb }
+    );
+  }
+
+  if (sub === "list") {
     const bounties = db.getOpenBounties();
     if (bounties.length === 0) return ctx.reply("No open bounties. Admin: /bounty create <xrd> <title>");
     let msg = "Open Bounties:\n\n";
@@ -849,6 +885,7 @@ bot.on("message:new_chat_members", async (ctx) => {
 bot.on("message:text", (ctx) => {
   // Check if user is in wizard flow
   if (handleWizardText(ctx)) return;
+  if (handleGuidedText(ctx)) return;
 
   // Only respond to unknown commands in private chat, not groups
   if (ctx.message.text.startsWith("/") && ctx.chat.type === "private") {

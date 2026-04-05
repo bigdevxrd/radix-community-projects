@@ -1,0 +1,258 @@
+// Guided wizards for onboarding, bounties, and registration
+const { InlineKeyboard } = require("grammy");
+
+const wizardStates = new Map();
+
+function setupGuidedWizards(bot, db, PORTAL, requireBadge, queueXpReward) {
+
+  // ═══════════════════════════════════════════════════════
+  // ONBOARDING WIZARD (/start in private chat)
+  // ═══════════════════════════════════════════════════════
+
+  bot.callbackQuery("onboard_register", async (ctx) => {
+    await ctx.editMessageText(
+      "Step 1: Link Your Wallet\n\n" +
+      "Paste your Radix account address below.\n" +
+      "It starts with account_rdx1...\n\n" +
+      "Find it in your Radix Wallet app → copy address."
+    );
+    wizardStates.set(ctx.from.id, { wizard: "onboard", step: "register" });
+    await ctx.answerCallbackQuery();
+  });
+
+  bot.callbackQuery("onboard_mint", async (ctx) => {
+    const user = db.getUser(ctx.from.id);
+    if (!user) {
+      await ctx.answerCallbackQuery({ text: "Register first! Paste your account_rdx1... address.", show_alert: true });
+      return;
+    }
+    const kb = new InlineKeyboard()
+      .url("Open Mint Page", PORTAL + "/mint")
+      .row()
+      .text("I've minted → check my badge", "onboard_check_badge");
+
+    await ctx.editMessageText(
+      "Step 2: Mint Your Badge\n\n" +
+      "Click below to open the mint page.\n" +
+      "Connect your Radix Wallet → enter a username → confirm.\n\n" +
+      "It's free (0 XRD). Takes about 30 seconds.",
+      { reply_markup: kb }
+    );
+    await ctx.answerCallbackQuery();
+  });
+
+  bot.callbackQuery("onboard_check_badge", async (ctx) => {
+    const user = db.getUser(ctx.from.id);
+    if (!user) {
+      await ctx.answerCallbackQuery({ text: "Register first!", show_alert: true });
+      return;
+    }
+    const { getBadgeData } = require("./services/gateway");
+    const badge = await getBadgeData(user.radix_address);
+
+    if (badge) {
+      const kb = new InlineKeyboard()
+        .text("View Proposals", "onboard_proposals");
+      await ctx.editMessageText(
+        "Badge found!\n\n" +
+        "Name: " + badge.issued_to + "\n" +
+        "Tier: " + badge.tier + "\n" +
+        "XP: " + badge.xp + "\n\n" +
+        "You're ready to participate in governance.",
+        { reply_markup: kb }
+      );
+    } else {
+      const kb = new InlineKeyboard()
+        .url("Open Mint Page", PORTAL + "/mint")
+        .row()
+        .text("Check again", "onboard_check_badge");
+      await ctx.editMessageText(
+        "No badge found yet.\n\n" +
+        "If you just minted, wait ~30 seconds and check again.",
+        { reply_markup: kb }
+      );
+    }
+    await ctx.answerCallbackQuery();
+  });
+
+  bot.callbackQuery("onboard_proposals", async (ctx) => {
+    const active = db.getActiveProposals();
+    let text = "Step 3: Vote!\n\n";
+    if (active.length > 0) {
+      text += active.length + " active proposals:\n\n";
+      active.slice(0, 5).forEach(p => {
+        text += "#" + p.id + " " + p.title.slice(0, 50) + "\n";
+      });
+      text += "\nUse /proposals in the group chat to see vote buttons.";
+    } else {
+      text += "No active proposals right now.\nUse /propose to create one!";
+    }
+    await ctx.editMessageText(text);
+    wizardStates.delete(ctx.from.id);
+    await ctx.answerCallbackQuery();
+  });
+
+  // ═══════════════════════════════════════════════════════
+  // BOUNTY WIZARD (/bounty in guided mode)
+  // ═══════════════════════════════════════════════════════
+
+  bot.callbackQuery("bounty_create_start", async (ctx) => {
+    const user = await requireBadge(ctx);
+    if (!user) return;
+    wizardStates.set(ctx.from.id, { wizard: "bounty_create", step: "amount" });
+    await ctx.editMessageText(
+      "Create a Bounty\n\n" +
+      "Step 1/3: How much XRD reward?\n\n" +
+      "Type the amount (e.g. 25)"
+    );
+    await ctx.answerCallbackQuery();
+  });
+
+  bot.callbackQuery("bounty_claim_start", async (ctx) => {
+    const bounties = db.getOpenBounties();
+    const open = bounties.filter(b => b.status === "open");
+    if (open.length === 0) {
+      await ctx.answerCallbackQuery({ text: "No open bounties to claim.", show_alert: true });
+      return;
+    }
+    const kb = new InlineKeyboard();
+    open.slice(0, 5).forEach(b => {
+      kb.text("#" + b.id + " " + b.reward_xrd + " XRD — " + b.title.slice(0, 25), "bounty_claim_" + b.id).row();
+    });
+    kb.text("Cancel", "bounty_cancel");
+    await ctx.editMessageText("Claim a Bounty\n\nSelect one:", { reply_markup: kb });
+    await ctx.answerCallbackQuery();
+  });
+
+  bot.callbackQuery(/^bounty_claim_(\d+)$/, async (ctx) => {
+    const id = parseInt(ctx.match[1]);
+    const user = db.getUser(ctx.from.id);
+    if (!user) {
+      await ctx.answerCallbackQuery({ text: "Register first!", show_alert: true });
+      return;
+    }
+    const result = db.assignBounty(id, ctx.from.id, user.radix_address);
+    if (result.changes === 0) {
+      await ctx.answerCallbackQuery({ text: "Bounty not available.", show_alert: true });
+      return;
+    }
+    await ctx.editMessageText(
+      "Bounty #" + id + " claimed!\n\n" +
+      "When you're done, submit your work:\n" +
+      "/bounty submit " + id + " <github_pr_url>"
+    );
+    await ctx.answerCallbackQuery();
+  });
+
+  bot.callbackQuery("bounty_view_start", async (ctx) => {
+    const bounties = db.getOpenBounties();
+    if (bounties.length === 0) {
+      await ctx.editMessageText("No open bounties right now.");
+    } else {
+      let text = "Open Bounties:\n\n";
+      bounties.forEach(b => {
+        text += "#" + b.id + " [" + b.status + "] " + b.reward_xrd + " XRD — " + b.title + "\n";
+      });
+      await ctx.editMessageText(text);
+    }
+    await ctx.answerCallbackQuery();
+  });
+
+  bot.callbackQuery("bounty_cancel", async (ctx) => {
+    wizardStates.delete(ctx.from.id);
+    await ctx.editMessageText("Cancelled.");
+    await ctx.answerCallbackQuery();
+  });
+
+  // ═══════════════════════════════════════════════════════
+  // TEXT HANDLER for wizard steps
+  // ═══════════════════════════════════════════════════════
+
+  function handleGuidedWizardText(ctx) {
+    const state = wizardStates.get(ctx.from.id);
+    if (!state) return false;
+
+    const text = ctx.message.text.trim();
+
+    // Onboarding: register step
+    if (state.wizard === "onboard" && state.step === "register") {
+      if (!/^account_rdx1[a-z0-9]{40,60}$/.test(text)) {
+        ctx.reply("That doesn't look right. Paste your full Radix address starting with account_rdx1...");
+        return true;
+      }
+      db.registerUser(ctx.from.id, text, ctx.from.username || ctx.from.first_name);
+      const kb = new InlineKeyboard()
+        .text("Next: Mint Badge", "onboard_mint");
+      ctx.reply(
+        "Wallet linked!\n\n" +
+        "Address: " + text.slice(0, 25) + "...\n\n" +
+        "Voting is FREE — no XRD needed.\n" +
+        "Next step: mint your badge.",
+        { reply_markup: kb }
+      );
+      wizardStates.delete(ctx.from.id);
+      return true;
+    }
+
+    // Bounty create: amount step
+    if (state.wizard === "bounty_create" && state.step === "amount") {
+      const amount = parseInt(text);
+      if (!amount || amount <= 0) {
+        ctx.reply("Enter a positive number (e.g. 25)");
+        return true;
+      }
+      state.amount = amount;
+      state.step = "title";
+      ctx.reply("Step 2/3: What's the bounty title?\n\nDescribe the task in one line.");
+      return true;
+    }
+
+    // Bounty create: title step
+    if (state.wizard === "bounty_create" && state.step === "title") {
+      if (text.length > 500) {
+        ctx.reply("Too long (max 500 chars). Try shorter.");
+        return true;
+      }
+      state.title = text;
+      state.step = "confirm";
+
+      const kb = new InlineKeyboard()
+        .text("Create Bounty", "bounty_create_confirm")
+        .text("Cancel", "bounty_cancel");
+      ctx.reply(
+        "Create Bounty — Confirm\n\n" +
+        "Title: " + state.title + "\n" +
+        "Reward: " + state.amount + " XRD\n\n" +
+        "Submit?",
+        { reply_markup: kb }
+      );
+      return true;
+    }
+
+    return false;
+  }
+
+  // Bounty create confirm
+  bot.callbackQuery("bounty_create_confirm", async (ctx) => {
+    const state = wizardStates.get(ctx.from.id);
+    if (!state || state.wizard !== "bounty_create") {
+      await ctx.answerCallbackQuery({ text: "No active bounty wizard.", show_alert: true });
+      return;
+    }
+    const user = db.getUser(ctx.from.id);
+    const id = db.createBounty(state.title, state.amount, ctx.from.id);
+    queueXpReward(user.radix_address, "propose");
+    wizardStates.delete(ctx.from.id);
+    await ctx.editMessageText(
+      "Bounty #" + id + " created!\n\n" +
+      state.title + "\n" +
+      "Reward: " + state.amount + " XRD\n\n" +
+      "Others can claim it with /bounty"
+    );
+    await ctx.answerCallbackQuery();
+  });
+
+  return handleGuidedWizardText;
+}
+
+module.exports = { setupGuidedWizards, wizardStates };
