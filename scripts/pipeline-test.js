@@ -320,6 +320,47 @@ async function main() {
     }
   });
 
+  // ── CV2 Endpoints ──────────────────────────────────
+
+  console.log("\n  CV2 (Consultation v2):");
+
+  await test("GET /api/cv2/status returns sync status", async () => {
+    const data = await fetchJson(API + "/cv2/status");
+    assert(data.ok === true);
+    assert(typeof data.data.enabled === "boolean", "enabled should be boolean");
+    assert("component" in data.data, "should have component field");
+    assert("lastSync" in data.data, "should have lastSync field");
+    assert(typeof data.data.errors === "number", "errors should be number");
+  });
+
+  await test("GET /api/cv2/stats returns counts", async () => {
+    const data = await fetchJson(API + "/cv2/stats");
+    assert(data.ok === true);
+    assert(typeof data.data.temperatureChecks === "number");
+    assert(typeof data.data.proposals === "number");
+    assert(typeof data.data.totalVotes === "number");
+  });
+
+  await test("GET /api/cv2/proposals returns array", async () => {
+    const data = await fetchJson(API + "/cv2/proposals");
+    assert(data.ok === true);
+    assert(Array.isArray(data.data), "data should be array");
+  });
+
+  await test("GET /api/cv2/proposals/nonexistent returns 404", async () => {
+    const resp = await fetch(API + "/cv2/proposals/nonexistent_999");
+    assert(resp.status === 404, "should be 404");
+  });
+
+  // ── Extended Dashboard ─────────────────────────────
+
+  console.log("\n  Dashboard (full):");
+
+  await test("GET /guild/bounties returns 200", async () => {
+    const resp = await fetch(GUILD + "/bounties");
+    assert(resp.ok, "should be 200");
+  });
+
   // ── Summary ────────────────────────────────────────
 
   console.log("\n  Results: " + passed + " passed, " + failed + " failed");
