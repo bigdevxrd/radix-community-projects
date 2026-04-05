@@ -2,6 +2,7 @@
 const http = require("http");
 const db = require("../db");
 const { hasBadge, getBadgeData } = require("./gateway");
+const cv2 = require("./consultation");
 
 const API_PORT = parseInt(process.env.API_PORT || "3003");
 const ALLOWED_ORIGINS = (process.env.CORS_ORIGINS || "").split(",").filter(Boolean);
@@ -186,6 +187,39 @@ function startApi() {
         res.writeHead(500);
         return res.end(JSON.stringify({ ok: false, error: "gateway_error" }));
       }
+    }
+
+    // ── CV2 Consultation Endpoints (feature-flagged) ────
+
+    // GET /api/cv2/status — sync health
+    if (url.pathname === "/api/cv2/status") {
+      res.writeHead(200);
+      return res.end(JSON.stringify({ ok: true, data: cv2.getSyncStatus() }));
+    }
+
+    // GET /api/cv2/stats — counts summary
+    if (url.pathname === "/api/cv2/stats") {
+      res.writeHead(200);
+      return res.end(JSON.stringify({ ok: true, data: cv2.getStats() }));
+    }
+
+    // GET /api/cv2/proposals — list all synced proposals
+    if (url.pathname === "/api/cv2/proposals") {
+      const type = url.searchParams.get("type"); // temperature_check or proposal
+      res.writeHead(200);
+      return res.end(JSON.stringify({ ok: true, data: cv2.getProposals(type) }));
+    }
+
+    // GET /api/cv2/proposals/:id — single proposal detail
+    const cv2Match = url.pathname.match(/^\/api\/cv2\/proposals\/(.+)$/);
+    if (cv2Match) {
+      const proposal = cv2.getProposal(cv2Match[1]);
+      if (!proposal) {
+        res.writeHead(404);
+        return res.end(JSON.stringify({ ok: false, error: "not_found" }));
+      }
+      res.writeHead(200);
+      return res.end(JSON.stringify({ ok: true, data: proposal }));
     }
 
     res.writeHead(404);

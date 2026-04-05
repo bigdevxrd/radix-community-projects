@@ -5,11 +5,13 @@ const { hasBadge, getBadgeData } = require("./services/gateway");
 const { queueXpReward, getXpQueue } = require("./services/xp");
 const { setupWizard, setupSkipDesc, pendingProposals } = require("./wizard");
 const { setupGuidedWizards, wizardStates } = require("./wizards");
+const cv2 = require("./services/consultation");
 
 const TOKEN = process.env.TG_BOT_TOKEN;
 if (!TOKEN) { console.error("Set TG_BOT_TOKEN in .env"); process.exit(1); }
 
-db.init();
+const dbInstance = db.init();
+cv2.init(dbInstance); // Only creates tables if CV2_ENABLED=true
 const bot = new Bot(TOKEN);
 
 const PORTAL = process.env.PORTAL_URL || "https://72-62-195-141.sslip.io/guild";
@@ -120,6 +122,14 @@ bot.command("help", (ctx) => {
     "/bounty create <xrd> <title> — Create bounty\n" +
     "/bounty claim <id> — Claim a bounty\n" +
     "/bounty stats — Stats + escrow balance\n\n" +
+
+    "Game:\n" +
+    "/game — Your dice roll stats\n" +
+    "/leaderboard — Top players by bonus XP\n\n" +
+
+    "Network Governance:\n" +
+    "/cv2 — On-chain consultations (when live)\n" +
+    "/cv2 status — CV2 sync health\n\n" +
 
     "Help + Resources:\n" +
     "/faq — Frequently asked questions\n" +
@@ -863,6 +873,85 @@ bot.command("support", (ctx) => ctx.reply(
   "Contact: @bigdevxrd (Telegram DM)\n\n" +
   "This is a beta — feedback welcome!"
 ));
+
+// ── CV2 Network Governance Commands ──────────────────────
+
+bot.command("cv2", async (ctx) => {
+  if (!cv2.isEnabled()) {
+    return ctx.reply(
+      "On-chain governance (CV2) is not yet enabled.\n\n" +
+      "The Foundation's Consultation v2 system will be deployed to mainnet soon. " +
+      "Once live, you'll be able to view and participate in formal on-chain votes here.\n\n" +
+      "Current governance: use /proposals for off-chain guild votes."
+    );
+  }
+
+  const args = ctx.message.text.split(/\s+/).slice(1);
+  const sub = args[0]?.toLowerCase();
+
+  // /cv2 status — sync health
+  if (sub === "status") {
+    const status = cv2.getSyncStatus();
+    return ctx.reply(
+      "CV2 Sync Status\n\n" +
+      "Enabled: " + (status.enabled ? "Yes" : "No") + "\n" +
+      "Component: " + (status.component ? status.component.slice(0, 30) + "..." : "Not set") + "\n" +
+      "Deployed: " + (status.deployed ? "Yes" : "Not yet") + "\n" +
+      "Polling: " + (status.polling ? "Every " + status.pollInterval : "Off") + "\n" +
+      "Last sync: " + (status.lastSync ? new Date(status.lastSync * 1000).toISOString() : "Never") + "\n" +
+      "Temp checks: " + status.temperatureCheckCount + "\n" +
+      "Proposals: " + status.proposalCount + "\n" +
+      "Errors: " + status.errors
+    );
+  }
+
+  // /cv2 sync — force refresh (admin)
+  if (sub === "sync") {
+    try {
+      await cv2.syncFromChain();
+      return ctx.reply("CV2 sync completed successfully.");
+    } catch (err) {
+      return ctx.reply("CV2 sync failed: " + err.message);
+    }
+  }
+
+  // /cv2 <id> — detail view
+  if (sub && sub !== "list") {
+    const proposal = cv2.getProposal(sub);
+    if (!proposal) return ctx.reply("CV2 proposal not found: " + sub);
+    const opts = proposal.vote_options ? JSON.parse(proposal.vote_options) : [];
+    return ctx.reply(
+      (proposal.type === "temperature_check" ? "Temp Check" : "Proposal") + " — " + proposal.title + "\n\n" +
+      (proposal.short_description || "") + "\n\n" +
+      "Type: " + proposal.type + "\n" +
+      "Votes: " + (proposal.vote_count - proposal.revote_count) + " unique\n" +
+      "Quorum: " + proposal.quorum + " XRD\n" +
+      (opts.length > 0 ? "Options: " + opts.join(", ") + "\n" : "") +
+      "\nView on dashboard: " + PORTAL + "/proposals"
+    );
+  }
+
+  // /cv2 — list active
+  const proposals = cv2.getActiveProposals();
+  if (proposals.length === 0) {
+    return ctx.reply(
+      "No active network consultations.\n\n" +
+      "Temperature checks and formal proposals will appear here when created on-chain.\n" +
+      "Use /cv2 status to check sync health."
+    );
+  }
+
+  let msg = "Network Governance (On-Chain)\n\n";
+  for (const p of proposals.slice(0, 10)) {
+    const uniqueVotes = p.vote_count - p.revote_count;
+    msg += (p.type === "temperature_check" ? "🌡 " : "📋 ") +
+      p.title + "\n" +
+      "  " + uniqueVotes + " votes | Quorum: " + p.quorum + " XRD\n" +
+      "  ID: " + p.id + "\n\n";
+  }
+  msg += "Use /cv2 <id> for details";
+  return ctx.reply(msg);
+});
 
 // ── Welcome new members ────────────────────────────────
 

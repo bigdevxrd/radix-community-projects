@@ -1,0 +1,206 @@
+"use client";
+import { useEffect, useState } from "react";
+import { AppShell } from "@/components/AppShell";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+import { API_URL } from "@/lib/constants";
+
+interface Bounty {
+  id: number; title: string; description: string | null;
+  reward_xrd: number; reward_xp: number; status: string;
+  creator_tg_id: number; assignee_tg_id: number | null;
+  assignee_address: string | null; github_issue: string | null;
+  github_pr: string | null; created_at: number;
+  assigned_at: number | null; submitted_at: number | null;
+  verified_at: number | null; paid_at: number | null; paid_tx: string | null;
+}
+interface BountyStats {
+  open: number; assigned: number; submitted: number;
+  verified: number; paid: number; totalPaid: number;
+  escrow: { funded: number; released: number; available: number };
+}
+
+const STATUS_COLORS: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
+  open: "default", assigned: "secondary", submitted: "outline", verified: "outline", paid: "default",
+};
+const STATUS_TEXT_COLORS: Record<string, string> = {
+  open: "text-primary", assigned: "text-yellow-500", submitted: "text-blue-400",
+  verified: "text-blue-400", paid: "text-muted-foreground",
+};
+
+function BountiesContent() {
+  const [bounties, setBounties] = useState<Bounty[]>([]);
+  const [stats, setStats] = useState<BountyStats | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+  const [filter, setFilter] = useState("all");
+
+  const fetchData = () => {
+    setLoading(true); setError(false);
+    fetch(API_URL + "/bounties")
+      .then(r => r.json())
+      .then(d => {
+        setBounties(d.data?.bounties || []);
+        setStats(d.data?.stats || null);
+        setLoading(false);
+      })
+      .catch(() => { setError(true); setLoading(false); });
+  };
+
+  useEffect(() => { fetchData(); }, []);
+
+  const filtered = filter === "all" ? bounties : bounties.filter(b => b.status === filter);
+
+  return (
+    <div className="space-y-5">
+      <div>
+        <h1 className="text-xl font-bold">Bounty Board</h1>
+        <p className="text-muted-foreground text-sm mt-1">Earn XRD and XP by completing bounties</p>
+      </div>
+
+      {/* Error State */}
+      {error && !loading && (
+        <Card>
+          <CardContent className="py-8 text-center">
+            <p className="text-muted-foreground text-sm mb-3">Failed to load bounties</p>
+            <Button variant="outline" size="sm" onClick={fetchData}>Retry</Button>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Stats */}
+      {stats && (
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          {[
+            { label: "Open", value: stats.open, color: STATUS_TEXT_COLORS.open },
+            { label: "In Progress", value: stats.assigned, color: STATUS_TEXT_COLORS.assigned },
+            { label: "Review", value: stats.submitted + stats.verified, color: STATUS_TEXT_COLORS.submitted },
+            { label: "Paid", value: stats.paid, color: STATUS_TEXT_COLORS.paid },
+          ].map(s => (
+            <Card key={s.label}>
+              <CardContent className="px-4 py-3">
+                <div className="text-[10px] text-muted-foreground uppercase tracking-wider">{s.label}</div>
+                <div className={`text-xl font-bold font-mono mt-0.5 ${s.color}`}>{s.value}</div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+
+      {/* Escrow Balance */}
+      {stats && (
+        <Card>
+          <CardContent className="px-4 py-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-[10px] text-muted-foreground uppercase tracking-wider">Escrow Balance</div>
+                <div className="text-lg font-bold font-mono text-primary">{stats.escrow.available} XRD</div>
+              </div>
+              <div className="text-right text-xs text-muted-foreground">
+                <div>Funded: {stats.escrow.funded} XRD</div>
+                <div>Released: {stats.escrow.released} XRD</div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Filter */}
+      <div className="flex items-center gap-2 overflow-x-auto">
+        {["all", "open", "assigned", "submitted", "verified", "paid"].map(f => (
+          <Button key={f} variant={filter === f ? "default" : "ghost"} size="sm"
+            onClick={() => setFilter(f)} className="capitalize text-xs">
+            {f === "all" ? `All (${bounties.length})` : f}
+          </Button>
+        ))}
+      </div>
+
+      {/* Bounty List */}
+      {loading ? (
+        <div className="space-y-3">
+          {[1, 2, 3].map(i => (
+            <Card key={i}><CardContent className="p-4 space-y-3">
+              <Skeleton className="h-4 w-48" /><Skeleton className="h-3 w-full" />
+            </CardContent></Card>
+          ))}
+        </div>
+      ) : filtered.length === 0 ? (
+        <p className="text-muted-foreground text-sm py-8 text-center">
+          {filter === "all" ? "No bounties yet." : `No ${filter} bounties.`}
+        </p>
+      ) : (
+        <div className="space-y-3">
+          {filtered.map(b => (
+            <Card key={b.id}>
+              <CardContent className="pt-4 pb-4">
+                <div className="flex items-start justify-between mb-2">
+                  <div className="min-w-0">
+                    <span className="text-muted-foreground font-mono text-xs mr-2">#{b.id}</span>
+                    <span className="font-semibold text-sm">{b.title}</span>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <span className="font-mono text-sm font-bold text-primary">{b.reward_xrd} XRD</span>
+                    <Badge variant={STATUS_COLORS[b.status] || "secondary"}>{b.status}</Badge>
+                  </div>
+                </div>
+                {b.description && (
+                  <p className="text-xs text-muted-foreground mb-2">{b.description.slice(0, 120)}{b.description.length > 120 ? "..." : ""}</p>
+                )}
+                <div className="flex flex-wrap gap-3 text-[11px] text-muted-foreground">
+                  <span>Created {new Date(b.created_at * 1000).toLocaleDateString()}</span>
+                  {b.assignee_address && (
+                    <span>Assignee: {b.assignee_address.slice(0, 12)}...{b.assignee_address.slice(-4)}</span>
+                  )}
+                  {b.reward_xp > 0 && <span>+{b.reward_xp} XP</span>}
+                </div>
+                {(b.github_issue || b.github_pr) && (
+                  <div className="flex gap-3 mt-2">
+                    {b.github_issue && (
+                      <a href={b.github_issue} target="_blank" className="text-xs text-primary hover:underline">Issue</a>
+                    )}
+                    {b.github_pr && (
+                      <a href={b.github_pr} target="_blank" className="text-xs text-primary hover:underline">PR</a>
+                    )}
+                  </div>
+                )}
+                {b.paid_tx && (
+                  <a href={`https://dashboard.radixdlt.com/transaction/${b.paid_tx}`} target="_blank"
+                    className="text-xs text-primary hover:underline mt-1 block">
+                    View payment tx
+                  </a>
+                )}
+                {/* Timeline dots */}
+                <div className="flex items-center gap-1.5 mt-3">
+                  {["created", "assigned", "submitted", "verified", "paid"].map((step, i) => {
+                    const ts = [b.created_at, b.assigned_at, b.submitted_at, b.verified_at, b.paid_at][i];
+                    const active = !!ts;
+                    return (
+                      <div key={step} className="flex items-center gap-1.5">
+                        {i > 0 && <div className={`h-px w-4 sm:w-6 ${active ? "bg-primary" : "bg-muted"}`} />}
+                        <div className={`h-2 w-2 rounded-full ${active ? "bg-primary" : "bg-muted"}`}
+                          title={step + (ts ? ": " + new Date(ts * 1000).toLocaleDateString() : "")} />
+                      </div>
+                    );
+                  })}
+                  <span className="text-[10px] text-muted-foreground ml-1 capitalize">{bounties.length > 0 ? filtered[0]?.status : ""}</span>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+
+      <div className="text-center pt-2">
+        <a href="https://t.me/rad_gov" target="_blank" className="text-primary text-sm font-semibold hover:underline">
+          Create Bounties in Telegram
+        </a>
+      </div>
+    </div>
+  );
+}
+
+export default function BountiesPage() {
+  return <AppShell><BountiesContent /></AppShell>;
+}
