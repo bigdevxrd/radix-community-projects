@@ -1,79 +1,57 @@
 # CV2 Integration — Technical Plan
 
-## Current State
+## Status: READY TO FORK AND DEPLOY
 
-Consultation v2 records votes on-chain in Scrypto governance components. The Vote Collector reads them via Radix Gateway API. There is NO REST API — all data lives on the ledger.
+### Key Finding (April 5, 2026)
 
-## Integration Path: Read the Ledger
+The Foundation's CV2 repo (`github.com/radixdlt/consultation_v2`) is **complete but NOT deployed to mainnet**. Last commit: Feb 24, 2026. Mainnet config has `TODO` addresses. No active development.
 
-We already read on-chain state for badges. CV2 integration uses the same pattern:
+We forked it to `github.com/bigdevxrd/consultation_v2`.
+
+### What CV2 Contains
 
 ```
-Radix Mainnet Ledger
-    │
-    ├── Badge Manager (we query this for badge verification)
-    │
-    └── CV2 Governance Component (we'll query this for proposals/votes)
-         │
-         └── Gateway API: POST /state/entity/details
+scrypto/              → Governance + VoteDelegation blueprints
+apps/consultation/    → React frontend (TanStack Router + Vite)
+apps/vote-collector/  → Backend (Hono + Effect + SST)
+packages/database/    → PostgreSQL (Drizzle ORM)
+packages/shared/      → Governance config (addresses, types)
 ```
 
-## What We Need
+Tech: pnpm monorepo, turbo task runner, Docker + nginx for self-hosting.
 
-1. **CV2 governance component address** on mainnet
-   - Not publicly documented yet
-   - Options: ask Radix team, find via Radix Dashboard explorer, or check consultation.radixdlt.com network requests
+### Integration Path
 
-2. **CV2 data structure** — what the KVStore contains
-   - Proposals: title, options, voting period, status
-   - Votes: voter address, choice, LSU weight
-   - Source: `github.com/gguuttss/consultation-blueprint`
+**Phase 1: Deploy Scrypto to mainnet (1 week)**
+- Build CV2 governance + vote delegation blueprints
+- Deploy to Radix mainnet via Dashboard
+- Update `packages/shared/src/governance/config.ts` with real addresses
+- Test on mainnet: create proposal, cast vote, tally
 
-3. **Gateway API queries** to read CV2 state
-   - `POST /state/entity/details` — get component state
-   - `POST /state/key-value-store/data` — read proposal KVStore entries
+**Phase 2: Self-host the dApp (1 week)**
+- Use `self-hosted` branch / docker-compose
+- PostgreSQL for vote collector
+- Deploy to guild VPS or separate small VPS
+- Point at our mainnet governance component
 
-## Implementation Plan
+**Phase 3: Bot integration (1 week)**
+- Read governance component state via Gateway API
+- Display CV2 proposals in bot `/cv2` command
+- Show on dashboard alongside Guild proposals
+- Clear labels: "Guild Vote (off-chain)" vs "Network Vote (on-chain)"
 
-### Phase 1: Find the Component (research)
-- Monitor consultation.radixdlt.com network requests for component_rdx addresses
-- Or ask on RadixTalk/Discord for the deployment address
-- Or search Radix Dashboard for consultation-related components
+### What This Gives Us
 
-### Phase 2: Read Proposals (1 week)
-```javascript
-// bot/services/consultation.js
-async function getCV2Proposals() {
-  // Query the CV2 governance component via Gateway API
-  const resp = await fetch(GATEWAY + "/state/entity/details", {
-    method: "POST",
-    body: JSON.stringify({ addresses: [CV2_COMPONENT] }),
-  });
-  // Parse the KVStore data for proposals
-  // Return array of { id, title, options, votes, status }
-}
-```
+- **On-chain voting** for formal decisions (XRD-weighted)
+- **Temperature checks stay in TG** (free, fast, off-chain)
+- **Two-tier governance**: community sentiment (TG) → formal ratification (CV2)
+- **Composable**: any Radix dApp can read our governance state
 
-### Phase 3: Display in Bot + Dashboard
-- `/cv2` command — list network-level consultations
-- Dashboard: "Network Governance" section alongside Guild proposals
-- Clear labeling: "Guild Vote (off-chain)" vs "Network Vote (on-chain)"
+### Resources
 
-## What Copilot Built (PR #55) — Assessment
-
-PR #55 assumes a REST API (`CV2_API_URL`, `CV2_API_KEY`, webhooks) that doesn't exist. The federation architecture is sound but the implementation needs rewriting to use Gateway API instead.
-
-**Useful from PR #55:** Database schema additions, dashboard components, bot command structure.
-**Needs rewriting:** `consultation.js` service — replace API calls with Gateway API queries.
-
-## Blockers
-
-- **Component address unknown** — need to find the CV2 mainnet deployment
-- **KVStore data format** — need to decode the SBOR-encoded proposal data
-- **No webhook support** — we poll, not push (5-minute intervals like auto-close)
-
-## Not Blocked
-
-- Badge-tier weighted voting (already built)
-- Dashboard components (Copilot PR #55 has these)
-- Bot commands for displaying network votes
+| Resource | URL |
+|----------|-----|
+| Foundation repo | github.com/radixdlt/consultation_v2 |
+| Our fork | github.com/bigdevxrd/consultation_v2 |
+| Scrypto blueprint | github.com/gguuttss/consultation-blueprint |
+| Product scope | radixtalk.com/t/consultation-v2-product-scope-document/2193 |
