@@ -93,7 +93,9 @@ function OutcomeContent() {
               (cp: CharterParam) => cp.param_key === p.charter_param
             );
             if (found) setCharterParam(found);
-          } catch { /* ignore */ }
+          } catch {
+            // Charter param load failure is non-critical; proposal outcome still displays
+          }
         }
         setLoading(false);
       })

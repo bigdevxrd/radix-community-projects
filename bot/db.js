@@ -560,6 +560,3 @@ function getProposalHistory(limit = 10) {
 
 module.exports.cancelProposal = cancelProposal;
 module.exports.getProposalHistory = getProposalHistory;
-
-// Analytics exports appended here (also exported in main block above)
-// No-op: already included in main module.exports block

@@ -55,8 +55,6 @@ interface BountyStats {
 function ProposalsTab() {
   const [proposals, setProposals] = useState<Proposal[]>([]);
   const [loading, setLoading] = useState(true);
-  const [newTitle, setNewTitle] = useState("");
-  const [newDays, setNewDays] = useState("3");
 
   function load() {
     setLoading(true);
@@ -79,11 +77,6 @@ function ProposalsTab() {
           <CardTitle className="text-sm uppercase tracking-wide text-muted-foreground">Create Proposal</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
-          <p className="text-xs text-muted-foreground">New proposals are created via the Telegram bot.</p>
-          <div className="flex gap-2">
-            <Input value={newTitle} onChange={(e) => setNewTitle(e.target.value)} placeholder="Proposal title (for reference)" className="text-[13px]" />
-            <Input value={newDays} onChange={(e) => setNewDays(e.target.value)} placeholder="Days" className="w-20 text-[13px]" type="number" />
-          </div>
           <Alert>
             <AlertDescription className="text-xs">
               Use the Telegram bot command <code className="bg-muted px-1 rounded">/propose &lt;title&gt;</code> with an authorized admin wallet to create proposals on-chain.
