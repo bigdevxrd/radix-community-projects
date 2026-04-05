@@ -271,17 +271,18 @@ function XpTab() {
               size="sm"
               disabled={!manualAddr.trim() || !manualAmt || parseInt(manualAmt) <= 0}
               onClick={() => {
-                setStatus(`XP award queued for ${manualAddr.slice(0, 20)}... (+${manualAmt} XP). Apply via the XP batch script.`);
+                setStatus(`Reference noted: ${manualAddr.slice(0, 20)}... +${manualAmt} XP (${manualReason || "manual award"}). To actually queue this reward, use the bot command /award_xp in Telegram.`);
                 setManualAddr(""); setManualAmt(""); setManualReason("");
               }}
             >
-              Queue XP Award
+              Generate Reference
             </Button>
           </div>
           {status && <p className="text-xs text-primary">{status}</p>}
           <Separator />
           <p className="text-xs text-muted-foreground">
-            To apply XP rewards on-chain, run: <code className="bg-muted px-1 rounded">scripts/xp-batch-apply.sh</code>
+            XP rewards are queued via the Telegram bot command <code className="bg-muted px-1 rounded">/award_xp &lt;address&gt; &lt;amount&gt;</code>.
+            To apply pending rewards on-chain, run: <code className="bg-muted px-1 rounded">scripts/xp-batch-apply.sh</code>
           </p>
         </CardContent>
       </Card>

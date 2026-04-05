@@ -93,8 +93,9 @@ function OutcomeContent() {
               (cp: CharterParam) => cp.param_key === p.charter_param
             );
             if (found) setCharterParam(found);
-          } catch {
+          } catch (err) {
             // Charter param load failure is non-critical; proposal outcome still displays
+            console.error("Failed to load charter param:", err);
           }
         }
         setLoading(false);

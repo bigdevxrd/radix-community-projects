@@ -97,11 +97,11 @@ function AnalyticsContent() {
 
   useEffect(() => {
     Promise.all([
-      fetch(API_URL + "/analytics/summary").then((r) => r.json()).catch(() => null),
-      fetch(API_URL + "/analytics/proposals-timeline").then((r) => r.json()).catch(() => null),
-      fetch(API_URL + "/analytics/voters-histogram").then((r) => r.json()).catch(() => null),
-      fetch(API_URL + "/analytics/xp-distribution").then((r) => r.json()).catch(() => null),
-      fetch(API_URL + "/analytics/charter-progress").then((r) => r.json()).catch(() => null),
+      fetch(API_URL + "/analytics/summary").then((r) => r.json()).catch((err) => { console.error("Analytics summary fetch failed:", err); return null; }),
+      fetch(API_URL + "/analytics/proposals-timeline").then((r) => r.json()).catch((err) => { console.error("Analytics timeline fetch failed:", err); return null; }),
+      fetch(API_URL + "/analytics/voters-histogram").then((r) => r.json()).catch((err) => { console.error("Analytics voters fetch failed:", err); return null; }),
+      fetch(API_URL + "/analytics/xp-distribution").then((r) => r.json()).catch((err) => { console.error("Analytics XP fetch failed:", err); return null; }),
+      fetch(API_URL + "/analytics/charter-progress").then((r) => r.json()).catch((err) => { console.error("Analytics charter fetch failed:", err); return null; }),
     ]).then(([s, t, v, x, c]) => {
       setSummary(s?.data || null);
       setTimeline(t?.data || []);

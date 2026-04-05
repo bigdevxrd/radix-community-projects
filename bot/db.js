@@ -524,7 +524,7 @@ function getCharterProgressByPhase() {
 
 function getAvgVotesPerProposal() {
   const r = db.prepare("SELECT COUNT(*) as total_votes FROM votes").get();
-  const p = db.prepare("SELECT COUNT(*) as total_proposals FROM proposals WHERE status != 'active'").get();
+  const p = db.prepare("SELECT COUNT(*) as total_proposals FROM proposals").get();
   if (!p.total_proposals) return 0;
   return Math.round((r.total_votes / p.total_proposals) * 10) / 10;
 }
