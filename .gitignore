@@ -10,3 +10,5 @@ badge-manager/build/
 badge-manager/build/
 *.db
 *.db-journal
+*.tsbuildinfo
+package-lock.json
