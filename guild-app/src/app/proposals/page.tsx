@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { AppShell } from "@/components/AppShell";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -204,7 +205,7 @@ function ProposalsContent() {
                 <div className="flex items-start justify-between mb-2">
                   <div>
                     <span className="text-muted-foreground font-mono text-xs mr-2">#{p.id}</span>
-                    <span className="font-semibold text-sm">{p.title}</span>
+                    <Link href={`/proposals/${p.id}`} className="font-semibold text-sm hover:text-primary no-underline text-foreground">{p.title}</Link>
                   </div>
                   <Badge variant={STATUS_VARIANT[p.status] || "secondary"}>{p.status}</Badge>
                 </div>
