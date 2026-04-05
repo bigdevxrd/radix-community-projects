@@ -12,15 +12,25 @@ import { useWallet } from "@/hooks/useWallet";
 import { API_URL, ECOSYSTEM_LINKS, RESOURCES } from "@/lib/constants";
 import Link from "next/link";
 
+interface GameStats {
+  total_rolls: number;
+  total_bonus_xp: number;
+  streak_days: number;
+  last_roll_date: string | null;
+  last_roll_value: number;
+  jackpots: number;
+}
+
 interface DashboardData {
   stats: { total_proposals: number; active_proposals: number; total_voters: number; pending_xp_rewards: number } | null;
   charter: { status: { total: number; resolved: number; voting: number; tbd: number }; ready: { param_key: string; title: string }[] } | null;
   bounties: { stats: { open: number; assigned: number; submitted: number; verified: number; paid: number; totalPaid: number; escrow: { funded: number; released: number; available: number } }; bounties: { id: number; title: string; reward_xrd: number; status: string }[] } | null;
+  game: GameStats | null;
 }
 
 function Dashboard() {
   const { account, connected, badge, badgeLoading } = useWallet();
-  const [data, setData] = useState<DashboardData>({ stats: null, charter: null, bounties: null });
+  const [data, setData] = useState<DashboardData>({ stats: null, charter: null, bounties: null, game: null });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -29,10 +39,16 @@ function Dashboard() {
       fetch(API_URL + "/charter").then(r => r.json()).catch(() => null),
       fetch(API_URL + "/bounties").then(r => r.json()).catch(() => null),
     ]).then(([s, c, b]) => {
-      setData({ stats: s?.data || null, charter: c?.data || null, bounties: b?.data || null });
+      setData(prev => ({ ...prev, stats: s?.data || null, charter: c?.data || null, bounties: b?.data || null }));
       setLoading(false);
     });
   }, []);
+
+  // Game stats are fetched separately, triggered by account connection (requires wallet address)
+  useEffect(() => {.then(r => r.json()).catch(() => null).then(g => {
+      setData(prev => ({ ...prev, game: g?.data || null }));
+    });
+  }, [account]);
 
   return (
     <div className="space-y-5">
@@ -173,6 +189,43 @@ function Dashboard() {
                     </div>
                   </div>
                 ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Game Stats */}
+      {connected && data.game && (
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm uppercase tracking-wide text-muted-foreground">Grid Game Stats</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              {[
+                { label: "Total Rolls", value: data.game.total_rolls },
+                { label: "Bonus XP", value: data.game.total_bonus_xp },
+                { label: "Streak", value: data.game.streak_days + "d" },
+                { label: "Jackpots", value: data.game.jackpots },
+              ].map(s => (
+                <div key={s.label} className="bg-muted rounded-lg px-3 py-2.5">
+                  <div className="text-[10px] text-muted-foreground uppercase tracking-wider">{s.label}</div>
+                  <div className="text-lg font-bold font-mono text-primary">{s.value}</div>
+                </div>
+              ))}
+            </div>
+            {data.game.last_roll_date && (
+              <div className="flex items-center justify-between bg-muted rounded-lg px-3 py-2.5">
+                <span className="text-xs text-muted-foreground">Last Roll</span>
+                <div className="flex items-center gap-2">
+                  <Badge variant="secondary" className="font-mono text-[10px]">{data.game.last_roll_date}</Badge>
+                  {data.game.last_roll_value > 0 && (
+                    <Badge variant={data.game.last_roll_value === 6 ? "default" : "outline"} className="text-[9px]">
+                      {data.game.last_roll_value === 6 ? "JACKPOT" : "Roll " + data.game.last_roll_value}
+                    </Badge>
+                  )}
+                </div>
               </div>
             )}
           </CardContent>
