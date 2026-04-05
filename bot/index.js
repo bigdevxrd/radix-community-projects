@@ -795,6 +795,24 @@ bot.command("mvd", (ctx) => ctx.reply("Minimum Viable DAO discussion:\nhttps://r
 bot.command("wiki", (ctx) => ctx.reply("Radix Wiki:\nhttps://radix.wiki/ecosystem"));
 bot.command("talk", (ctx) => ctx.reply("RadixTalk forum:\nhttps://radixtalk.com"));
 
+// ── Welcome new members ────────────────────────────────
+
+bot.on("message:new_chat_members", async (ctx) => {
+  for (const member of ctx.message.new_chat_members) {
+    if (member.is_bot) continue;
+    const name = member.first_name || member.username || "there";
+    await ctx.reply(
+      "Welcome " + name + "!\n\n" +
+      "Radix Governance — propose ideas, vote, earn XP.\n\n" +
+      "Get started:\n" +
+      "1. /register <your_account_rdx1...>\n" +
+      "2. Mint free badge: " + PORTAL + "/mint\n" +
+      "3. /proposals to vote\n\n" +
+      "/help for commands | /faq for questions"
+    );
+  }
+});
+
 bot.on("message:text", (ctx) => {
   // Check if user is in wizard flow
   if (handleWizardText(ctx)) return;
