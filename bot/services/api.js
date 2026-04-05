@@ -2,6 +2,7 @@
 const http = require("http");
 const db = require("../db");
 const { hasBadge, getBadgeData } = require("./gateway");
+const { getXpStats, getXpQueue } = require("./xp");
 
 const API_PORT = parseInt(process.env.API_PORT || "3003");
 const ALLOWED_ORIGINS = (process.env.CORS_ORIGINS || "").split(",").filter(Boolean);
@@ -135,14 +136,12 @@ function startApi() {
 
     // GET /api/xp-queue — pending XP rewards
     if (url.pathname === "/api/xp-queue") {
-      const { getXpQueue } = require("./xp");
       res.writeHead(200);
       return res.end(JSON.stringify({ ok: true, data: getXpQueue() }));
     }
 
     // GET /api/stats
     if (url.pathname === "/api/stats") {
-      const { getXpQueue } = require("./xp");
       res.writeHead(200);
       return res.end(JSON.stringify({
         ok: true,
@@ -151,7 +150,7 @@ function startApi() {
           total_voters: db.getTotalVoters(),
           active_proposals: db.getActiveProposals().length,
           pending_xp_rewards: getXpQueue().length,
-          xp: require("./xp").getXpStats(),
+          xp: getXpStats(),
         }
       }));
     }
@@ -190,7 +189,6 @@ function startApi() {
 
     // GET /api/analytics/summary — key metrics
     if (url.pathname === "/api/analytics/summary") {
-      const { getXpStats } = require("./xp");
       const xpStats = getXpStats();
       res.writeHead(200);
       return res.end(JSON.stringify({
@@ -223,7 +221,6 @@ function startApi() {
 
     // GET /api/analytics/xp-distribution — XP awards data
     if (url.pathname === "/api/analytics/xp-distribution") {
-      const { getXpStats, getXpQueue } = require("./xp");
       const stats = getXpStats();
       const queue = getXpQueue();
       res.writeHead(200);
