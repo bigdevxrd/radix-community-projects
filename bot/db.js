@@ -472,6 +472,63 @@ function getGameLeaderboard(limit = 10) {
   return db.prepare("SELECT * FROM game_state ORDER BY total_bonus_xp DESC LIMIT ?").all(limit);
 }
 
+// ── Analytics Queries ──────────────────────────────────
+
+function getProposalsTimeline() {
+  // Group proposals by month (YYYY-MM)
+  return db.prepare(
+    "SELECT strftime('%Y-%m', datetime(created_at, 'unixepoch')) as month, COUNT(*) as count FROM proposals GROUP BY month ORDER BY month ASC"
+  ).all();
+}
+
+function getVotersHistogram() {
+  // Distribution of vote counts per voter (how many voters cast exactly N votes)
+  const rows = db.prepare(
+    "SELECT tg_id, COUNT(*) as vote_count FROM votes GROUP BY tg_id"
+  ).all();
+  const buckets = { "1": 0, "2-5": 0, "6-10": 0, "11-20": 0, "21+": 0 };
+  for (const r of rows) {
+    if (r.vote_count === 1) buckets["1"]++;
+    else if (r.vote_count <= 5) buckets["2-5"]++;
+    else if (r.vote_count <= 10) buckets["6-10"]++;
+    else if (r.vote_count <= 20) buckets["11-20"]++;
+    else buckets["21+"]++;
+  }
+  return buckets;
+}
+
+function getTopVoters(limit = 10) {
+  return db.prepare(
+    "SELECT tg_id, COUNT(*) as vote_count, MAX(voted_at) as last_voted_at FROM votes GROUP BY tg_id ORDER BY vote_count DESC LIMIT ?"
+  ).all(limit);
+}
+
+function getOutcomesDistribution() {
+  const rows = db.prepare(
+    "SELECT status, COUNT(*) as count FROM proposals WHERE status != 'active' GROUP BY status"
+  ).all();
+  const dist = {};
+  for (const r of rows) dist[r.status] = r.count;
+  return dist;
+}
+
+function getCharterProgressByPhase() {
+  const phases = [1, 2, 3];
+  return phases.map(phase => {
+    const total = db.prepare("SELECT COUNT(*) as c FROM charter_params WHERE phase = ?").get(phase).c;
+    const resolved = db.prepare("SELECT COUNT(*) as c FROM charter_params WHERE phase = ? AND status = 'resolved'").get(phase).c;
+    const voting = db.prepare("SELECT COUNT(*) as c FROM charter_params WHERE phase = ? AND status = 'voting'").get(phase).c;
+    return { phase, total, resolved, voting, tbd: total - resolved - voting, pct: total > 0 ? Math.round((resolved / total) * 100) : 0 };
+  });
+}
+
+function getAvgVotesPerProposal() {
+  const r = db.prepare("SELECT COUNT(*) as total_votes FROM votes").get();
+  const p = db.prepare("SELECT COUNT(*) as total_proposals FROM proposals WHERE status != 'active'").get();
+  if (!p.total_proposals) return 0;
+  return Math.round((r.total_votes / p.total_proposals) * 10) / 10;
+}
+
 module.exports = {
   init,
   getUser, registerUser,
@@ -483,6 +540,8 @@ module.exports = {
   createBounty, getBounty, getOpenBounties, getAllBounties, assignBounty, submitBounty, verifyBounty, payBounty,
   fundEscrow, getEscrowBalance, getBountyTransactions, getBountyStats,
   rollDice, recordRoll, getGameState, getGameLeaderboard, ROLL_BONUSES,
+  getProposalsTimeline, getVotersHistogram, getTopVoters, getOutcomesDistribution,
+  getCharterProgressByPhase, getAvgVotesPerProposal,
 };
 
 function cancelProposal(proposalId, tgId) {
@@ -501,3 +560,6 @@ function getProposalHistory(limit = 10) {
 
 module.exports.cancelProposal = cancelProposal;
 module.exports.getProposalHistory = getProposalHistory;
+
+// Analytics exports appended here (also exported in main block above)
+// No-op: already included in main module.exports block
