@@ -609,6 +609,44 @@ bot.command("bounty", async (ctx) => {
   ctx.reply("Bounty commands:\n/bounty list — open bounties\n/bounty stats — stats + escrow\n/bounty create <xrd> <title>\n/bounty claim <id>\n/bounty submit <id> <pr_url>\n/bounty verify <id> (admin)\n/bounty pay <id> <tx_hash> (admin)\n/bounty fund <xrd> <tx_hash> (admin)");
 });
 
+// ── /badges ────────────────────────────────────────────
+
+bot.command("badges", async (ctx) => {
+  const user = db.getUser(ctx.from.id);
+  if (!user) return ctx.reply("Register first: /register <account_rdx1...>");
+
+  const badge = await getBadgeData(user.radix_address);
+  const game = db.getGameState(user.radix_address);
+
+  let msg = "Your Badge Profile\n\n";
+
+  if (badge) {
+    const tierWeights = { member: "1x", contributor: "2x", builder: "3x", steward: "5x", elder: "10x" };
+    msg += "Guild Member: " + badge.tier + " (" + (tierWeights[badge.tier] || "1x") + " vote)\n";
+    msg += "XP: " + badge.xp + " | Level: " + badge.level + "\n";
+    msg += "ID: " + badge.id + "\n\n";
+  } else {
+    msg += "Guild Member: not minted\nMint free: " + PORTAL + "/mint\n\n";
+  }
+
+  // Show achievement progress
+  msg += "Achievement Progress:\n";
+
+  // Voter badge progress
+  const voteCount = db.getVoteCountForUser ? db.getVoteCountForUser(ctx.from.id) : 0;
+  msg += "  Voter: " + voteCount + "/10 votes" + (voteCount >= 10 ? " (earned!)" : "") + "\n";
+
+  // Game stats
+  if (game.total_rolls > 0) {
+    msg += "  Dice Roller: " + game.total_rolls + " rolls, " + game.jackpots + " jackpots\n";
+  }
+
+  msg += "\nPlanned badges: Contributor, Voter, Steward, Builder\n";
+  msg += "See /faq for details.";
+
+  ctx.reply(msg);
+});
+
 // ── /game ──────────────────────────────────────────────
 
 bot.command("game", async (ctx) => {

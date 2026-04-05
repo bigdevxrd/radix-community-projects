@@ -246,6 +246,11 @@ function hasVoted(proposalId, tgId) {
   ).get(proposalId, tgId);
 }
 
+function getVoteCountForUser(tgId) {
+  const r = db.prepare("SELECT COUNT(*) as c FROM votes WHERE tg_id = ?").get(tgId);
+  return r ? r.c : 0;
+}
+
 function getTotalVoters() {
   const r = db.prepare("SELECT COUNT(DISTINCT tg_id) as c FROM votes").get();
   return r ? r.c : 0;
@@ -473,7 +478,7 @@ module.exports = {
   createProposal, updateProposalMessage, getProposal,
   getActiveProposals, closeExpiredProposals, closeProposal, getAmendments,
   recordVote, getVoteCounts, hasVoted,
-  getTotalVoters, getTotalProposals,
+  getVoteCountForUser, getTotalVoters, getTotalProposals,
   getCharterParams, getCharterParam, resolveCharterParam, getCharterStatus, getReadyParams,
   createBounty, getBounty, getOpenBounties, getAllBounties, assignBounty, submitBounty, verifyBounty, payBounty,
   fundEscrow, getEscrowBalance, getBountyTransactions, getBountyStats,
