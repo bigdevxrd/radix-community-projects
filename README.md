@@ -1,5 +1,29 @@
 # Radix Governance
 
+Radix Governance — Status Update
+What's happening:
+Community transition is disorderly - working on this together should be a breeze in 2026 esp. with radix. 
+I am trying to make this ‘orderly’ dream come true!  
+How:
+We made a TG bot that helps with decision making - web3 integration asap. The first proposal used for example purposes is the current DAO MVD discussion on RadixTalk (https://radix.wiki/ideas/radix-network-dao-charter).
+The proposal has been broken into logical procession for logical voting order - some issues have dependencies - this needs review - example only.
+The badge system is not fully deployed - We tried to design something that had everything to get the community started  - system is ready and waiting on proposals and approvals to develop it further. Note: there are a lot of elements I included in the repo (ie Grid Game) as features or side projects as part of my bigger ‘Radix Guild’ project.
+ *This is a WIP feel free to break it. Give me feedback.*
+
+What's LIVE right now (go try break it):
+🤖TG: @rad_gov 
+📊 Dashboard: https://72-62-195-141.sslip.io/guild 
+🗳️ 20 governance proposals waiting for YOUR vote  
+What we need from you:
+1. Mint a badge (free, 30 seconds)
+2. Vote on the 6 foundation proposals
+3. Tell us what's broken 
+No XRD needed. No token. No hopium. Just tools.  Issues:  1. Rad Gov. is not yet fully web3 - architecture is there - waiting on the radix consultation v2 and or other api - RadixTalk, RadixWiki, Muan?? The cv2 needs to be built or foundation need to release it - not public yet afaik. 
+2. Rad Gov. is a year of thinking and weekend project with Claude - probably buggy! I did my best to clean up.
+
+GitHub: github.com/bigdevxrd/radix-community-projects 
+CV2 Fork: github.com/bigdevxrd/consultation_v2
+
 ## Why This Exists
 
 The Radix community is fragmented. Discussions happen across Telegram, Discord, RadixTalk, and CrumbsUp with no coherent thread connecting them. Ideas get debated but never decided. Decisions get made but never funded. Work gets done but never rewarded.
@@ -7,6 +31,8 @@ The Radix community is fragmented. Discussions happen across Telegram, Discord, 
 The Foundation is transitioning to community governance. The DAO Charter exists but has 32 undefined parameters. The Consultation v2 system handles network-level votes but there's no tooling for community-level coordination — the day-to-day decisions about how we actually organize and work together.
 
 This is not a marketing project or a token launch. This is infrastructure. A last serious attempt at giving the Radix community a coherent way to make decisions, fund work, and hold each other accountable.
+
+
 
 ## What It Is
 
