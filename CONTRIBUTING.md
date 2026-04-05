@@ -111,7 +111,7 @@ Contributing earns XP on your Guild badge:
 
 ## Questions?
 
-- [Telegram Group](https://t.me/radix_guild_bot) — governance + discussion
+- [Telegram Group](https://t.me/rad_gov) — governance + discussion
 - [GitHub Issues](https://github.com/bigdevxrd/radix-community-projects/issues) — bugs and features
 - [RadixTalk](https://radixtalk.com) — longer-form discussion
 

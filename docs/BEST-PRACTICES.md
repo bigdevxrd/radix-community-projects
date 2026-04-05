@@ -339,7 +339,7 @@ curl https://DOMAIN/api/proposals?status=active
 # Open https://DOMAIN/guild in browser — badge card should render
 
 # 4. Bot responds
-# Send /stats to @radix_guild_bot in TG — should reply with numbers
+# Send /stats to @rad_gov in TG — should reply with numbers
 
 # 5. Run full pipeline
 node scripts/pipeline-test.js  # All 19 tests green
@@ -394,7 +394,7 @@ Option C — Database rollback (migration went wrong):
 
 | Channel | Purpose | Response time |
 |---------|---------|---------------|
-| **Telegram** (`@radix_guild_bot`) | Day-to-day governance, votes, community chat | Same day |
+| **Telegram** (`@rad_gov`) | Day-to-day governance, votes, community chat | Same day |
 | **GitHub Issues** | Bugs, feature requests, formal proposals | 48 hours |
 | **RadixTalk** | Long-form discussion, ecosystem updates | Best effort |
 | **Discord** | If/when a Guild Discord is created | TBD |

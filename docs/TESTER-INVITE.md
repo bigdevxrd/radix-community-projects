@@ -9,7 +9,7 @@ Hey — I've built something for the Radix community and need a few OGs to test 
 **Radix Governance** — a system for making community decisions. Free badge, vote from Telegram, earn XP with dice rolls. 20 governance proposals already live.
 
 3 minutes to try it:
-1. Open @radix_guild_bot
+1. Open @rad_gov
 2. `/register account_rdx1...` (your wallet address)
 3. Mint free badge: https://72-62-195-141.sslip.io/guild/mint
 4. `/proposals` to see what's being voted on
@@ -46,7 +46,7 @@ Free badge. Vote from Telegram. Earn XP with dice rolls.
 These 6 decisions unlock 14 more. The DAO builds itself.
 
 Get started:
-1. @radix_guild_bot → `/register` your wallet
+1. @rad_gov → `/register` your wallet
 2. Mint badge (free): https://72-62-195-141.sslip.io/guild/mint
 3. `/proposals` → vote
 
@@ -87,7 +87,7 @@ Step 2 — Configuration (auto-unlocks): Treasury limits, election rules, timing
 Step 3 — Operations (after config): First RAC election, first bounty fund
 
 **How to join the beta:**
-1. Message @radix_guild_bot in Telegram
+1. Message @rad_gov in Telegram
 2. `/register account_rdx1...`
 3. Mint badge: https://72-62-195-141.sslip.io/guild/mint (free)
 4. `/proposals` to vote
@@ -96,7 +96,7 @@ Step 3 — Operations (after config): First RAC election, first bounty fund
 Everything is free. No XRD needed. Voting is off-chain (instant, free). Badges are on-chain (free mint).
 
 **Links:**
-- Bot: @radix_guild_bot
+- Bot: @rad_gov
 - Dashboard: https://72-62-195-141.sslip.io/guild
 - GitHub: github.com/bigdevxrd/radix-community-projects (MIT)
 - CrumbsUp DAO: crumbsup.io (search "Guild")
@@ -127,5 +127,5 @@ MIT licensed. 30 tests. Beta testing now.
 Stack: Scrypto 1.3.1 / Grammy / Next.js 16 / shadcn/ui / SQLite / Caddy
 
 github.com/bigdevxrd/radix-community-projects
-Bot: @radix_guild_bot
+Bot: @rad_gov
 Dashboard: https://72-62-195-141.sslip.io/guild

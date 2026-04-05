@@ -29,7 +29,7 @@ Tiers: Member (1x) → Contributor (2x) → Builder (3x) → Steward (5x) → El
 | Component | Status |
 |-----------|--------|
 | Badge Manager (Scrypto, mainnet) | Live |
-| Telegram Bot (@radix_guild_bot) | Live |
+| Telegram Bot (@rad_gov) | Live |
 | Dashboard (mint, proposals, admin) | Live |
 | Badge API (public REST) | Live |
 | CrumbsUp DAO | Active |
@@ -66,7 +66,7 @@ Looking for community help with:
 
 ## Links
 
-- Bot: @radix_guild_bot
+- Bot: @rad_gov
 - CrumbsUp DAO: crumbsup.io (search "Guild")
 - GitHub: github.com/bigdevxrd/radix-community-projects
 

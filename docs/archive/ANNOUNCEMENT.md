@@ -38,7 +38,7 @@ XP earned by voting, proposing, completing tasks. Level up through participation
 
 ## Try It
 
-1. TG Bot: @radix_guild_bot
+1. TG Bot: @rad_gov
 2. Dashboard: https://156-67-219-105.sslip.io/guild
 3. GitHub: https://github.com/bigdevxrd/radix-community-projects
 

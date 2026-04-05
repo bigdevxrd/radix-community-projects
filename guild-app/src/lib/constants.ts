@@ -98,7 +98,7 @@ export const ECOSYSTEM_LINKS: EcosystemLink[] = [
 ];
 
 export const QUICK_ACTIONS = [
-  { label: "Vote on Proposals", href: "https://t.me/radix_guild_bot", desc: "Open TG bot", external: true },
+  { label: "Vote on Proposals", href: "https://t.me/rad_gov", desc: "Open TG bot", external: true },
   { label: "View Proposals", href: "/proposals", desc: "Live results", external: false },
   { label: "Manage Badges", href: "/admin", desc: "Admin panel", external: false },
 ];

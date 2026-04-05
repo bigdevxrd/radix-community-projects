@@ -18,7 +18,7 @@ First governance proposals dropping soon:
 - Should we bid on the Gateway RFP?
 
 Get started:
-1. Message @radix_guild_bot
+1. Message @rad_gov
 2. `/register` your wallet
 3. `/help` to see all commands
 
@@ -46,4 +46,4 @@ On-chain badges (Scrypto), badge-gated voting (TG bot), open source dashboard (N
 MIT licensed. PRs welcome.
 
 GitHub: github.com/bigdevxrd/radix-community-projects
-Bot: @radix_guild_bot
+Bot: @rad_gov

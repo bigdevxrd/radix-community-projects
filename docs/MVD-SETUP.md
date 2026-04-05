@@ -165,7 +165,7 @@ The dashboard at `/guild` also shows charter progress with a visual progress bar
 
 1. **A Radix Wallet** (free)
 2. **A Guild badge** (free — mint at the dashboard)
-3. **Telegram** (join @radix_guild_bot)
+3. **Telegram** (join @rad_gov)
 4. **5 minutes** to vote on the 6 foundation proposals
 
 That's it. Vote on 6 things and the DAO starts building itself.

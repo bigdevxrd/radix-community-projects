@@ -58,7 +58,7 @@ function MintContent() {
           <CardContent className="pt-4">
             <p className="text-sm font-semibold mb-2">Next Steps</p>
             <div className="space-y-2 text-[13px] text-muted-foreground">
-              <p>1. Open the <a href="https://t.me/radix_guild_bot" target="_blank" className="text-primary hover:underline">Telegram Bot</a> and type <code className="font-mono text-xs bg-muted px-1 rounded">/register</code> with your wallet address</p>
+              <p>1. Open the <a href="https://t.me/rad_gov" target="_blank" className="text-primary hover:underline">Telegram Bot</a> and type <code className="font-mono text-xs bg-muted px-1 rounded">/register</code> with your wallet address</p>
               <p>2. Type <code className="font-mono text-xs bg-muted px-1 rounded">/proposals</code> to see active governance votes</p>
               <p>3. Vote on proposals to earn XP and level up your tier</p>
             </div>

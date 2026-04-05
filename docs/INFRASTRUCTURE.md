@@ -68,7 +68,7 @@ Domain will be added later — Caddy config is one-line change.
 
 | Item | Value |
 |------|-------|
-| Bot | @radix_guild_bot |
+| Bot | @rad_gov |
 | Framework | Grammy v1.41.1 |
 | Database | SQLite (guild.db) |
 | Token | In /opt/guild/bot/.env |

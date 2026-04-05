@@ -186,7 +186,7 @@ function Dashboard() {
           <CardContent>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               {[
-                { label: "Vote on Proposals", href: "https://t.me/radix_guild_bot", desc: "Open TG bot", external: true },
+                { label: "Vote on Proposals", href: "https://t.me/rad_gov", desc: "Open TG bot", external: true },
                 { label: "View Proposals", href: "/proposals", desc: "Live results", external: false },
                 { label: "Manage Badges", href: "/admin", desc: "Admin panel", external: false },
               ].map((a) => {
