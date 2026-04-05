@@ -1,17 +1,38 @@
 "use client";
+import { useEffect, useState } from "react";
 import { AppShell } from "@/components/AppShell";
 import { BadgeCard } from "@/components/BadgeCard";
 import { TierProgression } from "@/components/TierProgression";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useWallet } from "@/hooks/useWallet";
-import { ECOSYSTEM_LINKS, QUICK_ACTIONS, RESOURCES } from "@/lib/constants";
+import { API_URL, ECOSYSTEM_LINKS, RESOURCES } from "@/lib/constants";
 import Link from "next/link";
+
+interface DashboardData {
+  stats: { total_proposals: number; active_proposals: number; total_voters: number; pending_xp_rewards: number } | null;
+  charter: { status: { total: number; resolved: number; voting: number; tbd: number }; ready: { param_key: string; title: string }[] } | null;
+  bounties: { stats: { open: number; assigned: number; submitted: number; verified: number; paid: number; totalPaid: number; escrow: { funded: number; released: number; available: number } }; bounties: { id: number; title: string; reward_xrd: number; status: string }[] } | null;
+}
 
 function Dashboard() {
   const { account, connected, badge, badgeLoading } = useWallet();
+  const [data, setData] = useState<DashboardData>({ stats: null, charter: null, bounties: null });
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    Promise.all([
+      fetch(API_URL + "/stats").then(r => r.json()).catch(() => null),
+      fetch(API_URL + "/charter").then(r => r.json()).catch(() => null),
+      fetch(API_URL + "/bounties").then(r => r.json()).catch(() => null),
+    ]).then(([s, c, b]) => {
+      setData({ stats: s?.data || null, charter: c?.data || null, bounties: b?.data || null });
+      setLoading(false);
+    });
+  }, []);
 
   return (
     <div className="space-y-5">
@@ -36,15 +57,11 @@ function Dashboard() {
           </CardContent>
         </Card>
       ) : badgeLoading ? (
-        <Card>
-          <CardContent className="p-5 space-y-4">
-            <div className="flex justify-between"><Skeleton className="h-5 w-32" /><Skeleton className="h-5 w-20" /></div>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              {[1,2,3,4].map(i => <Skeleton key={i} className="h-14" />)}
-            </div>
-            <Skeleton className="h-1.5 w-full" />
-          </CardContent>
-        </Card>
+        <Card><CardContent className="p-5 space-y-4">
+          <div className="flex justify-between"><Skeleton className="h-5 w-32" /><Skeleton className="h-5 w-20" /></div>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">{[1,2,3,4].map(i => <Skeleton key={i} className="h-14" />)}</div>
+          <Skeleton className="h-1.5 w-full" />
+        </CardContent></Card>
       ) : badge ? (
         <>
           <BadgeCard badge={badge} />
@@ -63,13 +80,116 @@ function Dashboard() {
         </Card>
       )}
 
+      {/* Proposal Stats */}
+      {data.stats && (
+        <Card>
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-sm uppercase tracking-wide text-muted-foreground">Proposals</CardTitle>
+              <Link href="/proposals"><Button variant="ghost" size="sm">View All</Button></Link>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              {[
+                { label: "Total", value: data.stats.total_proposals },
+                { label: "Active", value: data.stats.active_proposals },
+                { label: "Voters", value: data.stats.total_voters },
+                { label: "Pending XP", value: data.stats.pending_xp_rewards },
+              ].map(s => (
+                <div key={s.label} className="bg-muted rounded-lg px-3 py-2.5">
+                  <div className="text-[10px] text-muted-foreground uppercase tracking-wider">{s.label}</div>
+                  <div className="text-lg font-bold font-mono text-primary">{s.value}</div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Charter Progress */}
+      {data.charter && (
+        <Card>
+          <CardHeader className="pb-3"><CardTitle className="text-sm uppercase tracking-wide text-muted-foreground">Charter Progress</CardTitle></CardHeader>
+          <CardContent className="space-y-3">
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-muted-foreground">{data.charter.status.resolved} of {data.charter.status.total} parameters resolved</span>
+              <span className="font-mono text-primary">{Math.round((data.charter.status.resolved / data.charter.status.total) * 100)}%</span>
+            </div>
+            <Progress value={(data.charter.status.resolved / data.charter.status.total) * 100} className="h-2" />
+            {data.charter.ready.length > 0 && (
+              <div>
+                <div className="text-xs text-muted-foreground mb-2">Ready to vote ({data.charter.ready.length}):</div>
+                <div className="space-y-1">
+                  {data.charter.ready.slice(0, 4).map(p => (
+                    <div key={p.param_key} className="flex items-center gap-2 text-xs">
+                      <Badge variant="secondary" className="text-[9px] font-mono">{p.param_key}</Badge>
+                      <span className="text-muted-foreground">{p.title}</span>
+                    </div>
+                  ))}
+                  {data.charter.ready.length > 4 && (
+                    <div className="text-[11px] text-muted-foreground">+ {data.charter.ready.length - 4} more</div>
+                  )}
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Bounty Board */}
+      {data.bounties && (
+        <Card>
+          <CardHeader className="pb-3"><CardTitle className="text-sm uppercase tracking-wide text-muted-foreground">Bounty Board</CardTitle></CardHeader>
+          <CardContent className="space-y-3">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              {[
+                { label: "Open", value: data.bounties.stats.open, color: "text-primary" },
+                { label: "In Progress", value: data.bounties.stats.assigned, color: "text-yellow-500" },
+                { label: "Review", value: data.bounties.stats.submitted + data.bounties.stats.verified, color: "text-blue-400" },
+                { label: "Paid", value: data.bounties.stats.paid, color: "text-muted-foreground" },
+              ].map(s => (
+                <div key={s.label} className="bg-muted rounded-lg px-3 py-2.5">
+                  <div className="text-[10px] text-muted-foreground uppercase tracking-wider">{s.label}</div>
+                  <div className={`text-lg font-bold font-mono ${s.color}`}>{s.value}</div>
+                </div>
+              ))}
+            </div>
+            <div className="flex items-center justify-between bg-muted rounded-lg px-3 py-2.5">
+              <span className="text-xs text-muted-foreground">Escrow Balance</span>
+              <span className="font-mono font-bold text-primary">{data.bounties.stats.escrow.available} XRD</span>
+            </div>
+            {data.bounties.bounties.length > 0 && (
+              <div className="space-y-1.5">
+                {data.bounties.bounties.slice(0, 5).map(b => (
+                  <div key={b.id} className="flex items-center justify-between text-xs py-1.5 border-b last:border-0">
+                    <div>
+                      <span className="text-muted-foreground font-mono mr-1.5">#{b.id}</span>
+                      <span>{b.title.slice(0, 45)}{b.title.length > 45 ? "..." : ""}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono text-muted-foreground">{b.reward_xrd} XRD</span>
+                      <Badge variant={b.status === "paid" ? "default" : b.status === "open" ? "secondary" : "outline"} className="text-[9px]">{b.status}</Badge>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
       {/* Quick Actions */}
       {connected && (
         <Card>
           <CardHeader className="pb-3"><CardTitle className="text-sm uppercase tracking-wide text-muted-foreground">Quick Actions</CardTitle></CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              {QUICK_ACTIONS.map((a) => {
+              {[
+                { label: "Vote on Proposals", href: "https://t.me/radix_guild_bot", desc: "Open TG bot", external: true },
+                { label: "View Proposals", href: "/proposals", desc: "Live results", external: false },
+                { label: "Manage Badges", href: "/admin", desc: "Admin panel", external: false },
+              ].map((a) => {
                 const inner = (<><div className="font-semibold text-sm mb-1">{a.label}</div><div className="text-xs text-muted-foreground">{a.desc}</div></>);
                 return a.external ? (
                   <a key={a.label} href={a.href} target="_blank" className="block bg-muted rounded-lg p-4 no-underline text-foreground hover:bg-accent/10 transition-colors">{inner}</a>
@@ -117,7 +237,6 @@ function Dashboard() {
         </CardContent>
       </Card>
 
-      {/* Wallet */}
       {account && (
         <div className="text-xs text-muted-foreground font-mono">{account.slice(0, 20)}...{account.slice(-8)}</div>
       )}
