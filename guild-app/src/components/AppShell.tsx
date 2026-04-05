@@ -38,10 +38,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               Radix Governance
             </Link>
             {badge && (
-              <Badge variant="secondary" className="hidden sm:inline-flex font-mono text-[11px]"
-                style={{ borderLeft: `3px solid ${TIER_COLORS[badge.tier] || "var(--muted)"}` }}>
-                {badge.tier.toUpperCase()} | {badge.xp} XP
-              </Badge>
+              <Link href="/profile" className="no-underline">
+                <Badge variant="secondary" className="hidden sm:inline-flex font-mono text-[11px] cursor-pointer hover:bg-accent/20 transition-colors"
+                  style={{ borderLeft: `3px solid ${TIER_COLORS[badge.tier] || "var(--muted)"}` }}>
+                  {badge.tier.toUpperCase()} | {badge.xp} XP
+                </Badge>
+              </Link>
             )}
           </div>
           <div className="flex items-center gap-2 sm:gap-3">
