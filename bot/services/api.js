@@ -44,11 +44,23 @@ function startApi() {
       return res.end();
     }
 
+    // Only allow GET requests
+    if (req.method !== "GET") {
+      res.writeHead(405);
+      return res.end(JSON.stringify({ ok: false, error: "method_not_allowed" }));
+    }
+
     // Rate limiting
     const clientIp = req.headers["x-forwarded-for"]?.split(",")[0]?.trim() || req.socket.remoteAddress;
     if (!rateLimit(clientIp)) {
       res.writeHead(429);
       return res.end(JSON.stringify({ ok: false, error: "rate_limit_exceeded" }));
+    }
+
+    // Reject oversized URLs
+    if (req.url.length > 512) {
+      res.writeHead(414);
+      return res.end(JSON.stringify({ ok: false, error: "uri_too_long" }));
     }
 
     const url = new URL(req.url, "http://localhost");
@@ -81,7 +93,7 @@ function startApi() {
     }
 
     // GET /api/game/:address — game state for an address
-    const gameMatch = url.pathname.match(/^\/api\/game\/(account_rdx1[a-z0-9]+)$/);
+    const gameMatch = url.pathname.match(/^\/api\/game\/(account_rdx1[a-z0-9]{40,65})$/);
     if (gameMatch) {
       const game = db.getGameState(gameMatch[1]);
       res.writeHead(200);
@@ -158,7 +170,7 @@ function startApi() {
     }
 
     // GET /api/badge/:address — full badge data for an address
-    const badgeMatch = url.pathname.match(/^\/api\/badge\/(account_rdx1[a-z0-9]+)$/);
+    const badgeMatch = url.pathname.match(/^\/api\/badge\/(account_rdx1[a-z0-9]{40,65})$/);
     if (badgeMatch) {
       const addr = badgeMatch[1];
       try {
@@ -176,7 +188,7 @@ function startApi() {
     }
 
     // GET /api/badge/:address/verify — quick badge check (true/false)
-    const verifyMatch = url.pathname.match(/^\/api\/badge\/(account_rdx1[a-z0-9]+)\/verify$/);
+    const verifyMatch = url.pathname.match(/^\/api\/badge\/(account_rdx1[a-z0-9]{40,65})\/verify$/);
     if (verifyMatch) {
       const addr = verifyMatch[1];
       try {

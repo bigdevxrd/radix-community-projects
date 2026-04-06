@@ -13,6 +13,8 @@ const path = require("path");
 const fs = require("fs");
 
 let signer = null;
+let lastBridgeTime = 0;
+const BRIDGE_COOLDOWN = 60000; // 1 minute between bridges (prevents XRD drain)
 
 function isEnabled() {
   return process.env.CV2_ENABLED === "true" && !!process.env.BOT_PRIVATE_KEY;
@@ -41,10 +43,24 @@ async function bridgeToChain(title, description, options = ["For", "Against"]) {
     return { ok: false, error: "CV2 bridge not enabled" };
   }
 
+  // Rate limit: 1 bridge per minute (prevents XRD drain from spam)
+  const now = Date.now();
+  if (now - lastBridgeTime < BRIDGE_COOLDOWN) {
+    return { ok: false, error: "Bridge rate limited (1/min)" };
+  }
+  lastBridgeTime = now;
+
   const component = process.env.CV2_COMPONENT;
   const account = process.env.RADIX_ACCOUNT_ADDRESS;
   if (!component || !account) {
     return { ok: false, error: "CV2_COMPONENT or RADIX_ACCOUNT_ADDRESS not set" };
+  }
+  // Validate addresses from env
+  if (!/^component_rdx1[a-z0-9]{40,65}$/.test(component)) {
+    return { ok: false, error: "Invalid CV2_COMPONENT address" };
+  }
+  if (!/^account_rdx1[a-z0-9]{40,65}$/.test(account)) {
+    return { ok: false, error: "Invalid RADIX_ACCOUNT_ADDRESS" };
   }
 
   // Sanitize inputs
