@@ -7,6 +7,8 @@ dist/
 *.swp
 *.swo
 badge-manager/build/
-badge-manager/build/
 *.db
 *.db-journal
+.next/
+next-env.d.ts
+.env.local
