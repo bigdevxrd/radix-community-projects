@@ -103,3 +103,87 @@ What stays open source:
 - All docs
 
 Fork point: guild-saas repo gets a config layer on top of the open source base. Same code, different deployment config.
+
+## Week 2 Plan (Apr 14-20)
+
+### Day 8 (Apr 14) — Governance Assistant MVP
+
+- [ ] Simplify agent-tools: strip executor, keep scan + context + LLM ask
+- [ ] Build: governance-specific prompts (charter rules, proposal templates)
+- [ ] Build: POST /api/assist endpoint (badge-gated, rate limited)
+- [ ] Build: pay-per-use model (0.5 XRD per assist, configurable)
+- [ ] Wire: XRD payment → treasury escrow on each assist call
+- [ ] Test: "help me write a proposal about X" → formatted proposal draft
+
+### Day 9 (Apr 15) — Dashboard Assistant UI
+
+- [ ] Build: sidebar assistant component on dashboard
+- [ ] Input: text field + context selector (proposal/bounty/charter/general)
+- [ ] Output: formatted response with action buttons (create proposal, create bounty)
+- [ ] Bot: /assist command in TG for same functionality
+- [ ] Deploy + test with beta testers
+
+### Day 10 (Apr 16) — Achievement NFT Minting
+
+- [ ] Fund bot signer account (if not done)
+- [ ] Deploy achievement badge schema on-chain (create_manager call)
+- [ ] Build: mint-achievement.js script
+- [ ] Wire: batch signer writes game data to badge extra_data
+- [ ] Wire: milestone NFT minting on 5th/10th grid completion
+- [ ] Test: complete grid → NFT appears in wallet
+
+### Day 11 (Apr 17) — Multi-Sig Treasury Prep
+
+- [ ] Research: Radix native access rules for M-of-N signing
+- [ ] Design: treasury account with RAC member badges as signers
+- [ ] Build: treasury dashboard page (balance, pending, history)
+- [ ] Build: /treasury bot command
+- [ ] Document: treasury management guide
+
+### Day 12 (Apr 18) — SaaS Fork + Pricing
+
+- [ ] Fork: create guild-saas branch from current main
+- [ ] Add: config layer (tenant ID, branding, pricing)
+- [ ] Add: royalty on badge minting (configurable XRD per mint)
+- [ ] Add: assist API markup (SaaS takes cut of per-use fees)
+- [ ] Add: white-label dashboard config (logo, colors, name)
+- [ ] Document: SaaS deployment guide
+
+### Day 13-14 (Apr 19-20) — Testing + Community
+
+- [ ] Full regression (target 50+ pipeline tests)
+- [ ] Security audit on new features
+- [ ] Process beta tester feedback backlog
+- [ ] Update all docs
+- [ ] Community call or forum post with progress update
+- [ ] Plan Week 3 based on feedback
+
+## Revenue Model (Pay-Per-Use)
+
+```
+Badge holder uses governance assistant
+  → LLM API call costs ~$0.002
+  → User pays 0.5 XRD per assist
+  → XRD deposited to guild treasury escrow
+  → Treasury grows from real usage
+  → No pre-funding needed
+
+SaaS version:
+  → Same model + platform fee
+  → Host charges 1 XRD per assist (keeps 0.5, passes 0.5 to DAO)
+  → Badge minting: free (open source) vs 1 XRD (SaaS hosted)
+```
+
+## Full Stage Schedule
+
+| Stage | What | When | Status |
+|-------|------|------|--------|
+| 1 | Foundation (badges, voting, CV2, game) | Apr 3-6 | Done |
+| 2a | Working groups | Apr 8 | Week 1 |
+| 2b | RAC election | Apr 10 | Week 1 |
+| 2c | Group proposals | Apr 11 | Week 1 |
+| 3 | Treasury + multi-sig | Apr 17 | Week 2 |
+| 4 | Legal entity + federation | TBD | Community decides |
+| 5 | Governance assistant (pay-per-use) | Apr 14-15 | Week 2 |
+| SaaS | Fork + pricing + white-label | Apr 18 | Week 2 |
+| NFTs | Achievement minting on-chain | Apr 16 | Week 2 |
