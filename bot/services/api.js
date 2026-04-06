@@ -211,7 +211,7 @@ function startApi() {
     }
 
     // GET /api/cv2/proposals/:id — single proposal detail
-    const cv2Match = url.pathname.match(/^\/api\/cv2\/proposals\/(.+)$/);
+    const cv2Match = url.pathname.match(/^\/api\/cv2\/proposals\/([\w_-]+)$/);
     if (cv2Match) {
       const proposal = cv2.getProposal(cv2Match[1]);
       if (!proposal) {
