@@ -7,7 +7,7 @@ A simple guide to how everything connects — from your first badge to running a
 ## The 5-Minute Version
 
 ```
-You ──> Mint Badge ──> Vote ──> Earn XP ──> Level Up ──> More Influence
+You ──> Mint Badge ──> Vote ──> Earn XP ──> Level Up ──> More Reputation
 ```
 
 1. Connect your Radix Wallet
