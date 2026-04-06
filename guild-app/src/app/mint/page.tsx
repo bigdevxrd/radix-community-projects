@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import Link from "next/link";
 import { AppShell } from "@/components/AppShell";
 import { BadgeCard } from "@/components/BadgeCard";
 import { TierProgression } from "@/components/TierProgression";
@@ -53,14 +54,46 @@ function MintContent() {
   if (badge) {
     return (
       <div className="space-y-5">
+        <Card className="bg-gradient-to-br from-card to-muted">
+          <CardContent className="pt-6 pb-6 text-center">
+            <div className="text-3xl mb-2">Welcome, {badge.issued_to}!</div>
+            <p className="text-muted-foreground text-sm">Your badge is live on-chain. You're part of Radix Governance.</p>
+          </CardContent>
+        </Card>
+
         <BadgeCard badge={badge} />
+
         <Card>
-          <CardContent className="pt-4">
-            <p className="text-sm font-semibold mb-2">Next Steps</p>
-            <div className="space-y-2 text-[13px] text-muted-foreground">
-              <p>1. Open the <a href="https://t.me/rad_gov" target="_blank" className="text-primary hover:underline">Telegram Bot</a> and type <code className="font-mono text-xs bg-muted px-1 rounded">/register</code> with your wallet address</p>
-              <p>2. Type <code className="font-mono text-xs bg-muted px-1 rounded">/proposals</code> to see active governance votes</p>
-              <p>3. Vote on proposals to earn XP and level up your tier</p>
+          <CardContent className="pt-5 pb-5">
+            <p className="text-sm font-semibold mb-3">Get started in 3 steps:</p>
+            <div className="space-y-3">
+              <div className="flex items-start gap-3">
+                <div className="bg-primary text-primary-foreground rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold shrink-0">1</div>
+                <div>
+                  <div className="text-sm font-semibold">Join the governance group</div>
+                  <div className="text-xs text-muted-foreground mt-0.5">
+                    Open <a href="https://t.me/rad_gov" target="_blank" className="text-primary hover:underline">@rad_gov</a> in Telegram and type <code className="font-mono text-[11px] bg-muted px-1 rounded">/register {account?.slice(0, 20)}...</code>
+                  </div>
+                </div>
+              </div>
+              <div className="flex items-start gap-3">
+                <div className="bg-primary text-primary-foreground rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold shrink-0">2</div>
+                <div>
+                  <div className="text-sm font-semibold">Cast your first vote</div>
+                  <div className="text-xs text-muted-foreground mt-0.5">
+                    Type <code className="font-mono text-[11px] bg-muted px-1 rounded">/proposals</code> to see active votes, or <Link href="/proposals" className="text-primary hover:underline">browse them here</Link>
+                  </div>
+                </div>
+              </div>
+              <div className="flex items-start gap-3">
+                <div className="bg-primary text-primary-foreground rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold shrink-0">3</div>
+                <div>
+                  <div className="text-sm font-semibold">Earn XP + roll the dice</div>
+                  <div className="text-xs text-muted-foreground mt-0.5">
+                    Every vote earns XP and a <Link href="/game" className="text-primary hover:underline">dice roll</Link> for bonus XP. Track progress on your <Link href="/profile" className="text-primary hover:underline">profile</Link>.
+                  </div>
+                </div>
+              </div>
             </div>
           </CardContent>
         </Card>

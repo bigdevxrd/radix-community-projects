@@ -58,24 +58,65 @@ function Dashboard() {
     <div className="space-y-5">
       {/* Badge Section */}
       {!connected ? (
-        <Card className="bg-gradient-to-br from-card to-muted">
-          <CardContent className="px-6 py-12 text-center">
-            <h1 className="text-2xl font-bold mb-3">Radix Governance</h1>
-            <p className="text-muted-foreground text-sm mb-6">Governance infrastructure for the Radix community</p>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-lg mx-auto">
+        <>
+          <Card className="bg-gradient-to-br from-card to-muted">
+            <CardContent className="px-6 py-10 text-center">
+              <h1 className="text-2xl font-bold mb-2">Radix Governance</h1>
+              <p className="text-muted-foreground text-sm mb-6 max-w-md mx-auto">
+                Community-built governance tools for Radix. Mint a free badge, vote on proposals, earn XP, shape the DAO.
+              </p>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 max-w-xl mx-auto mb-6">
+                {[
+                  { label: "1. Connect", desc: "Link your Radix Wallet" },
+                  { label: "2. Mint", desc: "Free on-chain badge" },
+                  { label: "3. Vote", desc: "In Telegram or here" },
+                  { label: "4. Earn", desc: "XP + dice roll bonus" },
+                ].map((s, i) => (
+                  <div key={s.label} className="bg-background/50 rounded-lg px-3 py-3 text-center">
+                    <div className="text-primary font-bold text-sm">{s.label}</div>
+                    <div className="text-[11px] text-muted-foreground mt-0.5">{s.desc}</div>
+                  </div>
+                ))}
+              </div>
+              <p className="text-xs text-muted-foreground">Connect your wallet above to get started. No XRD required.</p>
+            </CardContent>
+          </Card>
+
+          {/* Live stats visible even without wallet */}
+          {data.stats && (
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               {[
-                { title: "On-chain Badges", desc: "NFT membership in your wallet" },
-                { title: "Badge-gated Voting", desc: "Propose and vote in Telegram" },
-                { title: "Open Source", desc: "MIT licensed, clone and build" },
-              ].map((f) => (
-                <div key={f.title} className="text-center">
-                  <div className="text-sm font-semibold mb-1">{f.title}</div>
-                  <div className="text-xs text-muted-foreground">{f.desc}</div>
-                </div>
+                { label: "Proposals", value: data.stats.total_proposals },
+                { label: "Active Votes", value: data.stats.active_proposals },
+                { label: "Voters", value: data.stats.total_voters },
+                { label: "Pending XP", value: data.stats.pending_xp_rewards },
+              ].map(s => (
+                <Card key={s.label}>
+                  <CardContent className="px-4 py-3">
+                    <div className="text-[10px] text-muted-foreground uppercase tracking-wider">{s.label}</div>
+                    <div className="text-xl font-bold font-mono text-primary mt-0.5">{s.value}</div>
+                  </CardContent>
+                </Card>
               ))}
             </div>
-          </CardContent>
-        </Card>
+          )}
+
+          {/* Browse without connecting */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <Link href="/proposals" className="block bg-muted rounded-lg p-4 no-underline text-foreground hover:bg-accent/10 transition-colors">
+              <div className="font-semibold text-sm mb-1">View Proposals</div>
+              <div className="text-xs text-muted-foreground">See active votes and charter progress</div>
+            </Link>
+            <Link href="/bounties" className="block bg-muted rounded-lg p-4 no-underline text-foreground hover:bg-accent/10 transition-colors">
+              <div className="font-semibold text-sm mb-1">Browse Bounties</div>
+              <div className="text-xs text-muted-foreground">Earn XRD by contributing</div>
+            </Link>
+            <Link href="/game" className="block bg-muted rounded-lg p-4 no-underline text-foreground hover:bg-accent/10 transition-colors">
+              <div className="font-semibold text-sm mb-1">Dice Game</div>
+              <div className="text-xs text-muted-foreground">Every action earns a dice roll</div>
+            </Link>
+          </div>
+        </>
       ) : badgeLoading ? (
         <Card><CardContent className="p-5 space-y-4">
           <div className="flex justify-between"><Skeleton className="h-5 w-32" /><Skeleton className="h-5 w-20" /></div>
