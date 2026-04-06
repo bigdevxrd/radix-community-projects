@@ -4,54 +4,83 @@
  *
  * Usage: node scripts/generate-keypair.js
  *
- * Outputs:
- *   - Private key (hex) — store in .env as BOT_PRIVATE_KEY
- *   - Public key (hex) — for reference
- *   - Account address — store in .env as RADIX_ACCOUNT_ADDRESS
+ * IMPORTANT — READ BEFORE USING:
  *
- * SECURITY:
- *   - Run this ONCE, save the output securely
- *   - Never commit the private key to git
- *   - Fund the account with minimal XRD (5-10 XRD for tx fees)
- *   - For handover: transfer the private key securely to the new admin
+ *   This creates a RAW ed25519 keypair. It is NOT a BIP39 mnemonic.
+ *   You CANNOT import this key into the Radix Wallet mobile app.
+ *   The private key hex IS the only way to control this account.
+ *
+ *   FUNDING RULES:
+ *   - Do NOT send XRD from the Radix Wallet app to this account.
+ *     The wallet will "securify" the account and the bot won't be
+ *     able to withdraw funds.
+ *   - Instead, fund via a DEX, faucet, or another programmatic transfer.
+ *   - Or: accept that funds sent to this account can only be SPENT
+ *     as transaction fees by the bot, never withdrawn.
+ *   - Keep funding minimal (5-10 XRD). This covers hundreds of TX.
+ *
+ *   WHAT THE BOT CAN DO WITH THIS KEY:
+ *   - lock_fee (pay for transactions)
+ *   - Call methods on external components (CV2, BadgeManager)
+ *   - Sign and submit any manifest
+ *
+ *   WHAT THE BOT CANNOT DO (if funded from a wallet):
+ *   - withdraw XRD from its own account
+ *   - Transfer funds to another account
+ *   - The account becomes "securified" by the depositing wallet
+ *
+ *   HANDOVER:
+ *   - The private key hex is the only secret needed
+ *   - Store it in a password manager, not in code or chat
+ *   - New admin: generate a fresh keypair, update .env, fund new account
+ *   - Old account's remaining XRD is consumed as tx fees over time
  */
 
 const { PrivateKey, RadixEngineToolkit, NetworkId } = require("@radixdlt/radix-engine-toolkit");
 const crypto = require("crypto");
 
 async function main() {
-  // Generate 32 random bytes for the private key
   const privateKeyBytes = crypto.randomBytes(32);
   const privateKeyHex = privateKeyBytes.toString("hex");
 
-  // Create the key object
   const pk = new PrivateKey.Ed25519(privateKeyHex);
   const publicKeyHex = pk.publicKeyHex();
 
-  // Derive the account address
   const address = await RadixEngineToolkit.Derive.virtualAccountAddressFromPublicKey(
     pk.publicKey(),
     NetworkId.Mainnet
   );
 
-  console.log("=== Bot Signer Keypair ===\n");
-  console.log("Private Key (KEEP SECRET):");
+  console.log("=== Bot Signer Keypair ===");
+  console.log("");
+  console.log("Private Key (KEEP SECRET — this is NOT a seed phrase):");
   console.log(privateKeyHex);
-  console.log("\nPublic Key:");
+  console.log("");
+  console.log("Public Key:");
   console.log(publicKeyHex);
-  console.log("\nAccount Address:");
+  console.log("");
+  console.log("Account Address:");
   console.log(address);
-  console.log("\n=== Add to /opt/rad-dao/bot/.env ===\n");
+  console.log("");
+  console.log("=== Add to .env ===");
+  console.log("");
   console.log(`BOT_PRIVATE_KEY=${privateKeyHex}`);
   console.log(`RADIX_ACCOUNT_ADDRESS=${address}`);
-  console.log("\n=== Next Steps ===\n");
-  console.log("1. Copy the two lines above into /opt/rad-dao/bot/.env");
-  console.log("2. Send 5-10 XRD to the account address above");
-  console.log("3. Run: pm2 restart guild-bot --update-env");
-  console.log("4. Test: create a /temp in Telegram, check if it bridges to CV2");
-  console.log("\nFor handover: the private key is the only secret.");
-  console.log("Transfer it securely to the new admin when the DAO transitions.");
-  console.log("The account only needs enough XRD for transaction fees (~0.1 XRD each).");
+  console.log("");
+  console.log("=== WARNINGS ===");
+  console.log("");
+  console.log("1. This is a RAW ed25519 key, NOT a BIP39 mnemonic.");
+  console.log("   You CANNOT import it into the Radix Wallet app.");
+  console.log("");
+  console.log("2. If you fund this account from the Radix Wallet,");
+  console.log("   the account gets securified and the bot CANNOT");
+  console.log("   withdraw funds. The XRD can only be spent as tx fees.");
+  console.log("");
+  console.log("3. Keep funding minimal (5-10 XRD). This covers hundreds");
+  console.log("   of governance transactions at ~0.1 XRD each.");
+  console.log("");
+  console.log("4. Store this private key in a password manager.");
+  console.log("   It is the ONLY way to control this account.");
 }
 
 main().catch(err => {
