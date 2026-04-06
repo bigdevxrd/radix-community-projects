@@ -2,7 +2,23 @@
 
 Step-by-step guide to deploy the Consultation v2 governance system to Radix mainnet.
 
-## Prerequisites
+## DEPLOYED (April 6, 2026)
+
+| Component | Address |
+|-----------|---------|
+| Package | `package_rdx1phazm0kmzcfyejp52493zn7zgr5ljymxzvv64rx2u99l93lhtk5dej` |
+| Governance | `component_rdx1cqj99hx2rdx04mrdvd3am7wcenh6c26m2w5uzv8vkv9pudveqzy7d2` |
+| Owner Badge | `resource_rdx1tkkzwrttvsqrsylyf4nqt2fxq6h27eva4lr4ffwad63x3f2cl43xwe` |
+| Temp Check KVS | `internal_keyvaluestore_rdx1kr6xzh2k70whestr54qzhf6fkxxsmdqhuwm7aenervky3ypphy2x56` |
+| Proposals KVS | `internal_keyvaluestore_rdx1kp7elrlp7vfg84gk84kdnt9wem8fy05eghwlsyyz7myrvul4stxptf` |
+| Package Deploy TX | `txid_rdx10wdfzwh8p0l28pqxyn4x9yrgqr8dn6lxlzfucmurfzsa8knerlxsnel6rn` |
+| Instantiate TX | `txid_rdx1vxte6kpafs27w0u6kjdkur97szcgd4whumkuuk80knqjjaupd7asas25nc` |
+
+Governance parameters: temp checks 3 days / 1000 XRD quorum / 50% threshold, proposals 7 days / 5000 XRD quorum / 50% threshold.
+
+---
+
+## Prerequisites (for redeployment or new instances)
 
 - Scrypto CLI v1.3.1 installed on VPS (`scrypto --version`)
 - Radix Wallet with XRD for transaction fees

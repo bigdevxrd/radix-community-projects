@@ -1,208 +1,156 @@
 # Radix Governance
 
-Radix Governance — Status Update
-What's happening:
+Open source governance infrastructure for the Radix community. Two-tier system: free off-chain coordination in Telegram + formal on-chain voting via Consultation v2 on mainnet.
 
-Community transition is disorderly - working on this together should be a breeze in 2026 esp. with radix. 
-I am trying to make this ‘orderly’ dream come true!  
-
-How:
-
-We made a TG bot that helps with decision making - web3 integration asap. The first proposal used for example purposes is the current DAO MVD discussion on RadixTalk (https://radix.wiki/ideas/radix-network-dao-charter).
-The proposal has been broken into logical procession for logical voting order - some issues have dependencies - this needs review - example only.
-The badge system is not fully deployed - We tried to design something that had everything to get the community started  - system is ready and waiting on proposals and approvals to develop it further. Note: there are a lot of elements I included in the repo (ie Grid Game) as features or side projects as part of my bigger ‘Radix Guild’ project.
- *This is a WIP feel free to break it. Give me feedback.*
-
-What's LIVE right now (go try break it):
-
-🤖TG: @rad_gov 
-
-📊 Dashboard: https://72-62-195-141.sslip.io/guild 
-
-🗳️ 20 governance proposals waiting for YOUR vote  
-
-What we need from you:
-
-1. Mint a badge (free, 30 seconds)
-2. Vote on the 6 foundation proposals
-3. Tell us what's broken 
-No XRD needed. No token. No hopium. Just tools.  Issues:  1. Rad Gov. is not yet fully web3 - architecture is there - waiting on the radix consultation v2 and or other api - RadixTalk, RadixWiki, Muan?? The cv2 needs to be built or foundation need to release it - not public yet afaik. 
-2. Rad Gov. is a year of thinking and weekend project with Claude - probably buggy! I did my best to clean up.
-
-GitHub: github.com/bigdevxrd/radix-community-projects 
-CV2 Fork: github.com/bigdevxrd/consultation_v2
-
-## Why This Exists
-
-The Radix community is fragmented. Discussions happen across Telegram, Discord, RadixTalk, and CrumbsUp with no coherent thread connecting them. Ideas get debated but never decided. Decisions get made but never funded. Work gets done but never rewarded.
-
-The Foundation is transitioning to community governance. The DAO Charter exists but has 32 undefined parameters. The Consultation v2 system handles network-level votes but there's no tooling for community-level coordination — the day-to-day decisions about how we actually organize and work together.
-
-This is not a marketing project or a token launch. This is infrastructure. A last serious attempt at giving the Radix community a coherent way to make decisions, fund work, and hold each other accountable.
-
-
-
-## What It Is
-
-**Radix Governance** = the system (open source tools anyone can use)
+**Radix Governance** = the system (badges, voting, bounties, XP, on-chain identity)
 **Radix Guild** = the first community using it
 
 ```
-💡 Idea → 🗳️ Vote → ✅ Decision → 💰 Fund → 🔨 Build → ✔️ Verify → 🎁 Reward
+Idea --> Vote --> Decision --> Fund --> Build --> Verify --> Reward
 ```
 
-## What's Built (and what actually works)
+## What's Live
 
-| System | What It Does | Status | Verified |
-|--------|-------------|--------|----------|
-| **Badges** | On-chain NFT identity (Scrypto v4, free mint) | Live on mainnet | 11 Scrypto tests |
-| **Voting** | Propose + vote in Telegram (free, off-chain) | Live | Pass/fail/amend/expire tested |
-| **Charter Tracking** | 32 governance decisions with dependency tree | Live | 6 ready to vote |
-| **Bounties + Escrow** | Create → claim → submit → verify → pay | Live | Full cycle tested |
-| **Dice Game** | Every governance action = dice roll = bonus XP | Live | Weighted distribution verified |
-| **Dashboard** | Charter progress, proposals, bounty board | Live | 19 pipeline tests |
-| **Badge API** | Public REST endpoints for any dApp | Live | 7 endpoints |
+| System | What It Does | Status |
+|--------|-------------|--------|
+| **On-chain Badges** | NFT identity (Scrypto v4, free mint) | Mainnet |
+| **Off-chain Voting** | Propose + vote in Telegram (free, badge-gated) | Live |
+| **On-chain Governance** | CV2 temperature checks + proposals (XRD-weighted) | Mainnet |
+| **Charter Tracking** | 32 governance decisions with dependency tree | Live |
+| **Bounties + Escrow** | Create, claim, submit, verify, pay | Live |
+| **Dice Game** | Every governance action = dice roll = bonus XP | Live |
+| **Dashboard** | 10 pages: proposals, bounties, game, profile, admin | Live |
+| **REST API** | 15+ endpoints for any dApp to consume | Live |
+| **Pipeline Tests** | 39 automated tests (API, dashboard, gateway, CV2) | Passing |
 
-## What's NOT Built (honest gaps)
-
-| Gap | What's Missing | When | Effort |
-|-----|---------------|------|--------|
-| **On-chain voting** | Votes stored in SQLite, not on Radix ledger | Phase 4 | 2-3 weeks |
-| **CV2 integration** | Can't read Consultation v2 proposals yet (need component address) | Phase 4 | 1-2 weeks |
-| **CrumbsUp sync** | No API integration (API undocumented) | Phase 4 | 2-3 weeks |
-| **Custom domain** | Currently on IP-based URL (sslip.io) | Phase 3 | 1 day |
-| **Multi-DAO support** | Factory supports it, UI doesn't yet | Phase 5 | 3-4 weeks |
-| **Vote delegation** | Not implemented | Phase 5 | 2 weeks |
-
-## How Voting Works (be clear about this)
-
-| What | Cost | On-chain? | Implication |
-|------|------|-----------|-------------|
-| Mint a badge | Free | **Yes** — NFT in your wallet | Your identity is on-chain |
-| Vote on proposals | Free | **No** — stored in bot database | Votes are fast but not on Radix ledger |
-| Earn XP | Free | Written on-chain periodically | XP is real, stored in your badge NFT |
-| Create bounties | Free | **No** — tracked in bot database | Bounty system is off-chain |
-| Fund escrow | XRD | Tracked per-transaction | Escrow is managed, not smart contract |
-
-**Why off-chain voting?** On-chain voting requires XRD for every transaction. That's a barrier to participation. Temperature checks and community coordination should be free. Formal ratification (binding votes with XRD-weighted stakes) will use Consultation v2 when integrated.
-
-## The DAO Setup Plan
-
-The [DAO Charter](https://radix.wiki/ideas/radix-network-dao-charter) has 32 parameters that need community votes. They have dependencies — some decisions must happen before others.
+## Quick Start (3 minutes)
 
 ```
-STEP 1: FOUNDATION (vote now — 6 decisions, ~1 week)
-┌──────────────────────────────────────────────┐
-│  1. Adopt the Charter?          [YES/NO]     │
-│  2. RAC seat count?             [3/5/7/9]    │
-│  3. Quorum minimum?             [3/10/25]    │
-│  4. Voting period?              [48h/72h/7d] │
-│  5. Approval threshold?         [>50%/>60%]  │
-│  6. Amendment threshold?        [>60%/>66%]  │
-└──────────────────────────────────────────────┘
-         │ passes
-         ▼
-STEP 2: CONFIGURATION (auto-unlocks — 14 decisions, ~2-3 weeks)
-┌──────────────────────────────────────────────┐
-│  Treasury limits, election rules, timing,    │
-│  reputation system, enforcement rules        │
-│  ⚠️ Blocked until Step 1 completes          │
-└──────────────────────────────────────────────┘
-         │ passes
-         ▼
-STEP 3: OPERATIONS (~2 weeks)
-┌──────────────────────────────────────────────┐
-│  First RAC election, first bounty fund,      │
-│  infrastructure hosting approval             │
-└──────────────────────────────────────────────┘
-         │ passes
-         ▼
-STEP 4: SELF-GOVERNING
-┌──────────────────────────────────────────────┐
-│  Anyone can propose, vote, build, earn.      │
-│  The DAO governs itself.                     │
-└──────────────────────────────────────────────┘
+1. Open @rad_gov in Telegram
+2. /register account_rdx1...
+3. Mint a badge (free): https://72-62-195-141.sslip.io/guild/mint
+4. /proposals --> vote on foundation decisions
+5. Visit the dashboard to create on-chain temperature checks
 ```
 
-**Estimated timeline to operational DAO: 6-8 weeks** (depends on community participation)
-
-Type `/charter` in the bot to see real-time progress.
-
-## Roadmap (with honest timeframes)
-
-| Phase | What | When | Status |
-|-------|------|------|--------|
-| **1. Build** | Bot, dashboard, contracts, bounties, game | Apr 3-5 | ✅ Done |
-| **2. Beta** | 3-5 testers, fix bugs, validate flows | Apr 6-10 | ← Now |
-| **3. Launch** | Public announcement, custom domain | Apr 10-14 | Next |
-| **4. Integrate** | CV2 reading, on-chain outcomes, CrumbsUp | Apr 14-30 | Planned |
-| **5. Scale** | Multi-DAO, delegation, badge profiles | May+ | Designed |
-
-## What's Needed From the Community
-
-This project has one developer (Big Dev). The infrastructure is hosted at personal expense (~$7/month). Everything is open source. For this to work:
-
-1. **Vote on the 6 foundation proposals** — takes 5 minutes
-2. **Report bugs** — DM or GitHub issues
-3. **Contribute** — PRs welcome, bounties pay XP
-4. **Spread the word** — if you think this is worth trying
-
-If nobody votes, nothing happens. The system is ready. The question is whether the community wants to use it.
-
-## Get Started (3 minutes)
-
-```
-Step 1:  Open @rad_gov in Telegram
-Step 2:  /register account_rdx1...
-Step 3:  Mint badge (free): dashboard link in bot
-Step 4:  /proposals → vote on the 6 foundation decisions
-```
-
-Everything is free. No XRD required to participate.
+No XRD required for off-chain governance. On-chain votes use your XRD balance as voting weight.
 
 ## Links
 
 | What | Where |
 |------|-------|
 | Telegram Bot | [@rad_gov](https://t.me/rad_gov) |
-| Dashboard | [Radix Governance](https://72-62-195-141.sslip.io/guild) |
+| Dashboard | [72-62-195-141.sslip.io/guild](https://72-62-195-141.sslip.io/guild) |
+| CV2 Fork | [github.com/bigdevxrd/consultation_v2](https://github.com/bigdevxrd/consultation_v2) |
 | DAO Charter | [radix.wiki](https://radix.wiki/ideas/radix-network-dao-charter) |
-| CrumbsUp DAO | [Guild on CrumbsUp](https://www.crumbsup.io/#dao?id=4db790d7-4d75-49ed-a2e0-3514743809e0) |
-| CV2 Integration Plan | [docs/CV2-INTEGRATION.md](./docs/CV2-INTEGRATION.md) |
-| Full MVD Plan | [docs/MVD-SETUP.md](./docs/MVD-SETUP.md) |
+| API Reference | [docs/API-REFERENCE.md](./docs/API-REFERENCE.md) |
+| Bot Commands | [docs/BOT-COMMANDS.md](./docs/BOT-COMMANDS.md) |
+
+## Two-Tier Governance
+
+| Tier | Cost | Where | Weight | Use Case |
+|------|------|-------|--------|----------|
+| **Off-chain** | Free | Telegram bot | 1 badge = 1 vote | Day-to-day decisions, temp checks, coordination |
+| **On-chain** | TX fee (~0.1 XRD) | Dashboard / CV2 | XRD balance = vote weight | Formal proposals, binding decisions, treasury |
+
+Off-chain votes are fast and free. On-chain votes are XRD-weighted and recorded on the Radix ledger. Both are visible on the dashboard.
+
+## On-Chain Addresses (Mainnet)
+
+| Component | Address |
+|-----------|---------|
+| BadgeManager | `component_rdx1czexylvvm0q4uhwpjaqmlznj9sd3y2jnmmah6qug9lm9sfm3tyrtva` |
+| Badge NFT | `resource_rdx1n22rq94kh6ugwnrvc65m2pwhle3s6ez6j7702vkn2ctkaxemz4ppwl` |
+| Admin Badge | `resource_rdx1tkkzwrttvsqrsylyf4nqt2fxq6h27eva4lr4ffwad63x3f2cl43xwe` |
+| CV2 Package | `package_rdx1phazm0kmzcfyejp52493zn7zgr5ljymxzvv64rx2u99l93lhtk5dej` |
+| CV2 Governance | `component_rdx1cqj99hx2rdx04mrdvd3am7wcenh6c26m2w5uzv8vkv9pudveqzy7d2` |
+
+## Dashboard Pages
+
+| Route | Description |
+|-------|-------------|
+| `/` | Home: badge, stats, charter, bounties, game, ecosystem |
+| `/mint` | Free badge minting with username |
+| `/proposals` | Off-chain votes + on-chain CV2 governance + decision tree |
+| `/proposals/:id` | Individual proposal detail with vote breakdown |
+| `/bounties` | Bounty board with filters, escrow history |
+| `/game` | Dice mechanics, XP rewards table, leaderboard preview |
+| `/leaderboard` | Top players by bonus XP |
+| `/profile` | All badges, game stats, quick actions |
+| `/admin` | Badge lookup + admin actions |
+
+## Architecture
+
+```
+Radix Ledger
+  +-- BadgeManager (Scrypto v4) -- NFT identity
+  +-- CV2 Governance (Scrypto) -- on-chain proposals + votes
+  |
+  | Gateway API
+  v
+Guild VPS (72.62.195.141)
+  +-- guild-bot (Grammy TG bot, port 3003)
+  |     +-- SQLite (proposals, votes, XP, bounties, game, charter)
+  |     +-- consultation.js (CV2 sync, polls every 5 min)
+  |     +-- REST API (15+ endpoints)
+  |
+  +-- guild-app (Next.js 16, port 3002)
+  |     +-- shadcn/ui + Radix dApp Toolkit
+  |     +-- 10 pages, dark/light mode
+  |
+  +-- Caddy (reverse proxy, auto-TLS)
+        /api/* --> bot (3003)
+        /guild/* --> dashboard (3002)
+```
+
+## The DAO Setup Plan
+
+The DAO Charter has 32 parameters with dependencies. Community votes unlock them in sequence:
+
+```
+STEP 1: FOUNDATION (6 decisions)
+  Charter adoption, RAC seats, quorum, voting period, thresholds
+      |
+STEP 2: CONFIGURATION (20 decisions)
+  Treasury limits, election rules, timing, reputation
+      |
+STEP 3: OPERATIONS (6 decisions)
+  First RAC election, first bounty fund, hosting
+      |
+STEP 4: SELF-GOVERNING
+  Anyone can propose, vote, build, earn
+```
+
+Type `/charter` in the bot to see real-time progress.
 
 ## For Developers
 
-### Architecture
-```
-Telegram Bot ──→ SQLite (proposals, votes, bounties, XP, game, charter)
-     │              │
-     ├── Badge API ─┤──→ Radix Gateway API ──→ On-chain badges (Scrypto v4)
-     │              │
-Dashboard ──────────┘──→ shadcn/ui + Next.js 16 + Radix dApp Toolkit
-```
+### Test Coverage
+- 39 pipeline tests (API, dashboard, Gateway, data integrity, charter, bounties, game, CV2)
+- 11 Scrypto tests (factory, manager, mint, validation, duplicates)
+
+### API
+See [docs/API-REFERENCE.md](./docs/API-REFERENCE.md) for all 15+ endpoints.
+
+### Bot Commands
+See [docs/BOT-COMMANDS.md](./docs/BOT-COMMANDS.md) for all 22 commands.
 
 ### Deploy Your Own
-See [docs/INCEPTION.md](./docs/INCEPTION.md) — complete guide from zero to running governance system.
+See [docs/INCEPTION.md](./docs/INCEPTION.md) for setup from zero.
 
-### Test Coverage
-- 19 pipeline tests (API, dashboard, Gateway, data integrity)
-- 11 Scrypto tests (factory, manager, mint, validation, duplicates)
-- Vote cycle verified (pass/fail/amend/expire)
-- Bounty cycle verified (fund → claim → submit → verify → pay)
-- Dice game verified (weighted distribution)
+### CV2 Deployment
+See [docs/CV2-DEPLOY-GUIDE.md](./docs/CV2-DEPLOY-GUIDE.md) for Scrypto build + mainnet deployment.
 
 ### Contributing
-See [CONTRIBUTING.md](./CONTRIBUTING.md) for setup and how to earn XP.
+See [CONTRIBUTING.md](./CONTRIBUTING.md) for how to earn XP.
 
 ## Transparency
 
-- **Funding:** Self-funded by Big Dev. ~$7/month VPS. No treasury, no token, no VC.
-- **Code:** MIT licensed. Everything is public. Fork it, critique it, improve it.
-- **Hosting:** Big Dev hosts until the DAO forms and votes to transfer. All costs documented in [HANDOVER.md](./docs/HANDOVER.md).
+- **Funding:** Self-funded by Big Dev. ~$7/month VPS.
+- **Code:** MIT licensed. Everything is public.
 - **Control:** Big Dev holds the admin badge. Transfers to elected RAC when Step 3 completes.
-- **Risk:** If nobody participates, the project pauses. No obligation, no pressure.
+- **Hosting:** Big Dev hosts until the DAO forms and votes to transfer.
 
 ## License
 
-MIT — use it, fork it, build on it.
+MIT
