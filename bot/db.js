@@ -157,6 +157,22 @@ function init() {
     CREATE INDEX IF NOT EXISTS idx_boards_address ON game_boards(radix_address, status);
   `);
 
+  // Game achievements
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS game_achievements (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      radix_address TEXT NOT NULL,
+      achievement TEXT NOT NULL,
+      board_id INTEGER,
+      score INTEGER,
+      grids_at_time INTEGER,
+      created_at INTEGER DEFAULT (strftime('%s','now')),
+      written_on_chain INTEGER DEFAULT 0,
+      nft_minted INTEGER DEFAULT 0
+    );
+    CREATE INDEX IF NOT EXISTS idx_achievements_address ON game_achievements(radix_address);
+  `);
+
   // Indexes for 20k+ scale
   db.exec(`
     CREATE INDEX IF NOT EXISTS idx_users_address ON users(radix_address);
@@ -587,9 +603,11 @@ function rollOnBoard(radixAddress) {
 
   // Check win
   const allComplete = board.grid.every(row => row.every(c => c.state === "completed"));
+  let achievement = null;
   if (allComplete) {
     board.status = "completed";
     board.completed_at = Math.floor(Date.now() / 1000);
+    achievement = recordGridCompletion(radixAddress, board.id, board.score);
   }
 
   // Persist
@@ -612,6 +630,76 @@ function rollOnBoard(radixAddress) {
     usedExtra,
     score: board.score,
     gameOver: allComplete,
+    achievement,
+  };
+}
+
+// ── Game Achievements ─────────────────────────────────────
+
+const GRID_MILESTONES = [
+  { count: 1, name: "first_grid", label: "First Grid", xp: 500 },
+  { count: 5, name: "grid_runner", label: "Grid Runner", xp: 1000, nft: true },
+  { count: 10, name: "grid_master", label: "Grid Master", xp: 2000, nft: true },
+  { count: 25, name: "grid_legend", label: "Grid Legend", xp: 5000, nft: true },
+];
+
+function recordGridCompletion(radixAddress, boardId, score) {
+  const stats = getBoardStats(radixAddress);
+  const gridsNow = stats.boards_completed; // already incremented by status change
+  const baseXp = 250 + Math.floor(score / 2);
+
+  // Record base completion
+  db.prepare(
+    "INSERT INTO game_achievements (radix_address, achievement, board_id, score, grids_at_time) VALUES (?, ?, ?, ?, ?)"
+  ).run(radixAddress, "grid_complete", boardId, score, gridsNow);
+
+  let milestoneXp = 0;
+  let milestoneName = null;
+  let milestoneNft = false;
+
+  // Check milestones
+  for (const m of GRID_MILESTONES) {
+    if (gridsNow === m.count) {
+      db.prepare(
+        "INSERT INTO game_achievements (radix_address, achievement, board_id, score, grids_at_time) VALUES (?, ?, ?, ?, ?)"
+      ).run(radixAddress, m.name, boardId, score, gridsNow);
+      milestoneXp = m.xp;
+      milestoneName = m.label;
+      milestoneNft = !!m.nft;
+      break;
+    }
+  }
+
+  return {
+    baseXp,
+    milestoneXp,
+    totalXp: baseXp + milestoneXp,
+    milestoneName,
+    milestoneNft,
+    gridsCompleted: gridsNow,
+  };
+}
+
+function getAchievements(radixAddress) {
+  return db.prepare("SELECT * FROM game_achievements WHERE radix_address = ? ORDER BY created_at DESC").all(radixAddress);
+}
+
+function getAchievementSummary(radixAddress) {
+  const stats = getBoardStats(radixAddress);
+  const achievements = db.prepare(
+    "SELECT achievement, COUNT(*) as count FROM game_achievements WHERE radix_address = ? GROUP BY achievement"
+  ).all(radixAddress);
+  const bestScore = db.prepare(
+    "SELECT MAX(score) as best FROM game_boards WHERE radix_address = ? AND status = 'completed'"
+  ).get(radixAddress);
+
+  const nextMilestone = GRID_MILESTONES.find(m => m.count > stats.boards_completed);
+
+  return {
+    grids_completed: stats.boards_completed,
+    best_score: bestScore?.best || 0,
+    achievements: achievements.map(a => ({ name: a.achievement, count: a.count })),
+    next_milestone: nextMilestone ? { name: nextMilestone.label, grids_needed: nextMilestone.count - stats.boards_completed, nft: !!nextMilestone.nft } : null,
   };
 }
 
@@ -665,6 +753,7 @@ module.exports = {
   fundEscrow, getEscrowBalance, getBountyTransactions, getBountyStats,
   rollDice, recordRoll, getGameState, getGameLeaderboard, ROLL_BONUSES,
   generateGrid, createBoard, getBoard, getAvailableRolls, rollOnBoard, useWildCard, abandonBoard, getBoardStats,
+  getAchievements, getAchievementSummary, GRID_MILESTONES,
 };
 
 function cancelProposal(proposalId, tgId) {

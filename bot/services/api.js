@@ -105,6 +105,13 @@ function startApi() {
       });
     }
 
+    // GET /api/game/:address/achievements — achievement summary
+    const achieveMatch = url.pathname.match(/^\/api\/game\/(account_rdx1[a-z0-9]{40,65})\/achievements$/);
+    if (achieveMatch && req.method === "GET") {
+      res.writeHead(200);
+      return res.end(JSON.stringify({ ok: true, data: db.getAchievementSummary(achieveMatch[1]) }));
+    }
+
     // GET /api/game/:address/board — current board + available rolls
     const boardGetMatch = url.pathname.match(/^\/api\/game\/(account_rdx1[a-z0-9]{40,65})\/board$/);
     if (boardGetMatch && req.method === "GET") {

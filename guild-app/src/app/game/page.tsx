@@ -19,6 +19,12 @@ interface RollResult {
   newState: string; cellType: string; scoreChange: number;
   specialEffect: string | null; diceValue: number; usedExtra: boolean;
   score: number; gameOver: boolean; error?: string;
+  achievement?: { baseXp: number; milestoneXp: number; totalXp: number; milestoneName: string | null; milestoneNft: boolean; gridsCompleted: number } | null;
+}
+interface AchievementSummary {
+  grids_completed: number; best_score: number;
+  achievements: { name: string; count: number }[];
+  next_milestone: { name: string; grids_needed: number; nft: boolean } | null;
 }
 interface GameState {
   total_rolls: number; total_bonus_xp: number; streak_days: number;
@@ -54,19 +60,22 @@ function GameContent() {
   const [hitCell, setHitCell] = useState<{ row: number; col: number } | null>(null);
   const [wildMode, setWildMode] = useState(false);
   const [boardsCompleted, setBoardsCompleted] = useState(0);
+  const [achievements, setAchievements] = useState<AchievementSummary | null>(null);
 
   const fetchBoard = useCallback(() => {
     if (!account) return;
     Promise.all([
       fetch(API_URL + "/game/" + account + "/board").then(r => r.json()).catch(() => null),
       fetch(API_URL + "/game/" + account).then(r => r.json()).catch(() => null),
-    ]).then(([b, g]) => {
+      fetch(API_URL + "/game/" + account + "/achievements").then(r => r.json()).catch(() => null),
+    ]).then(([b, g, a]) => {
       if (b?.data) {
         setBoard(b.data.board);
         setAvailableRolls(b.data.available_rolls);
         setBoardsCompleted(b.data.boards_completed || 0);
       }
       if (g?.data) setGameState(g.data);
+      if (a?.data) setAchievements(a.data);
       setLoading(false);
     });
   }, [account]);
@@ -231,8 +240,19 @@ function GameContent() {
 
             {/* Board complete */}
             {board.status === "completed" && (
-              <div className="mt-4 text-center">
-                <div className="text-lg font-bold text-primary mb-2">Board Complete! Score: {board.score}</div>
+              <div className="mt-4 text-center space-y-2">
+                <div className="text-lg font-bold text-primary">Grid Complete! Score: {board.score}</div>
+                {lastResult?.achievement && (
+                  <div className="text-sm text-muted-foreground">
+                    +{lastResult.achievement.totalXp} XP earned
+                    {lastResult.achievement.milestoneName && (
+                      <Badge variant="default" className="ml-2">{lastResult.achievement.milestoneName}</Badge>
+                    )}
+                    {lastResult.achievement.milestoneNft && (
+                      <Badge variant="secondary" className="ml-1 text-[10px]">NFT unlocked</Badge>
+                    )}
+                  </div>
+                )}
                 <Button onClick={handleNewBoard}>Start New Board</Button>
               </div>
             )}
@@ -283,6 +303,41 @@ function GameContent() {
                 </div>
               ))}
             </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Achievements */}
+      {achievements && achievements.grids_completed > 0 && (
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm uppercase tracking-wide text-muted-foreground">Achievements</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              <div className="bg-muted rounded-lg px-3 py-2">
+                <div className="text-[10px] text-muted-foreground uppercase">Grids Completed</div>
+                <div className="text-lg font-bold font-mono text-primary">{achievements.grids_completed}</div>
+              </div>
+              <div className="bg-muted rounded-lg px-3 py-2">
+                <div className="text-[10px] text-muted-foreground uppercase">Best Score</div>
+                <div className="text-lg font-bold font-mono">{achievements.best_score}</div>
+              </div>
+              {achievements.next_milestone && (
+                <div className="bg-muted rounded-lg px-3 py-2">
+                  <div className="text-[10px] text-muted-foreground uppercase">Next Milestone</div>
+                  <div className="text-sm font-bold">{achievements.next_milestone.name}</div>
+                  <div className="text-[10px] text-muted-foreground">{achievements.next_milestone.grids_needed} grid{achievements.next_milestone.grids_needed !== 1 ? "s" : ""} to go{achievements.next_milestone.nft ? " (NFT)" : ""}</div>
+                </div>
+              )}
+            </div>
+            {achievements.achievements.length > 0 && (
+              <div className="flex flex-wrap gap-1.5">
+                {achievements.achievements.map(a => (
+                  <Badge key={a.name} variant="secondary" className="text-[10px]">{a.name.replace(/_/g, " ")}</Badge>
+                ))}
+              </div>
+            )}
           </CardContent>
         </Card>
       )}
