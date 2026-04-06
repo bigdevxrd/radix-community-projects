@@ -140,6 +140,23 @@ function init() {
     CREATE INDEX IF NOT EXISTS idx_game_address ON game_state(radix_address);
   `);
 
+  // Grid game boards
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS game_boards (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      radix_address TEXT NOT NULL,
+      grid TEXT NOT NULL,
+      score INTEGER DEFAULT 30,
+      rolls_used INTEGER DEFAULT 0,
+      extra_turns INTEGER DEFAULT 0,
+      wild_cards INTEGER DEFAULT 0,
+      status TEXT DEFAULT 'active',
+      created_at INTEGER DEFAULT (strftime('%s','now')),
+      completed_at INTEGER
+    );
+    CREATE INDEX IF NOT EXISTS idx_boards_address ON game_boards(radix_address, status);
+  `);
+
   // Indexes for 20k+ scale
   db.exec(`
     CREATE INDEX IF NOT EXISTS idx_users_address ON users(radix_address);
@@ -472,6 +489,170 @@ function getGameLeaderboard(limit = 10) {
   return db.prepare("SELECT * FROM game_state ORDER BY total_bonus_xp DESC LIMIT ?").all(limit);
 }
 
+// ── Grid Game Board ───────────────────────────────────────
+
+const CELL_TYPES = ["normal", "normal", "normal", "normal", "normal", "double", "extra", "wild", "penalty"];
+
+function generateGrid(size = 6) {
+  const grid = [];
+  for (let r = 0; r < size; r++) {
+    const row = [];
+    for (let c = 0; c < size; c++) {
+      const type = CELL_TYPES[Math.floor(Math.random() * CELL_TYPES.length)];
+      row.push({ state: "empty", type });
+    }
+    grid.push(row);
+  }
+  return grid;
+}
+
+function createBoard(radixAddress) {
+  const existing = db.prepare("SELECT id FROM game_boards WHERE radix_address = ? AND status = 'active'").get(radixAddress);
+  if (existing) return { ok: false, error: "active_board_exists", boardId: existing.id };
+  const grid = generateGrid(6);
+  const result = db.prepare(
+    "INSERT INTO game_boards (radix_address, grid) VALUES (?, ?)"
+  ).run(radixAddress, JSON.stringify(grid));
+  return { ok: true, boardId: result.lastInsertRowid };
+}
+
+function getBoard(radixAddress) {
+  const board = db.prepare("SELECT * FROM game_boards WHERE radix_address = ? AND status = 'active'").get(radixAddress);
+  if (!board) return null;
+  board.grid = JSON.parse(board.grid);
+  return board;
+}
+
+function getAvailableRolls(radixAddress) {
+  const state = getGameState(radixAddress);
+  const used = db.prepare("SELECT COALESCE(SUM(rolls_used), 0) as total FROM game_boards WHERE radix_address = ?").get(radixAddress);
+  return Math.max(0, state.total_rolls - (used?.total || 0));
+}
+
+function rollOnBoard(radixAddress) {
+  const board = getBoard(radixAddress);
+  if (!board) return { ok: false, error: "no_active_board" };
+
+  const available = getAvailableRolls(radixAddress);
+  const hasExtra = board.extra_turns > 0;
+  if (available <= 0 && !hasExtra) return { ok: false, error: "no_rolls_available" };
+
+  // Find all non-complete cells
+  const targets = [];
+  for (let r = 0; r < board.grid.length; r++) {
+    for (let c = 0; c < board.grid[r].length; c++) {
+      if (board.grid[r][c].state !== "completed") targets.push({ r, c });
+    }
+  }
+  if (targets.length === 0) return { ok: false, error: "board_already_complete" };
+
+  // Pick random target
+  const target = targets[Math.floor(Math.random() * targets.length)];
+  const cell = board.grid[target.r][target.c];
+  const oldState = cell.state;
+
+  // Advance cell
+  let scoreChange = 0;
+  let specialEffect = null;
+  if (cell.state === "empty") {
+    cell.state = "progress";
+  } else if (cell.state === "progress") {
+    cell.state = "completed";
+    scoreChange = cell.type === "double" ? 20 : 10;
+  }
+
+  // Apply special effects on completion
+  if (cell.state === "completed") {
+    switch (cell.type) {
+      case "extra": specialEffect = "extra_turn"; board.extra_turns++; break;
+      case "wild": specialEffect = "wild_card"; board.wild_cards++; break;
+      case "penalty": specialEffect = "penalty"; scoreChange = -10; break;
+      case "double": specialEffect = "double_points"; break;
+    }
+  }
+
+  // Use extra turn or regular roll
+  let usedExtra = false;
+  if (hasExtra && available <= 0) {
+    board.extra_turns--;
+    usedExtra = true;
+  } else if (hasExtra && specialEffect === "extra_turn") {
+    // Extra turn earned — don't count this roll
+    usedExtra = true;
+  } else {
+    board.rolls_used++;
+  }
+
+  board.score += scoreChange;
+
+  // Check win
+  const allComplete = board.grid.every(row => row.every(c => c.state === "completed"));
+  if (allComplete) {
+    board.status = "completed";
+    board.completed_at = Math.floor(Date.now() / 1000);
+  }
+
+  // Persist
+  db.prepare(
+    "UPDATE game_boards SET grid = ?, score = ?, rolls_used = ?, extra_turns = ?, wild_cards = ?, status = ?, completed_at = ? WHERE id = ?"
+  ).run(JSON.stringify(board.grid), board.score, board.rolls_used, board.extra_turns, board.wild_cards, board.status, board.completed_at || null, board.id);
+
+  // Dice animation value
+  const diceValue = rollDice();
+
+  return {
+    ok: true,
+    cell: { row: target.r, col: target.c },
+    oldState,
+    newState: cell.state,
+    cellType: cell.type,
+    scoreChange,
+    specialEffect,
+    diceValue,
+    usedExtra,
+    score: board.score,
+    gameOver: allComplete,
+  };
+}
+
+function useWildCard(radixAddress, row, col) {
+  const board = getBoard(radixAddress);
+  if (!board) return { ok: false, error: "no_active_board" };
+  if (board.wild_cards <= 0) return { ok: false, error: "no_wild_cards" };
+  if (row < 0 || row >= board.grid.length || col < 0 || col >= board.grid[0].length) {
+    return { ok: false, error: "invalid_cell" };
+  }
+  const cell = board.grid[row][col];
+  if (cell.state === "completed") return { ok: false, error: "cell_already_complete" };
+
+  cell.state = "completed";
+  board.wild_cards--;
+  const scoreChange = cell.type === "double" ? 20 : 10;
+  board.score += scoreChange;
+
+  const allComplete = board.grid.every(r => r.every(c => c.state === "completed"));
+  if (allComplete) {
+    board.status = "completed";
+    board.completed_at = Math.floor(Date.now() / 1000);
+  }
+
+  db.prepare(
+    "UPDATE game_boards SET grid = ?, score = ?, wild_cards = ?, status = ?, completed_at = ? WHERE id = ?"
+  ).run(JSON.stringify(board.grid), board.score, board.wild_cards, board.status, board.completed_at || null, board.id);
+
+  return { ok: true, cell: { row, col }, newState: "completed", scoreChange, score: board.score, gameOver: allComplete };
+}
+
+function abandonBoard(radixAddress) {
+  const result = db.prepare("UPDATE game_boards SET status = 'abandoned' WHERE radix_address = ? AND status = 'active'").run(radixAddress);
+  return { ok: result.changes > 0 };
+}
+
+function getBoardStats(radixAddress) {
+  const completed = db.prepare("SELECT COUNT(*) as c FROM game_boards WHERE radix_address = ? AND status = 'completed'").get(radixAddress);
+  return { boards_completed: completed?.c || 0 };
+}
+
 module.exports = {
   init,
   getUser, registerUser,
@@ -483,6 +664,7 @@ module.exports = {
   createBounty, getBounty, getOpenBounties, getAllBounties, assignBounty, submitBounty, verifyBounty, payBounty,
   fundEscrow, getEscrowBalance, getBountyTransactions, getBountyStats,
   rollDice, recordRoll, getGameState, getGameLeaderboard, ROLL_BONUSES,
+  generateGrid, createBoard, getBoard, getAvailableRolls, rollOnBoard, useWildCard, abandonBoard, getBoardStats,
 };
 
 function cancelProposal(proposalId, tgId) {

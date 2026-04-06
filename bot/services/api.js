@@ -44,15 +44,16 @@ function startApi() {
       return res.end();
     }
 
-    // Only allow GET requests
-    if (req.method !== "GET") {
+    // Allow GET + POST for game board routes, GET only for everything else
+    const isGamePost = req.method === "POST" && url.pathname.includes("/board/");
+    if (req.method !== "GET" && !isGamePost) {
       res.writeHead(405);
       return res.end(JSON.stringify({ ok: false, error: "method_not_allowed" }));
     }
 
-    // Rate limiting
+    // Rate limiting (stricter for POST: 10/min)
     const clientIp = req.headers["x-forwarded-for"]?.split(",")[0]?.trim() || req.socket.remoteAddress;
-    if (!rateLimit(clientIp)) {
+    if (!rateLimit(clientIp, isGamePost ? 10 : 60)) {
       res.writeHead(429);
       return res.end(JSON.stringify({ ok: false, error: "rate_limit_exceeded" }));
     }
@@ -92,12 +93,63 @@ function startApi() {
       return res.end(JSON.stringify({ ok: true, data: result, page, limit }));
     }
 
+    // ── Game Board Endpoints (before general game route) ──
+
+    // Helper: read POST body
+    function readBody(req) {
+      return new Promise((resolve, reject) => {
+        let body = "";
+        req.on("data", chunk => { body += chunk; if (body.length > 1024) { reject(new Error("too_large")); req.destroy(); } });
+        req.on("end", () => { try { resolve(JSON.parse(body || "{}")); } catch { resolve({}); } });
+        req.on("error", reject);
+      });
+    }
+
+    // GET /api/game/:address/board — current board + available rolls
+    const boardGetMatch = url.pathname.match(/^\/api\/game\/(account_rdx1[a-z0-9]{40,65})\/board$/);
+    if (boardGetMatch && req.method === "GET") {
+      const addr = boardGetMatch[1];
+      const board = db.getBoard(addr);
+      const available = db.getAvailableRolls(addr);
+      const stats = db.getBoardStats(addr);
+      res.writeHead(200);
+      return res.end(JSON.stringify({ ok: true, data: { board, available_rolls: available, ...stats } }));
+    }
+
+    // POST /api/game/:address/board/new — start new board
+    const boardNewMatch = url.pathname.match(/^\/api\/game\/(account_rdx1[a-z0-9]{40,65})\/board\/new$/);
+    if (boardNewMatch && req.method === "POST") {
+      const result = db.createBoard(boardNewMatch[1]);
+      res.writeHead(result.ok ? 200 : 400);
+      return res.end(JSON.stringify(result));
+    }
+
+    // POST /api/game/:address/board/roll — spend a roll
+    const boardRollMatch = url.pathname.match(/^\/api\/game\/(account_rdx1[a-z0-9]{40,65})\/board\/roll$/);
+    if (boardRollMatch && req.method === "POST") {
+      const result = db.rollOnBoard(boardRollMatch[1]);
+      res.writeHead(result.ok ? 200 : 400);
+      return res.end(JSON.stringify(result));
+    }
+
+    // POST /api/game/:address/board/wild — use wild card
+    const boardWildMatch = url.pathname.match(/^\/api\/game\/(account_rdx1[a-z0-9]{40,65})\/board\/wild$/);
+    if (boardWildMatch && req.method === "POST") {
+      try {
+        const body = await readBody(req);
+        const result = db.useWildCard(boardWildMatch[1], body.row, body.col);
+        res.writeHead(result.ok ? 200 : 400);
+        return res.end(JSON.stringify(result));
+      } catch { res.writeHead(400); return res.end(JSON.stringify({ ok: false, error: "invalid_body" })); }
+    }
+
     // GET /api/game/:address — game state for an address
     const gameMatch = url.pathname.match(/^\/api\/game\/(account_rdx1[a-z0-9]{40,65})$/);
     if (gameMatch) {
       const game = db.getGameState(gameMatch[1]);
+      const available = db.getAvailableRolls(gameMatch[1]);
       res.writeHead(200);
-      return res.end(JSON.stringify({ ok: true, data: game }));
+      return res.end(JSON.stringify({ ok: true, data: { ...game, available_rolls: available } }));
     }
 
     // GET /api/leaderboard — top game players
