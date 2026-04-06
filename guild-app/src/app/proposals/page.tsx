@@ -64,11 +64,12 @@ function ProposalsContent() {
   const [tcError, setTcError] = useState("");
 
   async function handleCreateTC() {
-    if (!rdt || !account || !tcTitle.trim() || !tcDesc.trim()) return;
+    if (!rdt || !account || !tcTitle.trim()) return;
+    const desc = tcDesc.trim() || tcTitle.trim();
     setTcSubmitting(true); setTcResult(""); setTcError("");
     try {
       const manifest = makeTemperatureCheckManifest(
-        CV2_COMPONENT, account, tcTitle.trim(), tcDesc.trim(), tcDesc.trim(),
+        CV2_COMPONENT, account, tcTitle.trim(), desc, desc,
         ["For", "Against"]
       );
       const result = await rdt.walletApi.sendTransaction({ transactionManifest: manifest, version: 1 });
@@ -309,9 +310,12 @@ function ProposalsContent() {
             )}
 
             {/* Create Temperature Check */}
-            {connected && !showCreateTC && (
-              <Button variant="outline" size="sm" onClick={() => setShowCreateTC(true)} className="w-full">
-                Create Temperature Check (On-Chain)
+            {!showCreateTC && (
+              <Button variant="default" size="sm" onClick={() => {
+                if (!connected) { alert("Connect your wallet first"); return; }
+                setShowCreateTC(true);
+              }} className="w-full">
+                Create Temperature Check
               </Button>
             )}
             {showCreateTC && (
@@ -321,7 +325,7 @@ function ProposalsContent() {
                 <Input value={tcDesc} onChange={e => setTcDesc(e.target.value)} placeholder="Description" className="text-sm" maxLength={500} />
                 <div className="text-[11px] text-muted-foreground">Options: For / Against (default). Runs for 3 days. Quorum: 1000 XRD.</div>
                 <div className="flex gap-2">
-                  <Button size="sm" onClick={handleCreateTC} disabled={tcSubmitting || !tcTitle.trim() || !tcDesc.trim()}>
+                  <Button size="sm" onClick={handleCreateTC} disabled={tcSubmitting || !tcTitle.trim()}>
                     {tcSubmitting ? "Submitting..." : "Create On-Chain"}
                   </Button>
                   <Button size="sm" variant="ghost" onClick={() => setShowCreateTC(false)}>Cancel</Button>

@@ -54,10 +54,10 @@ function MintContent() {
   if (badge) {
     return (
       <div className="space-y-5">
-        <Card className="bg-gradient-to-br from-card to-muted">
-          <CardContent className="pt-6 pb-6 text-center">
-            <div className="text-3xl mb-2">Welcome, {badge.issued_to}!</div>
-            <p className="text-muted-foreground text-sm">Your badge is live on-chain. You're part of Radix Governance.</p>
+        <Card>
+          <CardContent className="pt-5 pb-5 text-center">
+            <div className="text-lg font-bold mb-1">Badge minted: {badge.issued_to}</div>
+            <p className="text-muted-foreground text-sm">On-chain. In your wallet. Ready to vote.</p>
           </CardContent>
         </Card>
 
