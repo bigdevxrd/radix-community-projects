@@ -15,6 +15,7 @@ const NAV = [
   { path: "/mint", label: "Mint" },
   { path: "/proposals", label: "Proposals" },
   { path: "/bounties", label: "Bounties" },
+  { path: "/game", label: "Game" },
   { path: "/leaderboard", label: "Leaderboard" },
   { path: "/admin", label: "Admin" },
 ];
