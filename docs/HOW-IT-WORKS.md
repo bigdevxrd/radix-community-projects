@@ -245,7 +245,7 @@ Type `/charter` in the bot or visit `/proposals` on the dashboard to see real-ti
 
 | What | Where | URL |
 |------|-------|-----|
-| Dashboard | Browser | https://72-62-195-141.sslip.io/guild |
+| Dashboard | Browser | https://radixguild.com |
 | Telegram Bot | Telegram | @rad_gov |
 | Badge NFT | Your Radix Wallet | Visible in wallet |
 | On-chain votes | Radix Ledger | Viewable on Radix Dashboard |

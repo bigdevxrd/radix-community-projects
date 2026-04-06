@@ -120,14 +120,14 @@ xrdAddress: "resource_rdx1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqpqqqqqatx9jy"
 
 ```bash
 # Check bot sees the component
-curl https://72-62-195-141.sslip.io/api/cv2/status
+curl https://radixguild.com/api/cv2/status
 # Should show: enabled: true, component: "component_rdx1..."
 
 # Force initial sync
 # In Telegram: /cv2 sync
 
 # Check sync worked
-curl https://72-62-195-141.sslip.io/api/cv2/stats
+curl https://radixguild.com/api/cv2/stats
 ```
 
 ## Step 7: Create First Temperature Check

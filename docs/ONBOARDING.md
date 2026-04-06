@@ -13,7 +13,7 @@ In the TG group, send:
 Your Radix wallet address links to your Telegram account.
 
 ### Step 3: Mint Your Badge
-Go to https://156-67-219-105.sslip.io/dao and click "Join the Guild".
+Go to https://radixguild.com/mint and click "Join the Guild".
 Connect your Radix Wallet and approve the transaction.
 Your Guild member badge appears in your wallet.
 
@@ -83,7 +83,7 @@ Links back to the original. Full history tracked.
 
 ## Links
 
-- Portal: https://156-67-219-105.sslip.io/dao
+- Portal: https://radixguild.com
 - GitHub: https://github.com/bigdevxrd/radix-community-projects
 - CrumbsUp DAO: https://www.crumbsup.io/#dao?id=4db790d7-4d75-49ed-a2e0-3514743809e0
 - Charter: https://radix.wiki/ideas/radix-network-dao-charter

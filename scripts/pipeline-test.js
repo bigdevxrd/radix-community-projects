@@ -4,8 +4,8 @@
  * Run: node scripts/pipeline-test.js
  */
 
-const API = process.env.API_URL || "https://72-62-195-141.sslip.io/api";
-const GUILD = process.env.GUILD_URL || "https://72-62-195-141.sslip.io/guild";
+const API = process.env.API_URL || "https://radixguild.com/api";
+const GUILD = process.env.GUILD_URL || "https://radixguild.com";
 const GATEWAY = "https://mainnet.radixdlt.com";
 const BADGE_NFT = "resource_rdx1n22rq94kh6ugwnrvc65m2pwhle3s6ez6j7702vkn2ctkaxemz4ppwl";
 const MANAGER = "component_rdx1czexylvvm0q4uhwpjaqmlznj9sd3y2jnmmah6qug9lm9sfm3tyrtva";
@@ -103,24 +103,24 @@ async function main() {
 
   console.log("\n  Dashboard:");
 
-  await test("GET /guild returns 200", async () => {
+  await test("GET / returns 200", async () => {
     const resp = await fetch(GUILD);
     assert(resp.ok, "should be 200");
     const html = await resp.text();
     assert(html.includes("Radix Governance"), "should contain title");
   });
 
-  await test("GET /guild/proposals returns 200", async () => {
+  await test("GET /proposals returns 200", async () => {
     const resp = await fetch(GUILD + "/proposals");
     assert(resp.ok, "should be 200");
   });
 
-  await test("GET /guild/admin returns 200", async () => {
+  await test("GET /admin returns 200", async () => {
     const resp = await fetch(GUILD + "/admin");
     assert(resp.ok, "should be 200");
   });
 
-  await test("GET /guild/mint returns 200", async () => {
+  await test("GET /mint returns 200", async () => {
     const resp = await fetch(GUILD + "/mint");
     assert(resp.ok, "should be 200");
   });
@@ -305,7 +305,7 @@ async function main() {
 
   console.log("\n  Dashboard (extended):");
 
-  await test("GET /guild/leaderboard returns 200", async () => {
+  await test("GET /leaderboard returns 200", async () => {
     const resp = await fetch(GUILD + "/leaderboard");
     assert(resp.ok, "should be 200");
   });
@@ -356,7 +356,7 @@ async function main() {
 
   console.log("\n  Dashboard (full):");
 
-  await test("GET /guild/bounties returns 200", async () => {
+  await test("GET /bounties returns 200", async () => {
     const resp = await fetch(GUILD + "/bounties");
     assert(resp.ok, "should be 200");
   });

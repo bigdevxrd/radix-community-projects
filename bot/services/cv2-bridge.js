@@ -26,7 +26,7 @@ function init() {
  * @returns {string} dashboard URL
  */
 function getDashboardLink(title) {
-  const portal = process.env.PORTAL_URL || "https://72-62-195-141.sslip.io/guild";
+  const portal = process.env.PORTAL_URL || "https://radixguild.com";
   return portal + "/proposals";
 }
 

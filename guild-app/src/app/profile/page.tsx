@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useWallet } from "@/hooks/useWallet";
 import { lookupAllBadges } from "@/lib/gateway";
-import { API_URL } from "@/lib/constants";
+import { API_URL, TG_BOT_URL } from "@/lib/constants";
 import Link from "next/link";
 import type { BadgeInfo } from "@/lib/types";
 
@@ -201,7 +201,7 @@ function ProfileContent() {
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <a href="https://t.me/rad_gov" target="_blank"
+            <a href={TG_BOT_URL} target="_blank"
               className="block bg-muted rounded-lg p-4 no-underline text-foreground hover:bg-accent/10 transition-colors">
               <div className="font-semibold text-sm mb-1">Vote on Proposals</div>
               <div className="text-xs text-muted-foreground">Open TG bot</div>

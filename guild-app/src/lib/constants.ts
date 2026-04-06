@@ -20,7 +20,9 @@ export const ADMIN_BADGE =
 
 export const API_URL =
   process.env.NEXT_PUBLIC_API_URL ||
-  "https://72-62-195-141.sslip.io/api";
+  "https://radixguild.com/api";
+
+export const TG_BOT_URL = "https://t.me/rad_gov";
 
 // CV2 Governance Component (on-chain)
 export const CV2_COMPONENT =
@@ -103,7 +105,7 @@ export const ECOSYSTEM_LINKS: EcosystemLink[] = [
 ];
 
 export const QUICK_ACTIONS = [
-  { label: "Vote on Proposals", href: "https://t.me/rad_gov", desc: "Open TG bot", external: true },
+  { label: "Vote on Proposals", href: TG_BOT_URL, desc: "Open TG bot", external: true },
   { label: "View Proposals", href: "/proposals", desc: "Live results", external: false },
   { label: "Manage Badges", href: "/admin", desc: "Admin panel", external: false },
 ];

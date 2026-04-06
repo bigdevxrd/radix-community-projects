@@ -14,7 +14,7 @@ const dbInstance = db.init();
 cv2.init(dbInstance);
 const bot = new Bot(TOKEN);
 
-const PORTAL = process.env.PORTAL_URL || "https://72-62-195-141.sslip.io/guild";
+const PORTAL = process.env.PORTAL_URL || "https://radixguild.com";
 const DAO_URL = "https://www.crumbsup.io/#dao?id=4db790d7-4d75-49ed-a2e0-3514743809e0";
 const GITHUB = "https://github.com/bigdevxrd/radix-community-projects";
 const HOURS = 72;

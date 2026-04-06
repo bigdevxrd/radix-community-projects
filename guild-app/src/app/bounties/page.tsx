@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { API_URL } from "@/lib/constants";
+import { API_URL, TG_BOT_URL } from "@/lib/constants";
 
 interface Bounty {
   id: number; title: string; description: string | null;
@@ -235,7 +235,7 @@ function BountiesContent() {
       )}
 
       <div className="text-center pt-2">
-        <a href="https://t.me/rad_gov" target="_blank" className="text-primary text-sm font-semibold hover:underline">
+        <a href={TG_BOT_URL} target="_blank" className="text-primary text-sm font-semibold hover:underline">
           Create Bounties in Telegram
         </a>
       </div>

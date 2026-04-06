@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { API_URL, CV2_COMPONENT } from "@/lib/constants";
+import { API_URL, CV2_COMPONENT, TG_BOT_URL } from "@/lib/constants";
 import { useWallet } from "@/hooks/useWallet";
 import { makeTemperatureCheckManifest, voteOnTemperatureCheckManifest } from "@/lib/manifests";
 
@@ -221,7 +221,7 @@ function ProposalsContent() {
                   })}
                 </div>
                 <div className="mt-3">
-                  <a href="https://t.me/rad_gov" target="_blank">
+                  <a href={TG_BOT_URL} target="_blank">
                     <Button variant="default" size="sm" className="w-full">Vote in Telegram</Button>
                   </a>
                 </div>
@@ -402,7 +402,7 @@ function ProposalsContent() {
                   </div>
                 )}
                 {p.status === "active" && (
-                  <a href="https://t.me/rad_gov" target="_blank">
+                  <a href={TG_BOT_URL} target="_blank">
                     <Button variant="default" size="sm" className="mt-3">Vote in Telegram</Button>
                   </a>
                 )}
@@ -413,7 +413,7 @@ function ProposalsContent() {
       )}
 
       <div className="text-center pt-2">
-        <a href="https://t.me/rad_gov" target="_blank" className="text-primary text-sm font-semibold hover:underline">
+        <a href={TG_BOT_URL} target="_blank" className="text-primary text-sm font-semibold hover:underline">
           Open Telegram Bot
         </a>
       </div>

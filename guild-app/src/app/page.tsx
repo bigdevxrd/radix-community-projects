@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useWallet } from "@/hooks/useWallet";
-import { API_URL, ECOSYSTEM_LINKS, RESOURCES } from "@/lib/constants";
+import { API_URL, ECOSYSTEM_LINKS, RESOURCES, TG_BOT_URL } from "@/lib/constants";
 import Link from "next/link";
 
 interface GameState {
@@ -292,7 +292,7 @@ function Dashboard() {
           <CardContent>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               {[
-                { label: "Vote on Proposals", href: "https://t.me/rad_gov", desc: "Open TG bot", external: true },
+                { label: "Vote on Proposals", href: TG_BOT_URL, desc: "Open TG bot", external: true },
                 { label: "View Proposals", href: "/proposals", desc: "Live results", external: false },
                 { label: "Manage Badges", href: "/admin", desc: "Admin panel", external: false },
               ].map((a) => {

@@ -5,7 +5,7 @@ REST API for the Radix Guild governance system. Provides read-only access to pro
 ## Base URL
 
 ```
-https://72-62-195-141.sslip.io/api
+https://radixguild.com/api
 ```
 
 Override via the `API_URL` environment variable. The server binds to the host/port defined by `API_HOST` (default `127.0.0.1`) and `API_PORT` (default `3003`).

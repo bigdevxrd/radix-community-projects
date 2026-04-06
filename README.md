@@ -28,7 +28,7 @@ Idea --> Vote --> Decision --> Fund --> Build --> Verify --> Reward
 ```
 1. Open @rad_gov in Telegram
 2. /register account_rdx1...
-3. Mint a badge (free): https://72-62-195-141.sslip.io/guild/mint
+3. Mint a badge (free): https://radixguild.com/mint
 4. /proposals --> vote on foundation decisions
 5. Visit the dashboard to create on-chain temperature checks
 ```
@@ -40,7 +40,7 @@ No XRD required for off-chain governance. On-chain CV2 votes require a small tx 
 | What | Where |
 |------|-------|
 | Telegram Bot | [@rad_gov](https://t.me/rad_gov) |
-| Dashboard | [72-62-195-141.sslip.io/guild](https://72-62-195-141.sslip.io/guild) |
+| Dashboard | [radixguild.com](https://radixguild.com) |
 | CV2 Fork | [github.com/bigdevxrd/consultation_v2](https://github.com/bigdevxrd/consultation_v2) |
 | DAO Charter | [radix.wiki](https://radix.wiki/ideas/radix-network-dao-charter) |
 | API Reference | [docs/API-REFERENCE.md](./docs/API-REFERENCE.md) |
@@ -89,7 +89,7 @@ Radix Ledger
   |
   | Gateway API
   v
-Guild VPS (72.62.195.141)
+radixguild.com (Caddy, auto-TLS)
   +-- guild-bot (Grammy TG bot, port 3003)
   |     +-- SQLite (proposals, votes, XP, bounties, game, charter)
   |     +-- consultation.js (CV2 sync, polls every 5 min)
@@ -101,7 +101,7 @@ Guild VPS (72.62.195.141)
   |
   +-- Caddy (reverse proxy, auto-TLS)
         /api/* --> bot (3003)
-        /guild/* --> dashboard (3002)
+        /* --> dashboard (3002)
 ```
 
 ## The DAO Setup Plan

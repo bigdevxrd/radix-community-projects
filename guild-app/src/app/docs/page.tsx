@@ -1,6 +1,7 @@
 "use client";
 import { AppShell } from "@/components/AppShell";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { TG_BOT_URL } from "@/lib/constants";
 import Link from "next/link";
 
 const GUIDES = [
@@ -39,7 +40,7 @@ const GUIDES = [
 const QUICK_START = [
   { step: "1", title: "Connect your Radix Wallet", desc: "Click the connect button in the top right of any page.", link: null },
   { step: "2", title: "Mint a free badge", desc: "Choose a username and mint your on-chain governance badge.", link: "/mint" },
-  { step: "3", title: "Join the Telegram group", desc: "Open @rad_gov and type /register with your wallet address.", link: "https://t.me/rad_gov" },
+  { step: "3", title: "Join the Telegram group", desc: "Open @rad_gov and type /register with your wallet address.", link: TG_BOT_URL },
   { step: "4", title: "Vote on proposals", desc: "Type /proposals in Telegram or browse them on the dashboard.", link: "/proposals" },
   { step: "5", title: "Earn XP and play the game", desc: "Every vote earns XP and a dice roll. Spend rolls on the grid game.", link: "/game" },
   { step: "6", title: "Browse bounties", desc: "Earn XRD by completing tasks for the community.", link: "/bounties" },
@@ -87,7 +88,7 @@ function DocsContent() {
                 <h3 className="text-sm font-bold mb-1">{g.title}</h3>
                 <p className="text-xs text-muted-foreground mb-4">{g.desc}</p>
                 <div className="bg-muted rounded-lg p-4 flex items-center justify-center">
-                  <img src={"/guild" + g.image} alt={g.title} className="max-w-full h-auto max-h-80" />
+                  <img src={g.image} alt={g.title} className="max-w-full h-auto max-h-80" />
                 </div>
               </CardContent>
             </Card>
@@ -103,7 +104,7 @@ function DocsContent() {
         <CardContent>
           <div className="space-y-2 text-sm">
             {[
-              { label: "Telegram Bot", url: "https://t.me/rad_gov" },
+              { label: "Telegram Bot", url: TG_BOT_URL },
               { label: "GitHub (open source)", url: "https://github.com/bigdevxrd/radix-community-projects" },
               { label: "DAO Charter", url: "https://radix.wiki/ideas/radix-network-dao-charter" },
               { label: "API Reference", url: "https://github.com/bigdevxrd/radix-community-projects/blob/main/docs/API-REFERENCE.md" },

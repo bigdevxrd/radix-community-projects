@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
-import { API_URL } from "@/lib/constants";
+import { API_URL, TG_BOT_URL } from "@/lib/constants";
 
 interface ProposalDetail {
   id: number; title: string; type: string; status: string;
@@ -142,7 +142,7 @@ function ProposalDetailContent() {
               Results ({proposal.total_votes} vote{proposal.total_votes !== 1 ? "s" : ""})
             </CardTitle>
             {isActive && (
-              <a href="https://t.me/rad_gov" target="_blank">
+              <a href={TG_BOT_URL} target="_blank">
                 <Button variant="default" size="sm">Vote in Telegram</Button>
               </a>
             )}

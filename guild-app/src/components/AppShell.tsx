@@ -18,6 +18,7 @@ const NAV = [
   { path: "/game", label: "Game" },
   { path: "/leaderboard", label: "Leaderboard" },
   { path: "/docs", label: "Docs" },
+  { path: "/transparency", label: "Costs" },
   { path: "/admin", label: "Admin" },
 ];
 
@@ -25,7 +26,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const { badge } = useWallet();
   const { theme, setTheme } = useTheme();
   const rawPathname = usePathname();
-  const pathname = rawPathname.replace(/^\/guild/, "") || "/";
+  const pathname = rawPathname || "/";
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => setMounted(true), []);
@@ -55,7 +56,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               </Button>
             )}
             <Badge variant="outline" className="hidden sm:inline-flex font-mono text-xs text-primary">
-              Mainnet
+              {process.env.NEXT_PUBLIC_RADIX_NETWORK?.toUpperCase() || "MAINNET"}
             </Badge>
             {mounted && <radix-connect-button />}
           </div>

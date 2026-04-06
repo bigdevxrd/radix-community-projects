@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useWallet } from "@/hooks/useWallet";
-import { MANAGER } from "@/lib/constants";
+import { MANAGER, TG_BOT_URL } from "@/lib/constants";
 import { publicMintManifest } from "@/lib/manifests";
 
 function MintContent() {
@@ -72,7 +72,7 @@ function MintContent() {
                 <div>
                   <div className="text-sm font-semibold">Join the governance group</div>
                   <div className="text-xs text-muted-foreground mt-0.5">
-                    Open <a href="https://t.me/rad_gov" target="_blank" className="text-primary hover:underline">@rad_gov</a> in Telegram and type <code className="font-mono text-[11px] bg-muted px-1 rounded">/register {account?.slice(0, 20)}...</code>
+                    Open <a href={TG_BOT_URL} target="_blank" className="text-primary hover:underline">@rad_gov</a> in Telegram and type <code className="font-mono text-[11px] bg-muted px-1 rounded">/register {account?.slice(0, 20)}...</code>
                   </div>
                 </div>
               </div>
