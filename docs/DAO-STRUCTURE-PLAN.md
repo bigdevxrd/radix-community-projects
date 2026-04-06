@@ -131,6 +131,36 @@ Goal: Off-chain legal structure + multi-DAO support.
 | 4a | Legal entity | Off-chain | Community decision |
 | 4b | Multi-DAO federation | 2-3 sessions | Stages 2 + 3 complete |
 
+## Stage 5: GOVERNANCE ASSISTANT (agent-tools)
+
+Goal: Repurpose agent-tools as a community-facing governance assistant, funded by guild treasury.
+
+### What it does
+- Helps badge holders write good proposals (scans charter, checks dependencies, suggests format)
+- Guides bounty creation (checks scope, links to relevant issues)
+- Explains what's being voted on (summarizes proposal context)
+- Checks for duplicate proposals
+- Answers governance questions (how does quorum work, what's the approval threshold)
+- Available through dashboard sidebar or TG bot command
+
+### How it's funded
+- Treasury allocates monthly API budget (voted on by guild)
+- Each assisted action costs fractions of a cent
+- Usage tracked and reported to guild
+- Guild votes to continue/increase/decrease funding
+
+### Implementation
+- Simplify agent-tools: remove code generation (executor), keep scanning + context
+- Add governance-specific prompts (charter rules, proposal templates, bounty guidelines)
+- Dashboard: sidebar assistant component with text input
+- TG bot: /assist command for guided help
+- API: POST /api/assist with rate limiting per badge holder
+
+### Dependencies
+- Stage 3 (treasury) for funding model
+- API key management (stored in .env, not user-facing)
+- Badge-gated access (only badge holders can use the assistant)
+
 ## Design Principles
 
 1. Each stage is independent and deployable on its own
