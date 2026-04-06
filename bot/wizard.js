@@ -138,14 +138,11 @@ function setupWizard(bot, db, requireBadge, buildYesNoKeyboard, buildPollKeyboar
     db.updateProposalMessage(id, msg.message_id, ctx.chat.id);
     queueXpReward(user.radix_address, pending.type === "temp" ? "temp" : "propose");
 
-    // Bridge to CV2 on-chain if enabled
+    // Notify about on-chain option
     try {
       const bridge = require("./services/cv2-bridge");
       if (bridge.isEnabled()) {
-        const opts = pending.type === "poll" && pending.options ? pending.options : ["For", "Against"];
-        bridge.bridgeToChain(pending.title, pending.description || pending.title, opts)
-          .then(r => { if (r.ok) console.log("[CV2-Bridge] Proposal #" + id + " bridged to chain"); })
-          .catch(() => {});
+        ctx.reply("Want this on-chain too? Create it on the dashboard: " + bridge.getDashboardLink());
       }
     } catch(e) {}
 

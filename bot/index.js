@@ -6,14 +6,12 @@ const { queueXpReward, getXpQueue } = require("./services/xp");
 const { setupWizard, setupSkipDesc, pendingProposals } = require("./wizard");
 const { setupGuidedWizards, wizardStates } = require("./wizards");
 const cv2 = require("./services/consultation");
-const cv2Bridge = require("./services/cv2-bridge");
 
 const TOKEN = process.env.TG_BOT_TOKEN;
 if (!TOKEN) { console.error("Set TG_BOT_TOKEN in .env"); process.exit(1); }
 
 const dbInstance = db.init();
 cv2.init(dbInstance);
-cv2Bridge.init();
 const bot = new Bot(TOKEN);
 
 const PORTAL = process.env.PORTAL_URL || "https://72-62-195-141.sslip.io/guild";
@@ -217,11 +215,11 @@ bot.command("propose", async (ctx) => {
   db.updateProposalMessage(id, msg.message_id, ctx.chat.id);
   queueXpReward(user.radix_address, "propose");
 
-  // Bridge to CV2
+  // Notify about on-chain option
   try {
     const bridge = require("./services/cv2-bridge");
     if (bridge.isEnabled()) {
-      bridge.bridgeToChain(title, title).catch(() => {});
+      ctx.reply("Want this on-chain too? Create it on the dashboard: " + bridge.getDashboardLink(), { reply_to_message_id: msg.message_id });
     }
   } catch(e) {}
 });
@@ -295,11 +293,11 @@ bot.command("temp", async (ctx) => {
   db.updateProposalMessage(id, msg.message_id, ctx.chat.id);
   queueXpReward(user.radix_address, "temp");
 
-  // Bridge to CV2
+  // Notify about on-chain option
   try {
     const bridge = require("./services/cv2-bridge");
     if (bridge.isEnabled()) {
-      bridge.bridgeToChain(question, question, ["For", "Against"]).catch(() => {});
+      ctx.reply("Want this on-chain too? Create it on the dashboard: " + bridge.getDashboardLink(), { reply_to_message_id: msg.message_id });
     }
   } catch(e) {}
 });
