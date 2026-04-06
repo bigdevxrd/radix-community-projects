@@ -16,6 +16,16 @@ interface Proposal {
   created_at: number; ends_at: number;
   counts: Record<string, number>; total_votes: number;
 }
+interface CV2Status {
+  enabled: boolean; deployed: boolean; component: string;
+  temperatureCheckCount: number; proposalCount: number;
+  lastSync: number | null; errors: number;
+}
+interface CV2Proposal {
+  id: string; type: string; title: string; short_description: string;
+  vote_count: number; revote_count: number; quorum: string;
+  vote_options: string; hidden: number;
+}
 interface Stats {
   total_proposals: number; total_voters: number;
   active_proposals: number; pending_xp_rewards: number;
@@ -41,6 +51,8 @@ function ProposalsContent() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [showArchived, setShowArchived] = useState(false);
+  const [cv2Status, setCv2Status] = useState<CV2Status | null>(null);
+  const [cv2Proposals, setCv2Proposals] = useState<CV2Proposal[]>([]);
 
   const fetchData = () => {
     setLoading(true); setError(false);
@@ -48,10 +60,14 @@ function ProposalsContent() {
       fetch(API_URL + "/proposals").then((r) => r.json()),
       fetch(API_URL + "/stats").then((r) => r.json()),
       fetch(API_URL + "/charter").then((r) => r.json()),
-    ]).then(([p, s, c]) => {
+      fetch(API_URL + "/cv2/status").then((r) => r.json()).catch(() => null),
+      fetch(API_URL + "/cv2/proposals").then((r) => r.json()).catch(() => null),
+    ]).then(([p, s, c, cv2s, cv2p]) => {
       setProposals(p.data || []);
       setStats(s.data || null);
       setCharter(c?.data || null);
+      setCv2Status(cv2s?.data || null);
+      setCv2Proposals(cv2p?.data || []);
       setLoading(false);
     }).catch(() => { setError(true); setLoading(false); });
   };
@@ -177,6 +193,96 @@ function ProposalsContent() {
           </CardContent>
         </Card>
       )}
+
+      {/* Network Governance (On-Chain CV2) */}
+      {cv2Status && cv2Status.enabled && (
+        <Card>
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <CardTitle className="text-sm uppercase tracking-wide text-muted-foreground">Network Governance</CardTitle>
+                <Badge variant="outline" className="text-[9px]">On-Chain</Badge>
+              </div>
+              <Badge variant={cv2Status.deployed ? "default" : "secondary"} className="text-[9px]">
+                {cv2Status.deployed ? "Live" : "Pending"}
+              </Badge>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="text-xs text-muted-foreground">
+              Formal on-chain governance powered by Consultation v2. Votes are XRD-weighted.
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              <div className="bg-muted rounded-lg px-3 py-2">
+                <div className="text-[10px] text-muted-foreground uppercase tracking-wider">Temp Checks</div>
+                <div className="text-lg font-bold font-mono text-primary">{cv2Status.temperatureCheckCount}</div>
+              </div>
+              <div className="bg-muted rounded-lg px-3 py-2">
+                <div className="text-[10px] text-muted-foreground uppercase tracking-wider">Proposals</div>
+                <div className="text-lg font-bold font-mono text-primary">{cv2Status.proposalCount}</div>
+              </div>
+              <div className="bg-muted rounded-lg px-3 py-2">
+                <div className="text-[10px] text-muted-foreground uppercase tracking-wider">Last Sync</div>
+                <div className="text-xs font-mono text-muted-foreground mt-1">
+                  {cv2Status.lastSync ? new Date(cv2Status.lastSync * 1000).toLocaleTimeString() : "—"}
+                </div>
+              </div>
+            </div>
+
+            {cv2Proposals.length > 0 ? (
+              <div className="space-y-2">
+                {cv2Proposals.map(p => {
+                  const uniqueVotes = p.vote_count - p.revote_count;
+                  const opts = p.vote_options ? JSON.parse(p.vote_options) as string[] : [];
+                  return (
+                    <div key={p.id} className="bg-muted rounded-lg p-3">
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-sm font-semibold">{p.title}</span>
+                        <Badge variant={p.type === "temperature_check" ? "secondary" : "default"} className="text-[9px]">
+                          {p.type === "temperature_check" ? "Temp Check" : "Proposal"}
+                        </Badge>
+                      </div>
+                      {p.short_description && (
+                        <p className="text-xs text-muted-foreground mb-1.5">{p.short_description}</p>
+                      )}
+                      <div className="flex items-center gap-3 text-[11px] text-muted-foreground">
+                        <span>{uniqueVotes} vote{uniqueVotes !== 1 ? "s" : ""}</span>
+                        <span>Quorum: {p.quorum} XRD</span>
+                      </div>
+                      {opts.length > 0 && (
+                        <div className="flex flex-wrap gap-1.5 mt-1.5">
+                          {opts.map((o: string) => (
+                            <Badge key={o} variant="secondary" className="text-[10px]">{o}</Badge>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="text-center py-4">
+                <p className="text-muted-foreground text-xs mb-2">No on-chain consultations yet.</p>
+                <p className="text-muted-foreground text-[11px]">
+                  Create a temperature check to start formal on-chain governance.
+                </p>
+              </div>
+            )}
+
+            <div className="flex gap-2">
+              <div className="text-[10px] text-muted-foreground pt-1">
+                Component: <span className="font-mono">{cv2Status.component.slice(0, 20)}...</span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Two-tier label */}
+      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+        <Badge variant="secondary" className="text-[9px]">Off-Chain</Badge>
+        <span>Guild votes below are free, badge-gated, managed via Telegram</span>
+      </div>
 
       {/* Filter */}
       <div className="flex items-center justify-between">
