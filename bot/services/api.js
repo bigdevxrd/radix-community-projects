@@ -44,6 +44,14 @@ function startApi() {
       return res.end();
     }
 
+    // Reject oversized URLs
+    if (req.url.length > 512) {
+      res.writeHead(414);
+      return res.end(JSON.stringify({ ok: false, error: "uri_too_long" }));
+    }
+
+    const url = new URL(req.url, "http://localhost");
+
     // Allow GET + POST for game board routes, GET only for everything else
     const isGamePost = req.method === "POST" && url.pathname.includes("/board/");
     if (req.method !== "GET" && !isGamePost) {
@@ -57,14 +65,6 @@ function startApi() {
       res.writeHead(429);
       return res.end(JSON.stringify({ ok: false, error: "rate_limit_exceeded" }));
     }
-
-    // Reject oversized URLs
-    if (req.url.length > 512) {
-      res.writeHead(414);
-      return res.end(JSON.stringify({ ok: false, error: "uri_too_long" }));
-    }
-
-    const url = new URL(req.url, "http://localhost");
 
     // GET /api/proposals — proposals with vote counts (paginated)
     if (url.pathname === "/api/proposals") {
