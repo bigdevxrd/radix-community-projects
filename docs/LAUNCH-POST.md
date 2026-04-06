@@ -20,9 +20,9 @@ No token. No fundraise. Just tools for coordination.
 2. **Mint** a free Guild badge (on-chain NFT)
 3. **Register** your wallet with the TG bot (`/register`)
 4. **Propose** ideas (`/propose`), **vote** on them (inline buttons)
-5. **Earn XP** — voting, proposing, contributing. XP determines your tier and voting weight.
+5. **Earn XP** — voting, proposing, contributing. XP tracks your participation and determines your tier.
 
-Tiers: Member (1x) → Contributor (2x) → Builder (3x) → Steward (5x) → Elder (10x)
+Tiers: Initiate → Contributor → Builder → Architect → Elder (recognition levels, not voting power — voting weight is a charter decision)
 
 ## What's Live
 

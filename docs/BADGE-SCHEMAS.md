@@ -7,7 +7,7 @@ Badges are on-chain NFTs that represent identity, contribution, and authority wi
 ### 1. Guild Member (`guild_member`) — LIVE
 **Purpose:** Core governance identity. Required to vote.
 **Tiers:** member → contributor → builder → steward → elder
-**Voting weight:** 1x → 2x → 3x → 5x → 10x
+**Voting weight:** TBD — charter decision (currently equal: 1 badge = 1 vote)
 **Mint:** Free public mint
 **Progression:** XP-based (automatic tier upgrade via batch signer)
 
@@ -55,7 +55,7 @@ User Profile (one wallet):
 ├── guild_contributor → core contributor — earned through bounties
 └── guild_builder   → architect — earned through code contributions
 
-Combined voting weight: base tier × role multipliers
+Voting weight model: TBD — community decides via charter vote
 Dashboard shows: all badges stacked on profile
 Bot /badge shows: primary badge + earned badges list
 ```

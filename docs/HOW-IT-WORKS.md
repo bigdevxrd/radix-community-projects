@@ -7,7 +7,7 @@ A simple guide to how everything connects — from your first badge to running a
 ## The 5-Minute Version
 
 ```
-You ──> Mint Badge ──> Vote ──> Earn XP ──> Level Up ──> More Reputation
+You ──> Mint Badge ──> Vote ──> Earn XP ──> Level Up ──> Track Progress
 ```
 
 1. Connect your Radix Wallet
@@ -44,7 +44,7 @@ You ──> Mint Badge ──> Vote ──> Earn XP ──> Level Up ──> Mor
 │  Dice: 🎲 1=Miss  2=+5  3=+10  4=+25  5=+50  6=+100   │
 │                                                         │
 │  XP accumulates in your on-chain badge NFT.             │
-│  Higher tier = more governance influence.                │
+│  Higher tier = more recognition for participation.       │
 └─────────────────────────────────────────────────────────┘
           │
           ▼
@@ -121,15 +121,17 @@ YOU VOTE ON-CHAIN (CV2)
 
 ## Tier System
 
-| Tier | XP Required | What You Get |
-|------|-------------|-------------|
-| **Initiate** | 0 | Can vote on proposals |
-| **Contributor** | 100 | Recognized participant |
-| **Builder** | 500 | Can create proposals |
-| **Architect** | 2000 | Can manage bounties |
-| **Elder** | 10000 | Full governance weight |
+| Tier | XP Required | What It Means |
+|------|-------------|--------------|
+| **Initiate** | 0 | New member, just getting started |
+| **Contributor** | 100 | Active participant |
+| **Builder** | 500 | Regular contributor |
+| **Architect** | 2000 | Experienced governance participant |
+| **Elder** | 10000 | Long-term community pillar |
 
-XP is earned by participating. Every governance action (vote, propose, bounty) earns base XP plus a random dice roll bonus.
+**XP is a participation tracker, not voting power.** It shows how active you've been in governance. Every action (vote, propose, bounty) earns base XP plus a random dice roll bonus. Tiers are recognition — they show your commitment level on your on-chain badge.
+
+Voting weight (whether tiers affect vote power, or everyone gets equal votes, or votes are XRD-weighted) is an **unresolved charter parameter** — the community will decide this in Phase 2.
 
 ---
 
@@ -261,7 +263,7 @@ No. Minting a badge is free. Voting in Telegram is free. Only on-chain CV2 votes
 Yes. It's a Non-Fungible Token on the Radix mainnet. You can see it in your Radix Wallet and on the Radix Dashboard.
 
 **What happens to my XP?**
-XP is tracked in the bot database and written to your on-chain badge every 6 hours. It determines your tier and governance influence.
+XP is tracked in the bot database and written to your on-chain badge every 6 hours. It tracks your participation level and determines your tier. XP does not currently affect voting power — that's a charter decision the community will make.
 
 **Can I lose my badge?**
 Only if an admin revokes it (e.g., for abuse). You control it in your wallet.

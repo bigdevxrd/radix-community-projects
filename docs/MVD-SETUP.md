@@ -120,7 +120,7 @@ Once Steps 1-3 complete, the DAO is self-governing. Anyone with a badge can:
 - Create bounties (`/bounty create`)
 - Vote on anything (`inline buttons`)
 - Earn XP and roll dice (`/game`)
-- Level up their tier and voting weight
+- Level up their tier (participation recognition)
 
 ---
 

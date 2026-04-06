@@ -33,7 +33,7 @@ Idea --> Vote --> Decision --> Fund --> Build --> Verify --> Reward
 5. Visit the dashboard to create on-chain temperature checks
 ```
 
-No XRD required for off-chain governance. On-chain votes use your XRD balance as voting weight.
+No XRD required for off-chain governance. On-chain CV2 votes require a small tx fee. Voting weight model (equal, XRD-based, or tier-based) is an unresolved charter decision.
 
 ## Links
 
@@ -51,7 +51,7 @@ No XRD required for off-chain governance. On-chain votes use your XRD balance as
 | Tier | Cost | Where | Weight | Use Case |
 |------|------|-------|--------|----------|
 | **Off-chain** | Free | Telegram bot | 1 badge = 1 vote | Day-to-day decisions, temp checks, coordination |
-| **On-chain** | TX fee (~0.1 XRD) | Dashboard / CV2 | XRD balance = vote weight | Formal proposals, binding decisions, treasury |
+| **On-chain** | TX fee (~0.1 XRD) | Dashboard / CV2 | TBD (charter decision) | Formal proposals, binding decisions, treasury |
 
 Off-chain votes are fast and free. On-chain votes are XRD-weighted and recorded on the Radix ledger. Both are visible on the dashboard.
 

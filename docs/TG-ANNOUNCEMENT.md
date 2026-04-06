@@ -9,7 +9,7 @@ Free on-chain badge. Badge-gated voting. All in Telegram.
 What you get:
 - Mint a free membership badge (on-chain NFT)
 - Propose and vote on ideas right here in TG
-- Earn XP for participating — XP determines your voting weight
+- Earn XP for participating — XP tracks your contribution level
 - Open source, MIT licensed, no token
 
 First governance proposals dropping soon:

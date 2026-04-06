@@ -15,13 +15,15 @@ Both are on-chain NFTs. Both are verifiable. Both are separate.
 
 Anyone can get one. Free. Your vote.
 
-| Tier | XP | Voting Weight | What You Can Do |
-|------|-----|--------------|----------------|
-| Member | 0+ | 1x | Vote, daily participation |
-| Contributor | 100+ | 2x | Claim bounties, submit proposals |
-| Builder | 500+ | 3x | Create tasks, mentor newcomers |
-| Steward | 2,000+ | 5x | Verify work, propose treasury spending |
-| Elder | 10,000+ | 10x | Run for council, create DAOs |
+| Tier | XP | Recognition Level |
+|------|-----|------------------|
+| Initiate | 0+ | New member, can vote |
+| Contributor | 100+ | Active participant |
+| Builder | 500+ | Regular contributor |
+| Architect | 2,000+ | Experienced governance participant |
+| Elder | 10,000+ | Long-term community pillar |
+
+**Note:** XP and tiers are participation trackers, not voting power. Whether tiers affect vote weight is a charter decision the community will make in Phase 2.
 
 **How to get one:** `/register` your wallet in TG, then mint at the portal.
 **How to level up:** Vote, complete tasks, propose, contribute. XP is earned, not bought.
