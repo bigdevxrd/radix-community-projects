@@ -54,6 +54,56 @@ Radix Guild v1.0.0 is live at radixguild.com with 39/39 tests passing, custom do
 
 ---
 
+## ON-CHAIN ROYALTIES (Ongoing — Already Live)
+
+The Badge Manager Scrypto components have royalties configured on mainnet. These accrue automatically on every method call and can be claimed by the component owner at any time.
+
+### Current Royalty Schedule
+
+| Component | Method | Royalty | Status |
+|-----------|--------|---------|--------|
+| BadgeFactory | `create_manager` | 5 XRD | Live (updatable) |
+| BadgeManager | `public_mint` | 1 XRD | **Waived (free mint ON for beta)** |
+| BadgeManager | `revoke` | 0.5 XRD | Live |
+| BadgeManager | `update_tier` | 0.25 XRD | Live |
+| BadgeManager | `update_xp` | 0.1 XRD | Live |
+| BadgeManager | `update_extra_data` | 0.1 XRD | Live |
+| BadgeManager | Reads | Free | Locked (always free) |
+
+### Royalty Strategy
+
+**Phase 3 (Beta — April):**
+- Keep free mint ON — zero friction for onboarding
+- XP/tier update royalties are already accruing from batch signer operations
+- [ ] Write a `claim-royalties.js` script to withdraw accrued royalties from components
+- [ ] Check current royalty balance on BadgeFactory + BadgeManager
+- [ ] Claim any accrued royalties to the agent wallet
+
+**Phase 4+ (Post-Beta):**
+- [ ] Decision: when to turn off free mint (Charter vote? After 100 badges? After first customer?)
+- [ ] Consider: keep mint free for Radix Guild, charge for SaaS tenants
+- [ ] Each SaaS tenant gets their own BadgeManager with configurable royalties
+- [ ] Royalties flow to tenant's component owner (Big Dev for managed, customer for self-hosted)
+
+**Phase 7 (Scale):**
+- Every SaaS tenant deployment creates a new BadgeManager = new royalty stream
+- 10 tenants x 100 mints each x 1 XRD = 1,000 XRD passive income
+- Component royalties are automatic, on-chain, no invoicing needed
+- This is the moat — the more badges minted, the more royalties flow
+
+### On-Chain Addresses (for claiming)
+
+| Component | Address |
+|-----------|---------|
+| BadgeFactory | `component_rdx1cqxdsz6d3zjsjx7shk2fgg8dazmrknygvqsa4943yw0yz4e69taxhg` |
+| BadgeManager | `component_rdx1czexylvvm0q4uhwpjaqmlznj9sd3y2jnmmah6qug9lm9sfm3tyrtva` |
+| Owner Badge | `resource_rdx1t4nl08p3x3m4y2c9hn97957cvuxh0rgcl92gkur9ffc3duj90rsjvg` |
+| Agent Wallet | `account_rdx128lggt503h7m2dhzqnrkkqv4zklxcjmdggr8xxtqy8e47p7fkmd8cx` |
+
+To claim: present Owner Badge, call `claim_royalties()` on each component. Royalties withdraw to the caller's wallet.
+
+---
+
 ## PHASE 4: SAAS CONFIG LAYER (May 2026)
 
 **Goal:** Make the codebase deployable for any DAO, not just Radix Guild. This is the revenue foundation.
