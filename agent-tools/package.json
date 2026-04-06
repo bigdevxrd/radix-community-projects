@@ -1,0 +1,24 @@
+{
+  "name": "agent-tools",
+  "version": "0.1.0",
+  "description": "Agentic swarm toolkit — OMX (Command Center), OmO (Manager), Clawhip (Router)",
+  "main": "bin/cli.js",
+  "bin": {
+    "agent-tools": "./bin/cli.js"
+  },
+  "scripts": {
+    "start": "node bin/cli.js",
+    "architect": "node bin/cli.js architect",
+    "executor": "node bin/cli.js executor",
+    "reviewer": "node bin/cli.js reviewer",
+    "daemon": "node bin/cli.js daemon",
+    "scan": "node bin/cli.js scan",
+    "test": "node --test test/"
+  },
+  "keywords": ["agents", "swarm", "llm", "orchestration", "copilot"],
+  "license": "MIT",
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "dependencies": {}
+}
