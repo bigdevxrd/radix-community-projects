@@ -17,6 +17,7 @@ const NAV = [
   { path: "/bounties", label: "Bounties" },
   { path: "/game", label: "Game" },
   { path: "/leaderboard", label: "Leaderboard" },
+  { path: "/docs", label: "Docs" },
   { path: "/admin", label: "Admin" },
 ];
 
