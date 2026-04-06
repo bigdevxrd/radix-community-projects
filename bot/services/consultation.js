@@ -152,13 +152,13 @@ async function syncFromChain() {
       CV2_CONFIG.temperatureChecksKvs = state.temperatureChecksKvs || "";
       CV2_CONFIG.proposalsKvs = state.proposalsKvs || "";
 
-      // 2. Sync temperature checks
-      if (CV2_CONFIG.temperatureChecksKvs) {
+      // 2. Sync temperature checks (skip if none exist yet)
+      if (CV2_CONFIG.temperatureChecksKvs && state.temperatureCheckCount > 0) {
         await syncKvs(CV2_CONFIG.temperatureChecksKvs, "temperature_check", state.temperatureCheckCount);
       }
 
-      // 3. Sync proposals
-      if (CV2_CONFIG.proposalsKvs) {
+      // 3. Sync proposals (skip if none exist yet)
+      if (CV2_CONFIG.proposalsKvs && state.proposalCount > 0) {
         await syncKvs(CV2_CONFIG.proposalsKvs, "proposal", state.proposalCount);
       }
 
@@ -180,13 +180,11 @@ async function syncFromChain() {
 }
 
 function parseComponentState(component) {
-  // The component state fields are in the details.state object
-  // Structure depends on how the Scrypto blueprint encodes its fields
+  // Gateway returns: details.state.fields[] with field_name and value
+  // Structure: governance_parameters (Tuple), temperature_checks (Own/KVS),
+  //            temperature_check_count (U64), proposals (Own/KVS), proposal_count (U64)
   try {
     const fields = component.details?.state?.fields || [];
-    // CV2 Governance has these state fields (in order):
-    // temperature_check_count, proposal_count, temperature_checks_kvs, proposals_kvs, parameters, ...
-    // The exact SBOR encoding varies — parse what we can
     const state = {
       temperatureCheckCount: 0,
       proposalCount: 0,
@@ -195,18 +193,20 @@ function parseComponentState(component) {
     };
 
     for (const field of fields) {
-      if (field.field_name === "temperature_check_count" && field.value) {
-        state.temperatureCheckCount = parseInt(field.value) || 0;
-      }
-      if (field.field_name === "proposal_count" && field.value) {
-        state.proposalCount = parseInt(field.value) || 0;
-      }
-      if (field.field_name === "temperature_checks" && field.value) {
-        // This is a KVS — the address is in the entity_address
-        state.temperatureChecksKvs = field.value;
-      }
-      if (field.field_name === "proposals" && field.value) {
-        state.proposalsKvs = field.value;
+      switch (field.field_name) {
+        case "temperature_check_count":
+          state.temperatureCheckCount = parseInt(field.value) || 0;
+          break;
+        case "proposal_count":
+          state.proposalCount = parseInt(field.value) || 0;
+          break;
+        case "temperature_checks":
+          // Own type — KVS address is in field.value (internal_keyvaluestore_rdx1...)
+          state.temperatureChecksKvs = field.value || "";
+          break;
+        case "proposals":
+          state.proposalsKvs = field.value || "";
+          break;
       }
     }
 
