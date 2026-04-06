@@ -119,6 +119,7 @@ function startApi() {
     // POST /api/game/:address/board/new — start new board
     const boardNewMatch = url.pathname.match(/^\/api\/game\/(account_rdx1[a-z0-9]{40,65})\/board\/new$/);
     if (boardNewMatch && req.method === "POST") {
+      await readBody(req); // consume body
       const result = db.createBoard(boardNewMatch[1]);
       res.writeHead(result.ok ? 200 : 400);
       return res.end(JSON.stringify(result));
@@ -127,6 +128,7 @@ function startApi() {
     // POST /api/game/:address/board/roll — spend a roll
     const boardRollMatch = url.pathname.match(/^\/api\/game\/(account_rdx1[a-z0-9]{40,65})\/board\/roll$/);
     if (boardRollMatch && req.method === "POST") {
+      await readBody(req); // consume body
       const result = db.rollOnBoard(boardRollMatch[1]);
       res.writeHead(result.ok ? 200 : 400);
       return res.end(JSON.stringify(result));
