@@ -87,7 +87,7 @@ function DocsContent() {
                 <h3 className="text-sm font-bold mb-1">{g.title}</h3>
                 <p className="text-xs text-muted-foreground mb-4">{g.desc}</p>
                 <div className="bg-muted rounded-lg p-4 flex items-center justify-center">
-                  <img src={g.image} alt={g.title} className="max-w-full h-auto max-h-80" />
+                  <img src={"/guild" + g.image} alt={g.title} className="max-w-full h-auto max-h-80" />
                 </div>
               </CardContent>
             </Card>
