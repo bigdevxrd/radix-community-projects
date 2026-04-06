@@ -117,6 +117,65 @@ CALL_METHOD
 ;`;
 }
 
+// ── CV2 Governance Manifests ──────────────────────────────
+
+export function makeTemperatureCheckManifest(
+  component: string,
+  account: string,
+  title: string,
+  shortDescription: string,
+  description: string,
+  options: string[],
+): string {
+  const c = validateAddress(component, "component_rdx");
+  const a = validateAddress(account, "account_rdx");
+  const t = sanitize(title);
+  const sd = sanitize(shortDescription);
+  const desc = sanitize(description);
+  const opts = options.map(o => `Tuple("${sanitize(o)}")`).join(", ");
+  return `CALL_METHOD
+  Address("${c}")
+  "make_temperature_check"
+  Address("${a}")
+  Tuple(
+    "${t}",
+    "${sd}",
+    "${desc}",
+    Array<Tuple>(${opts}),
+    Array<String>(),
+    Enum<0u8>()
+  )
+;
+CALL_METHOD
+  Address("${a}")
+  "deposit_batch"
+  Expression("ENTIRE_WORKTOP")
+;`;
+}
+
+export function voteOnTemperatureCheckManifest(
+  component: string,
+  account: string,
+  temperatureCheckId: number,
+  vote: "for" | "against",
+): string {
+  const c = validateAddress(component, "component_rdx");
+  const a = validateAddress(account, "account_rdx");
+  const voteEnum = vote === "for" ? "Enum<0u8>()" : "Enum<1u8>()";
+  return `CALL_METHOD
+  Address("${c}")
+  "vote_on_temperature_check"
+  Address("${a}")
+  ${temperatureCheckId}u64
+  ${voteEnum}
+;
+CALL_METHOD
+  Address("${a}")
+  "deposit_batch"
+  Expression("ENTIRE_WORKTOP")
+;`;
+}
+
 export function updateExtraDataManifest(
   manager: string, adminBadge: string, badgeId: string, extraData: string, account: string
 ): string {

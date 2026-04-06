@@ -22,6 +22,11 @@ export const API_URL =
   process.env.NEXT_PUBLIC_API_URL ||
   "https://72-62-195-141.sslip.io/api";
 
+// CV2 Governance Component (on-chain)
+export const CV2_COMPONENT =
+  process.env.NEXT_PUBLIC_CV2_COMPONENT ||
+  "component_rdx1cqj99hx2rdx04mrdvd3am7wcenh6c26m2w5uzv8vkv9pudveqzy7d2";
+
 // ── Schemas ──
 
 export interface SchemaConfig {
