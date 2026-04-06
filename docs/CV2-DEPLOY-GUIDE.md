@@ -12,7 +12,9 @@ Step-by-step guide to deploy the Consultation v2 governance system to Radix main
 | Temp Check KVS | `internal_keyvaluestore_rdx1kr6xzh2k70whestr54qzhf6fkxxsmdqhuwm7aenervky3ypphy2x56` |
 | Proposals KVS | `internal_keyvaluestore_rdx1kp7elrlp7vfg84gk84kdnt9wem8fy05eghwlsyyz7myrvul4stxptf` |
 | Package Deploy TX | `txid_rdx10wdfzwh8p0l28pqxyn4x9yrgqr8dn6lxlzfucmurfzsa8knerlxsnel6rn` |
+| VoteDelegation | `component_rdx1cr877kp2s6ggdy6a7hrdczj6g2up6xhg4vd2g2mqr0qwvlrlknk6z2` |
 | Instantiate TX | `txid_rdx1vxte6kpafs27w0u6kjdkur97szcgd4whumkuuk80knqjjaupd7asas25nc` |
+| VoteDelegation TX | `txid_rdx1agjrq7t0309cxpfkkfz7p4xrkvscmkx8e9gu6tjzgvzau9mp43nq635ttp` |
 
 Governance parameters: temp checks 3 days / 1000 XRD quorum / 50% threshold, proposals 7 days / 5000 XRD quorum / 50% threshold.
 

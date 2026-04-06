@@ -64,6 +64,7 @@ Off-chain votes are fast and free. On-chain votes are XRD-weighted and recorded 
 | Admin Badge | `resource_rdx1tkkzwrttvsqrsylyf4nqt2fxq6h27eva4lr4ffwad63x3f2cl43xwe` |
 | CV2 Package | `package_rdx1phazm0kmzcfyejp52493zn7zgr5ljymxzvv64rx2u99l93lhtk5dej` |
 | CV2 Governance | `component_rdx1cqj99hx2rdx04mrdvd3am7wcenh6c26m2w5uzv8vkv9pudveqzy7d2` |
+| CV2 VoteDelegation | `component_rdx1cr877kp2s6ggdy6a7hrdczj6g2up6xhg4vd2g2mqr0qwvlrlknk6z2` |
 
 ## Dashboard Pages
 
