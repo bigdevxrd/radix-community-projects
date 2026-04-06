@@ -55,6 +55,16 @@ function queueXpReward(radixAddress, action) {
     ).run(radixAddress, "roll_bonus", bonus);
   }
 
+  // 7-day streak bonus: 3 extra rolls
+  const gameState = mainDb.getGameState(radixAddress);
+  if (gameState.streak_days > 0 && gameState.streak_days % 7 === 0) {
+    for (let i = 0; i < 3; i++) {
+      const streakRoll = mainDb.rollDice();
+      mainDb.recordRoll(radixAddress, streakRoll);
+    }
+    console.log("[XP] 7-day streak bonus: +3 rolls for " + radixAddress.slice(0, 20) + "...");
+  }
+
   console.log("[XP] +" + xp + " for " + radixAddress.slice(0, 20) + "... (" + action + ") | Roll: " + roll + " (+" + bonus + " bonus)");
 
   return { queued: true, xp, roll, bonus };

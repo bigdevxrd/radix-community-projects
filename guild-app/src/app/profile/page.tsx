@@ -17,10 +17,16 @@ interface GameState {
   total_rolls: number; total_bonus_xp: number; streak_days: number;
   last_roll_value: number; jackpots: number;
 }
+interface AchievementSummary {
+  grids_completed: number; best_score: number;
+  achievements: { name: string; count: number }[];
+  next_milestone: { name: string; grids_needed: number; nft: boolean } | null;
+}
 
 function ProfileContent() {
   const { account, connected, badge, badgeLoading } = useWallet();
   const [allBadges, setAllBadges] = useState<BadgeInfo[]>([]);
+  const [achievements, setAchievements] = useState<AchievementSummary | null>(null);
   const [game, setGame] = useState<GameState | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -29,9 +35,11 @@ function ProfileContent() {
     Promise.all([
       lookupAllBadges(account).catch(() => []),
       fetch(API_URL + "/game/" + account).then(r => r.json()).catch(() => null),
-    ]).then(([badges, g]) => {
+      fetch(API_URL + "/game/" + account + "/achievements").then(r => r.json()).catch(() => null),
+    ]).then(([badges, g, a]) => {
       setAllBadges(badges);
       setGame(g?.data || null);
+      if (a?.data) setAchievements(a.data);
       setLoading(false);
     });
   }, [account]);
@@ -142,6 +150,44 @@ function ProfileContent() {
             {game.last_roll_value > 0 && (
               <div className="mt-2 text-xs text-muted-foreground">
                 Last roll: {game.last_roll_value} ({rollLabels[game.last_roll_value]})
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Achievements */}
+      {achievements && achievements.grids_completed > 0 && (
+        <Card>
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-sm uppercase tracking-wide text-muted-foreground">Grid Game Achievements</CardTitle>
+              <Link href="/game"><Button variant="ghost" size="sm">Play</Button></Link>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="grid grid-cols-3 gap-3">
+              <div className="bg-muted rounded-lg px-3 py-2">
+                <div className="text-[10px] text-muted-foreground uppercase">Grids</div>
+                <div className="text-lg font-bold font-mono text-primary">{achievements.grids_completed}</div>
+              </div>
+              <div className="bg-muted rounded-lg px-3 py-2">
+                <div className="text-[10px] text-muted-foreground uppercase">Best Score</div>
+                <div className="text-lg font-bold font-mono">{achievements.best_score}</div>
+              </div>
+              {achievements.next_milestone && (
+                <div className="bg-muted rounded-lg px-3 py-2">
+                  <div className="text-[10px] text-muted-foreground uppercase">Next</div>
+                  <div className="text-sm font-bold">{achievements.next_milestone.name}</div>
+                  <div className="text-[10px] text-muted-foreground">{achievements.next_milestone.grids_needed} to go</div>
+                </div>
+              )}
+            </div>
+            {achievements.achievements.length > 0 && (
+              <div className="flex flex-wrap gap-1.5">
+                {achievements.achievements.map(a => (
+                  <Badge key={a.name} variant="secondary" className="text-[10px]">{a.name.replace(/_/g, " ")}</Badge>
+                ))}
               </div>
             )}
           </CardContent>
