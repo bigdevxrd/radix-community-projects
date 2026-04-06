@@ -2,14 +2,16 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { AppShell } from "@/components/AppShell";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
-import { API_URL } from "@/lib/constants";
-
-import { CardHeader, CardTitle } from "@/components/ui/card";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { API_URL, CV2_COMPONENT } from "@/lib/constants";
+import { useWallet } from "@/hooks/useWallet";
+import { makeTemperatureCheckManifest, voteOnTemperatureCheckManifest } from "@/lib/manifests";
 
 interface Proposal {
   id: number; title: string; type: string; status: string;
@@ -45,6 +47,7 @@ const STATUS_VARIANT: Record<string, "default" | "secondary" | "destructive" | "
 };
 
 function ProposalsContent() {
+  const { account, connected, rdt } = useWallet();
   const [proposals, setProposals] = useState<Proposal[]>([]);
   const [stats, setStats] = useState<Stats | null>(null);
   const [charter, setCharter] = useState<{ status: CharterStatus; ready: CharterParam[]; params: CharterParam[] } | null>(null);
@@ -53,6 +56,39 @@ function ProposalsContent() {
   const [showArchived, setShowArchived] = useState(false);
   const [cv2Status, setCv2Status] = useState<CV2Status | null>(null);
   const [cv2Proposals, setCv2Proposals] = useState<CV2Proposal[]>([]);
+  const [showCreateTC, setShowCreateTC] = useState(false);
+  const [tcTitle, setTcTitle] = useState("");
+  const [tcDesc, setTcDesc] = useState("");
+  const [tcSubmitting, setTcSubmitting] = useState(false);
+  const [tcResult, setTcResult] = useState("");
+  const [tcError, setTcError] = useState("");
+
+  async function handleCreateTC() {
+    if (!rdt || !account || !tcTitle.trim() || !tcDesc.trim()) return;
+    setTcSubmitting(true); setTcResult(""); setTcError("");
+    try {
+      const manifest = makeTemperatureCheckManifest(
+        CV2_COMPONENT, account, tcTitle.trim(), tcDesc.trim(), tcDesc.trim(),
+        ["For", "Against"]
+      );
+      const result = await rdt.walletApi.sendTransaction({ transactionManifest: manifest, version: 1 });
+      if (result.isOk()) {
+        setTcResult("Temperature check created on-chain!");
+        setTcTitle(""); setTcDesc(""); setShowCreateTC(false);
+        setTimeout(() => fetchData(), 5000);
+      } else { setTcError(JSON.stringify(result.error)); }
+    } catch (e: unknown) { setTcError(e instanceof Error ? e.message : "Transaction failed"); }
+    setTcSubmitting(false);
+  }
+
+  async function handleVoteTC(tcId: number, vote: "for" | "against") {
+    if (!rdt || !account) return;
+    try {
+      const manifest = voteOnTemperatureCheckManifest(CV2_COMPONENT, account, tcId, vote);
+      const result = await rdt.walletApi.sendTransaction({ transactionManifest: manifest, version: 1 });
+      if (result.isOk()) { setTimeout(() => fetchData(), 5000); }
+    } catch (e) { console.error("Vote failed:", e); }
+  }
 
   const fetchData = () => {
     setLoading(true); setError(false);
@@ -256,6 +292,12 @@ function ProposalsContent() {
                           ))}
                         </div>
                       )}
+                      {connected && (
+                        <div className="flex gap-2 mt-2">
+                          <Button size="sm" variant="default" onClick={() => handleVoteTC(parseInt(p.id.replace(/\D/g, "")), "for")} className="text-xs">Vote For</Button>
+                          <Button size="sm" variant="outline" onClick={() => handleVoteTC(parseInt(p.id.replace(/\D/g, "")), "against")} className="text-xs">Vote Against</Button>
+                        </div>
+                      )}
                     </div>
                   );
                 })}
@@ -263,16 +305,37 @@ function ProposalsContent() {
             ) : (
               <div className="text-center py-4">
                 <p className="text-muted-foreground text-xs mb-2">No on-chain consultations yet.</p>
-                <p className="text-muted-foreground text-[11px]">
-                  Create a temperature check to start formal on-chain governance.
-                </p>
               </div>
             )}
 
-            <div className="flex gap-2">
-              <div className="text-[10px] text-muted-foreground pt-1">
-                Component: <span className="font-mono">{cv2Status.component.slice(0, 20)}...</span>
+            {/* Create Temperature Check */}
+            {connected && !showCreateTC && (
+              <Button variant="outline" size="sm" onClick={() => setShowCreateTC(true)} className="w-full">
+                Create Temperature Check (On-Chain)
+              </Button>
+            )}
+            {showCreateTC && (
+              <div className="space-y-3 bg-muted rounded-lg p-4">
+                <div className="text-sm font-semibold">New Temperature Check</div>
+                <Input value={tcTitle} onChange={e => setTcTitle(e.target.value)} placeholder="Title" className="text-sm" maxLength={200} />
+                <Input value={tcDesc} onChange={e => setTcDesc(e.target.value)} placeholder="Description" className="text-sm" maxLength={500} />
+                <div className="text-[11px] text-muted-foreground">Options: For / Against (default). Runs for 3 days. Quorum: 1000 XRD.</div>
+                <div className="flex gap-2">
+                  <Button size="sm" onClick={handleCreateTC} disabled={tcSubmitting || !tcTitle.trim() || !tcDesc.trim()}>
+                    {tcSubmitting ? "Submitting..." : "Create On-Chain"}
+                  </Button>
+                  <Button size="sm" variant="ghost" onClick={() => setShowCreateTC(false)}>Cancel</Button>
+                </div>
               </div>
+            )}
+            {(tcResult || tcError) && (
+              <Alert variant={tcError ? "destructive" : "default"}>
+                <AlertDescription>{tcError || tcResult}</AlertDescription>
+              </Alert>
+            )}
+
+            <div className="text-[10px] text-muted-foreground">
+              Component: <span className="font-mono">{cv2Status.component.slice(0, 20)}...</span>
             </div>
           </CardContent>
         </Card>
