@@ -1,0 +1,153 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 1080" width="1080" height="1080">
+  <defs>
+    <linearGradient id="bg6" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0f172a"/>
+      <stop offset="100%" stop-color="#1e293b"/>
+    </linearGradient>
+    <filter id="glow6">
+      <feGaussianBlur stdDeviation="3" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <marker id="arrowhead" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="#4ea8de" opacity="0.6"/>
+    </marker>
+    <marker id="arrowhead2" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="#2dd4bf" opacity="0.6"/>
+    </marker>
+    <style>
+      .t6 { font-family: Inter, system-ui, sans-serif; font-weight: 700; fill: #f8fafc; }
+      .s6 { font-family: Inter, system-ui, sans-serif; font-weight: 500; fill: #94a3b8; }
+      .b6 { font-family: Inter, system-ui, sans-serif; font-weight: 400; fill: #cbd5e1; }
+      .c6 { font-family: Inter, system-ui, sans-serif; font-weight: 500; fill: #2dd4bf; }
+      .h6 { font-family: Inter, system-ui, sans-serif; font-weight: 600; fill: #f8fafc; }
+      .label { font-family: 'JetBrains Mono', monospace; font-weight: 500; font-size: 11px; }
+    </style>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1080" height="1080" fill="url(#bg6)"/>
+
+  <!-- Header -->
+  <text x="540" y="75" text-anchor="middle" class="s6" font-size="22">TECHNICAL</text>
+  <text x="540" y="125" text-anchor="middle" class="t6" font-size="48">Architecture at a Glance</text>
+  <text x="540" y="165" text-anchor="middle" class="s6" font-size="20">Full-stack governance infrastructure</text>
+
+  <!-- === LEFT SIDE: Off-chain stack === -->
+  <text x="310" y="220" text-anchor="middle" class="h6" font-size="20">Off-chain Stack</text>
+  <line x1="180" y1="235" x2="440" y2="235" stroke="#334155" stroke-width="1"/>
+
+  <!-- Telegram Bot -->
+  <g transform="translate(310, 310)">
+    <rect x="-120" y="-45" width="240" height="90" rx="14" fill="#1e293b" stroke="#2dd4bf" stroke-width="2" filter="url(#glow6)"/>
+    <text x="0" y="-15" text-anchor="middle" class="h6" font-size="18">🤖 Telegram Bot</text>
+    <text x="0" y="8" text-anchor="middle" class="b6" font-size="13">Grammy framework</text>
+    <text x="0" y="26" text-anchor="middle" class="label" fill="#2dd4bf">Node.js</text>
+  </g>
+
+  <!-- SQLite DB -->
+  <g transform="translate(310, 470)">
+    <rect x="-120" y="-45" width="240" height="90" rx="14" fill="#1e293b" stroke="#4ea8de" stroke-width="2"/>
+    <text x="0" y="-15" text-anchor="middle" class="h6" font-size="18">🗄️ SQLite Database</text>
+    <text x="0" y="8" text-anchor="middle" class="b6" font-size="13">better-sqlite3</text>
+    <text x="0" y="26" text-anchor="middle" class="label" fill="#4ea8de">Proposals, Votes, XP, Bounties</text>
+  </g>
+
+  <!-- REST API -->
+  <g transform="translate(310, 630)">
+    <rect x="-120" y="-45" width="240" height="90" rx="14" fill="#1e293b" stroke="#a78bfa" stroke-width="2"/>
+    <text x="0" y="-15" text-anchor="middle" class="h6" font-size="18">🔌 REST API</text>
+    <text x="0" y="8" text-anchor="middle" class="b6" font-size="13">Express.js</text>
+    <text x="0" y="26" text-anchor="middle" class="label" fill="#a78bfa">Rate limited • CORS • Validated</text>
+  </g>
+
+  <!-- Next.js Frontend -->
+  <g transform="translate(310, 790)">
+    <rect x="-120" y="-45" width="240" height="90" rx="14" fill="#1e293b" stroke="#f59e0b" stroke-width="2"/>
+    <text x="0" y="-15" text-anchor="middle" class="h6" font-size="18">🌐 Web Frontend</text>
+    <text x="0" y="8" text-anchor="middle" class="b6" font-size="13">Next.js + Tailwind</text>
+    <text x="0" y="26" text-anchor="middle" class="label" fill="#f59e0b">Dashboard • Admin • Mint</text>
+  </g>
+
+  <!-- Arrows between off-chain components -->
+  <line x1="310" y1="355" x2="310" y2="425" stroke="#4ea8de" stroke-width="1.5" marker-end="url(#arrowhead)" opacity="0.5"/>
+  <line x1="310" y1="515" x2="310" y2="585" stroke="#a78bfa" stroke-width="1.5" marker-end="url(#arrowhead)" opacity="0.5"/>
+  <line x1="310" y1="675" x2="310" y2="745" stroke="#f59e0b" stroke-width="1.5" marker-end="url(#arrowhead)" opacity="0.5"/>
+
+  <!-- === RIGHT SIDE: On-chain stack === -->
+  <text x="770" y="220" text-anchor="middle" class="h6" font-size="20">On-chain (Radix Ledger)</text>
+  <line x1="640" y1="235" x2="900" y2="235" stroke="#334155" stroke-width="1"/>
+
+  <!-- Radix Gateway API -->
+  <g transform="translate(770, 310)">
+    <rect x="-120" y="-45" width="240" height="90" rx="14" fill="#1e293b" stroke="#00e49f" stroke-width="2" filter="url(#glow6)"/>
+    <text x="0" y="-15" text-anchor="middle" class="h6" font-size="18">🌉 Gateway API</text>
+    <text x="0" y="8" text-anchor="middle" class="b6" font-size="13">Radix Gateway</text>
+    <text x="0" y="26" text-anchor="middle" class="label" fill="#00e49f">State queries • TX submit</text>
+  </g>
+
+  <!-- Badge Manager -->
+  <g transform="translate(770, 470)">
+    <rect x="-120" y="-45" width="240" height="90" rx="14" fill="#1e293b" stroke="#00e49f" stroke-width="2"/>
+    <text x="0" y="-15" text-anchor="middle" class="h6" font-size="18">🛡️ Badge Manager</text>
+    <text x="0" y="8" text-anchor="middle" class="b6" font-size="13">Scrypto Blueprint</text>
+    <text x="0" y="26" text-anchor="middle" class="label" fill="#00e49f">NFT mint • XP update • Tiers</text>
+  </g>
+
+  <!-- Bounty Escrow -->
+  <g transform="translate(770, 630)">
+    <rect x="-120" y="-45" width="240" height="90" rx="14" fill="#1e293b" stroke="#00e49f" stroke-width="2"/>
+    <text x="0" y="-15" text-anchor="middle" class="h6" font-size="18">💰 Bounty Escrow</text>
+    <text x="0" y="8" text-anchor="middle" class="b6" font-size="13">Scrypto Blueprint</text>
+    <text x="0" y="26" text-anchor="middle" class="label" fill="#00e49f">Create • Verify • Release</text>
+  </g>
+
+  <!-- CV2 Consultation -->
+  <g transform="translate(770, 790)">
+    <rect x="-120" y="-45" width="240" height="90" rx="14" fill="#1e293b" stroke="#00e49f" stroke-width="2" stroke-dasharray="6 3"/>
+    <text x="0" y="-15" text-anchor="middle" class="h6" font-size="18">📊 CV2 Consultation</text>
+    <text x="0" y="8" text-anchor="middle" class="b6" font-size="13">On-chain governance</text>
+    <text x="0" y="26" text-anchor="middle" class="label" fill="#00e49f">Proposals • Voting • Results</text>
+  </g>
+
+  <!-- Arrows between on-chain components -->
+  <line x1="770" y1="355" x2="770" y2="425" stroke="#00e49f" stroke-width="1.5" marker-end="url(#arrowhead2)" opacity="0.5"/>
+  <line x1="770" y1="515" x2="770" y2="585" stroke="#00e49f" stroke-width="1.5" marker-end="url(#arrowhead2)" opacity="0.5"/>
+  <line x1="770" y1="675" x2="770" y2="745" stroke="#00e49f" stroke-width="1.5" marker-end="url(#arrowhead2)" opacity="0.5"/>
+
+  <!-- Cross-stack connections -->
+  <!-- Bot ↔ Gateway -->
+  <line x1="430" y1="310" x2="650" y2="310" stroke="#2dd4bf" stroke-width="1.5" stroke-dasharray="4 4" marker-end="url(#arrowhead2)" opacity="0.4"/>
+  <text x="540" y="300" text-anchor="middle" class="label" fill="#94a3b8">TX manifests</text>
+
+  <!-- API ↔ Gateway -->
+  <line x1="430" y1="630" x2="650" y2="470" stroke="#a78bfa" stroke-width="1" stroke-dasharray="4 4" opacity="0.3"/>
+  <text x="530" y="540" text-anchor="middle" class="label" fill="#94a3b8">State queries</text>
+
+  <!-- Frontend ↔ Wallet (Radix Wallet) -->
+  <line x1="430" y1="790" x2="650" y2="630" stroke="#f59e0b" stroke-width="1" stroke-dasharray="4 4" opacity="0.3"/>
+  <text x="540" y="720" text-anchor="middle" class="label" fill="#94a3b8">Radix Wallet</text>
+
+  <!-- Tech stack callout boxes -->
+  <rect x="80" y="910" width="200" height="55" rx="10" fill="#1e293b" stroke="#2dd4bf" stroke-width="1"/>
+  <text x="180" y="935" text-anchor="middle" class="c6" font-size="13">🟢 Node.js Runtime</text>
+  <text x="180" y="952" text-anchor="middle" class="b6" font-size="11">Grammy • Express • SQLite</text>
+
+  <rect x="310" y="910" width="200" height="55" rx="10" fill="#1e293b" stroke="#f59e0b" stroke-width="1"/>
+  <text x="410" y="935" text-anchor="middle" class="c6" font-size="13">⚛️ Next.js Frontend</text>
+  <text x="410" y="952" text-anchor="middle" class="b6" font-size="11">React • Tailwind • shadcn/ui</text>
+
+  <rect x="540" y="910" width="200" height="55" rx="10" fill="#1e293b" stroke="#00e49f" stroke-width="1"/>
+  <text x="640" y="935" text-anchor="middle" class="c6" font-size="13">⚙️ Scrypto Contracts</text>
+  <text x="640" y="952" text-anchor="middle" class="b6" font-size="11">Rust • Radix Engine v2</text>
+
+  <rect x="770" y="910" width="220" height="55" rx="10" fill="#1e293b" stroke="#4ea8de" stroke-width="1"/>
+  <text x="880" y="935" text-anchor="middle" class="c6" font-size="13">📖 Open Source (MIT)</text>
+  <text x="880" y="952" text-anchor="middle" class="b6" font-size="11">github.com/bigdevxrd</text>
+
+  <!-- Footer -->
+  <text x="540" y="1040" text-anchor="middle" class="s6" font-size="16">radix-guild.org — Built for the Community, by the Community</text>
+
+  <!-- Corner decorations -->
+  <path d="M0 0 L50 0 L0 50 Z" fill="#2dd4bf" opacity="0.08"/>
+  <path d="M1080 1080 L1030 1080 L1080 1030 Z" fill="#00e49f" opacity="0.08"/>
+</svg>

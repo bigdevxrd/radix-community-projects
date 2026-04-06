@@ -1,0 +1,172 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 1080" width="1080" height="1080">
+  <defs>
+    <linearGradient id="bg5" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0f172a"/>
+      <stop offset="100%" stop-color="#1e293b"/>
+    </linearGradient>
+    <filter id="glow5">
+      <feGaussianBlur stdDeviation="4" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <style>
+      .t5 { font-family: Inter, system-ui, sans-serif; font-weight: 700; fill: #f8fafc; }
+      .s5 { font-family: Inter, system-ui, sans-serif; font-weight: 500; fill: #94a3b8; }
+      .b5 { font-family: Inter, system-ui, sans-serif; font-weight: 400; fill: #cbd5e1; }
+      .c5 { font-family: Inter, system-ui, sans-serif; font-weight: 500; fill: #2dd4bf; }
+      .h5 { font-family: Inter, system-ui, sans-serif; font-weight: 600; fill: #f8fafc; }
+      .mono5 { font-family: 'JetBrains Mono', monospace; font-weight: 500; }
+    </style>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1080" height="1080" fill="url(#bg5)"/>
+
+  <!-- Header -->
+  <text x="540" y="75" text-anchor="middle" class="s5" font-size="22">CHARTER</text>
+  <text x="540" y="125" text-anchor="middle" class="t5" font-size="48">Charter Decision Map</text>
+  <text x="540" y="165" text-anchor="middle" class="s5" font-size="20">32 governance parameters across 3 phases</text>
+
+  <!-- Phase 1: Foundation -->
+  <g transform="translate(540, 260)">
+    <rect x="-440" y="-50" width="880" height="200" rx="20" fill="#1e293b" stroke="#2dd4bf" stroke-width="2"/>
+    <text x="-410" y="-15" class="h5" font-size="24">Phase 1 — Foundation</text>
+    <text x="-410" y="12" class="s5" font-size="16">Core decisions that define the governance framework</text>
+
+    <!-- Decision nodes -->
+    <g transform="translate(-360, 70)">
+      <rect x="0" y="-20" width="130" height="40" rx="8" fill="#0f172a" stroke="#2dd4bf" stroke-width="1.5"/>
+      <text x="65" y="-1" text-anchor="middle" class="mono5" font-size="11" fill="#2dd4bf">voting.method</text>
+    </g>
+    <g transform="translate(-210, 70)">
+      <rect x="0" y="-20" width="130" height="40" rx="8" fill="#0f172a" stroke="#2dd4bf" stroke-width="1.5"/>
+      <text x="65" y="-1" text-anchor="middle" class="mono5" font-size="11" fill="#2dd4bf">voting.quorum</text>
+    </g>
+    <g transform="translate(-60, 70)">
+      <rect x="0" y="-20" width="150" height="40" rx="8" fill="#0f172a" stroke="#2dd4bf" stroke-width="1.5"/>
+      <text x="75" y="-1" text-anchor="middle" class="mono5" font-size="11" fill="#2dd4bf">membership.open</text>
+    </g>
+    <g transform="translate(110, 70)">
+      <rect x="0" y="-20" width="140" height="40" rx="8" fill="#0f172a" stroke="#2dd4bf" stroke-width="1.5"/>
+      <text x="70" y="-1" text-anchor="middle" class="mono5" font-size="11" fill="#2dd4bf">charter.amend</text>
+    </g>
+    <g transform="translate(270, 70)">
+      <rect x="0" y="-20" width="140" height="40" rx="8" fill="#0f172a" stroke="#2dd4bf" stroke-width="1.5"/>
+      <text x="70" y="-1" text-anchor="middle" class="mono5" font-size="11" fill="#2dd4bf">roles.admin</text>
+    </g>
+
+    <!-- Phase badge -->
+    <rect x="320" y="-40" width="100" height="36" rx="18" fill="#2dd4bf" fill-opacity="0.2"/>
+    <text x="370" y="-16" text-anchor="middle" class="mono5" font-size="14" fill="#2dd4bf">6 params</text>
+  </g>
+
+  <!-- Arrow between phases -->
+  <polygon points="540,430 530,445 550,445" fill="#2dd4bf" opacity="0.4"/>
+  <line x1="540" y1="415" x2="540" y2="445" stroke="#2dd4bf" stroke-width="1.5" opacity="0.4"/>
+
+  <!-- Phase 2: Configuration -->
+  <g transform="translate(540, 550)">
+    <rect x="-440" y="-70" width="880" height="280" rx="20" fill="#1e293b" stroke="#4ea8de" stroke-width="2"/>
+    <text x="-410" y="-35" class="h5" font-size="24">Phase 2 — Configuration</text>
+    <text x="-410" y="-8" class="s5" font-size="16">Detailed rules and thresholds (depends on Phase 1)</text>
+
+    <!-- Decision nodes - Row 1 -->
+    <g transform="translate(-380, 40)">
+      <rect x="0" y="-18" width="145" height="36" rx="8" fill="#0f172a" stroke="#4ea8de" stroke-width="1.5"/>
+      <text x="72" y="1" text-anchor="middle" class="mono5" font-size="10" fill="#4ea8de">voting.duration</text>
+    </g>
+    <g transform="translate(-215, 40)">
+      <rect x="0" y="-18" width="145" height="36" rx="8" fill="#0f172a" stroke="#4ea8de" stroke-width="1.5"/>
+      <text x="72" y="1" text-anchor="middle" class="mono5" font-size="10" fill="#4ea8de">voting.threshold</text>
+    </g>
+    <g transform="translate(-50, 40)">
+      <rect x="0" y="-18" width="155" height="36" rx="8" fill="#0f172a" stroke="#4ea8de" stroke-width="1.5"/>
+      <text x="77" y="1" text-anchor="middle" class="mono5" font-size="10" fill="#4ea8de">xp.vote_reward</text>
+    </g>
+    <g transform="translate(125, 40)">
+      <rect x="0" y="-18" width="145" height="36" rx="8" fill="#0f172a" stroke="#4ea8de" stroke-width="1.5"/>
+      <text x="72" y="1" text-anchor="middle" class="mono5" font-size="10" fill="#4ea8de">xp.tier_thresholds</text>
+    </g>
+    <g transform="translate(290, 40)">
+      <rect x="0" y="-18" width="125" height="36" rx="8" fill="#0f172a" stroke="#4ea8de" stroke-width="1.5"/>
+      <text x="62" y="1" text-anchor="middle" class="mono5" font-size="10" fill="#4ea8de">xp.weights</text>
+    </g>
+
+    <!-- Decision nodes - Row 2 -->
+    <g transform="translate(-380, 90)">
+      <rect x="0" y="-18" width="145" height="36" rx="8" fill="#0f172a" stroke="#4ea8de" stroke-width="1.5"/>
+      <text x="72" y="1" text-anchor="middle" class="mono5" font-size="10" fill="#4ea8de">treasury.limit</text>
+    </g>
+    <g transform="translate(-215, 90)">
+      <rect x="0" y="-18" width="145" height="36" rx="8" fill="#0f172a" stroke="#4ea8de" stroke-width="1.5"/>
+      <text x="72" y="1" text-anchor="middle" class="mono5" font-size="10" fill="#4ea8de">treasury.dispute</text>
+    </g>
+    <g transform="translate(-50, 90)">
+      <rect x="0" y="-18" width="155" height="36" rx="8" fill="#0f172a" stroke="#4ea8de" stroke-width="1.5"/>
+      <text x="77" y="1" text-anchor="middle" class="mono5" font-size="10" fill="#4ea8de">badge.metadata</text>
+    </g>
+    <g transform="translate(125, 90)">
+      <rect x="0" y="-18" width="145" height="36" rx="8" fill="#0f172a" stroke="#4ea8de" stroke-width="1.5"/>
+      <text x="72" y="1" text-anchor="middle" class="mono5" font-size="10" fill="#4ea8de">game.rewards</text>
+    </g>
+    <g transform="translate(290, 90)">
+      <rect x="0" y="-18" width="125" height="36" rx="8" fill="#0f172a" stroke="#4ea8de" stroke-width="1.5"/>
+      <text x="62" y="1" text-anchor="middle" class="mono5" font-size="10" fill="#4ea8de">+ 10 more</text>
+    </g>
+
+    <!-- Row 3 - dependency indicators -->
+    <g transform="translate(-380, 140)">
+      <text x="0" y="0" class="s5" font-size="12">↳ depends on voting.method</text>
+    </g>
+    <g transform="translate(50, 140)">
+      <text x="0" y="0" class="s5" font-size="12">↳ depends on membership.open</text>
+    </g>
+
+    <!-- Phase badge -->
+    <rect x="320" y="-58" width="100" height="36" rx="18" fill="#4ea8de" fill-opacity="0.2"/>
+    <text x="370" y="-34" text-anchor="middle" class="mono5" font-size="14" fill="#4ea8de">20 params</text>
+  </g>
+
+  <!-- Arrow between phases -->
+  <polygon points="540,760 530,775 550,775" fill="#4ea8de" opacity="0.4"/>
+  <line x1="540" y1="745" x2="540" y2="775" stroke="#4ea8de" stroke-width="1.5" opacity="0.4"/>
+
+  <!-- Phase 3: Operations -->
+  <g transform="translate(540, 870)">
+    <rect x="-440" y="-50" width="880" height="140" rx="20" fill="#1e293b" stroke="#00e49f" stroke-width="2"/>
+    <text x="-410" y="-15" class="h5" font-size="24">Phase 3 — Operations</text>
+    <text x="-410" y="12" class="s5" font-size="16">Operational rules (depends on Phase 2)</text>
+
+    <!-- Decision nodes -->
+    <g transform="translate(-360, 55)">
+      <rect x="0" y="-18" width="145" height="36" rx="8" fill="#0f172a" stroke="#00e49f" stroke-width="1.5"/>
+      <text x="72" y="1" text-anchor="middle" class="mono5" font-size="10" fill="#00e49f">ops.auto_release</text>
+    </g>
+    <g transform="translate(-195, 55)">
+      <rect x="0" y="-18" width="145" height="36" rx="8" fill="#0f172a" stroke="#00e49f" stroke-width="1.5"/>
+      <text x="72" y="1" text-anchor="middle" class="mono5" font-size="10" fill="#00e49f">ops.split_allowed</text>
+    </g>
+    <g transform="translate(-30, 55)">
+      <rect x="0" y="-18" width="145" height="36" rx="8" fill="#0f172a" stroke="#00e49f" stroke-width="1.5"/>
+      <text x="72" y="1" text-anchor="middle" class="mono5" font-size="10" fill="#00e49f">ops.cv2_enabled</text>
+    </g>
+    <g transform="translate(135, 55)">
+      <rect x="0" y="-18" width="130" height="36" rx="8" fill="#0f172a" stroke="#00e49f" stroke-width="1.5"/>
+      <text x="65" y="1" text-anchor="middle" class="mono5" font-size="10" fill="#00e49f">ops.game_fee</text>
+    </g>
+    <g transform="translate(285, 55)">
+      <rect x="0" y="-18" width="120" height="36" rx="8" fill="#0f172a" stroke="#00e49f" stroke-width="1.5"/>
+      <text x="60" y="1" text-anchor="middle" class="mono5" font-size="10" fill="#00e49f">+ 2 more</text>
+    </g>
+
+    <!-- Phase badge -->
+    <rect x="320" y="-40" width="100" height="36" rx="18" fill="#00e49f" fill-opacity="0.2"/>
+    <text x="370" y="-16" text-anchor="middle" class="mono5" font-size="14" fill="#00e49f">6 params</text>
+  </g>
+
+  <!-- Footer -->
+  <text x="540" y="1050" text-anchor="middle" class="s5" font-size="16">radix-guild.org — Governance Built by the Community</text>
+
+  <!-- Corner decorations -->
+  <path d="M0 0 L50 0 L0 50 Z" fill="#00e49f" opacity="0.08"/>
+  <path d="M1080 1080 L1030 1080 L1080 1030 Z" fill="#00e49f" opacity="0.08"/>
+</svg>

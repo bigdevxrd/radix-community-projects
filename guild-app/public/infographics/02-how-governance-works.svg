@@ -1,0 +1,106 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 1080" width="1080" height="1080">
+  <defs>
+    <linearGradient id="bg2" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0f172a"/>
+      <stop offset="100%" stop-color="#1e293b"/>
+    </linearGradient>
+    <filter id="glow2">
+      <feGaussianBlur stdDeviation="4" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <style>
+      .t2 { font-family: Inter, system-ui, sans-serif; font-weight: 700; fill: #f8fafc; }
+      .s2 { font-family: Inter, system-ui, sans-serif; font-weight: 500; fill: #94a3b8; }
+      .b2 { font-family: Inter, system-ui, sans-serif; font-weight: 400; fill: #cbd5e1; }
+      .a2 { fill: #2dd4bf; }
+      .step-title { font-family: Inter, system-ui, sans-serif; font-weight: 600; fill: #f8fafc; }
+      .callout { font-family: Inter, system-ui, sans-serif; font-weight: 500; fill: #2dd4bf; }
+    </style>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1080" height="1080" fill="url(#bg2)"/>
+
+  <!-- Header -->
+  <text x="540" y="80" text-anchor="middle" class="s2" font-size="22">GOVERNANCE</text>
+  <text x="540" y="130" text-anchor="middle" class="t2" font-size="48">How Governance Works</text>
+  <text x="540" y="170" text-anchor="middle" class="s2" font-size="20">From idea to on-chain decision</text>
+
+  <!-- Timeline connector line -->
+  <line x1="540" y1="220" x2="540" y2="840" stroke="#2dd4bf" stroke-width="2" opacity="0.3"/>
+
+  <!-- Step 1: Create Proposal -->
+  <g transform="translate(540, 280)">
+    <circle cx="0" cy="0" r="32" fill="#1e293b" stroke="#2dd4bf" stroke-width="2" filter="url(#glow2)"/>
+    <text x="0" y="7" text-anchor="middle" font-family="Inter, system-ui" font-weight="700" font-size="20" fill="#2dd4bf">1</text>
+    <rect x="60" y="-35" width="360" height="70" rx="12" fill="#1e293b" stroke="#334155" stroke-width="1"/>
+    <text x="80" y="-5" class="step-title" font-size="20">Create Proposal</text>
+    <text x="80" y="20" class="b2" font-size="15">Any badge holder can submit a proposal</text>
+    <!-- Icon: document -->
+    <rect x="-80" y="-35" width="360" height="70" rx="12" fill="none" opacity="0"/>
+    <rect x="-410" y="-35" width="330" height="70" rx="12" fill="#1e293b" stroke="#334155" stroke-width="1" opacity="0.6"/>
+    <text x="-395" y="-5" class="callout" font-size="14">💡 /propose in Telegram</text>
+    <text x="-395" y="18" class="b2" font-size="13">Title + description + options</text>
+  </g>
+
+  <!-- Step 2: Community Discussion -->
+  <g transform="translate(540, 400)">
+    <circle cx="0" cy="0" r="32" fill="#1e293b" stroke="#4ea8de" stroke-width="2" filter="url(#glow2)"/>
+    <text x="0" y="7" text-anchor="middle" font-family="Inter, system-ui" font-weight="700" font-size="20" fill="#4ea8de">2</text>
+    <rect x="-420" y="-35" width="360" height="70" rx="12" fill="#1e293b" stroke="#334155" stroke-width="1"/>
+    <text x="-400" y="-5" class="step-title" font-size="20">Community Discussion</text>
+    <text x="-400" y="20" class="b2" font-size="15">Members discuss and refine the idea</text>
+    <rect x="60" y="-35" width="330" height="70" rx="12" fill="#1e293b" stroke="#334155" stroke-width="1" opacity="0.6"/>
+    <text x="80" y="-5" class="callout" font-size="14">💬 Open forum in group chat</text>
+    <text x="80" y="18" class="b2" font-size="13">Amendments can be proposed</text>
+  </g>
+
+  <!-- Step 3: Voting Period -->
+  <g transform="translate(540, 520)">
+    <circle cx="0" cy="0" r="32" fill="#1e293b" stroke="#a78bfa" stroke-width="2" filter="url(#glow2)"/>
+    <text x="0" y="7" text-anchor="middle" font-family="Inter, system-ui" font-weight="700" font-size="20" fill="#a78bfa">3</text>
+    <rect x="60" y="-35" width="360" height="70" rx="12" fill="#1e293b" stroke="#334155" stroke-width="1"/>
+    <text x="80" y="-5" class="step-title" font-size="20">Voting Period (72h)</text>
+    <text x="80" y="20" class="b2" font-size="15">Badge holders cast weighted votes</text>
+    <rect x="-410" y="-35" width="330" height="70" rx="12" fill="#1e293b" stroke="#334155" stroke-width="1" opacity="0.6"/>
+    <text x="-395" y="-5" class="callout" font-size="14">🗳️ Free to vote — no XRD needed</text>
+    <text x="-395" y="18" class="b2" font-size="13">Weight based on badge tier</text>
+  </g>
+
+  <!-- Step 4: Quorum Check -->
+  <g transform="translate(540, 640)">
+    <circle cx="0" cy="0" r="32" fill="#1e293b" stroke="#f59e0b" stroke-width="2" filter="url(#glow2)"/>
+    <text x="0" y="7" text-anchor="middle" font-family="Inter, system-ui" font-weight="700" font-size="20" fill="#f59e0b">4</text>
+    <rect x="-420" y="-35" width="360" height="70" rx="12" fill="#1e293b" stroke="#334155" stroke-width="1"/>
+    <text x="-400" y="-5" class="step-title" font-size="20">Quorum Check</text>
+    <text x="-400" y="20" class="b2" font-size="15">Minimum participation required</text>
+    <rect x="60" y="-35" width="330" height="70" rx="12" fill="#1e293b" stroke="#334155" stroke-width="1" opacity="0.6"/>
+    <text x="80" y="-5" class="callout" font-size="14">⚖️ Ensures legitimacy</text>
+    <text x="80" y="18" class="b2" font-size="13">Configurable via charter</text>
+  </g>
+
+  <!-- Step 5: Result -->
+  <g transform="translate(540, 760)">
+    <circle cx="0" cy="0" r="32" fill="#1e293b" stroke="#00e49f" stroke-width="2" filter="url(#glow2)"/>
+    <text x="0" y="7" text-anchor="middle" font-family="Inter, system-ui" font-weight="700" font-size="20" fill="#00e49f">5</text>
+    <rect x="60" y="-45" width="360" height="90" rx="12" fill="#1e293b" stroke="#334155" stroke-width="1"/>
+    <text x="80" y="-15" class="step-title" font-size="20">Result</text>
+    <text x="80" y="10" class="b2" font-size="15">✅ Passed — enacted on-chain</text>
+    <text x="80" y="30" class="b2" font-size="15">❌ Failed — archived with rationale</text>
+    <rect x="-410" y="-35" width="330" height="70" rx="12" fill="#1e293b" stroke="#334155" stroke-width="1" opacity="0.6"/>
+    <text x="-395" y="-5" class="callout" font-size="14">🎯 +XP for every voter</text>
+    <text x="-395" y="18" class="b2" font-size="13">Outcome recorded on Radix ledger</text>
+  </g>
+
+  <!-- Key callout box -->
+  <rect x="140" y="890" width="800" height="80" rx="16" fill="#1e293b" stroke="#2dd4bf" stroke-width="1.5"/>
+  <text x="540" y="925" text-anchor="middle" class="callout" font-size="18">🔑 Badge required to vote • XP earned per vote • Results recorded on-chain</text>
+  <text x="540" y="952" text-anchor="middle" class="s2" font-size="16">Every vote strengthens your reputation and shapes the ecosystem</text>
+
+  <!-- Footer -->
+  <text x="540" y="1040" text-anchor="middle" class="s2" font-size="16">radix-guild.org — Governance for Everyone</text>
+
+  <!-- Corner decorations -->
+  <path d="M0 0 L50 0 L0 50 Z" fill="#2dd4bf" opacity="0.08"/>
+  <path d="M1080 1080 L1030 1080 L1080 1030 Z" fill="#2dd4bf" opacity="0.08"/>
+</svg>

@@ -1,0 +1,89 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 1080" width="1080" height="1080">
+  <defs>
+    <linearGradient id="bg1" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0f172a"/>
+      <stop offset="100%" stop-color="#1e293b"/>
+    </linearGradient>
+    <linearGradient id="cyan" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#2dd4bf"/>
+      <stop offset="100%" stop-color="#00e49f"/>
+    </linearGradient>
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="6" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <style>
+      .title { font-family: Inter, system-ui, sans-serif; font-weight: 700; fill: #f8fafc; }
+      .subtitle { font-family: Inter, system-ui, sans-serif; font-weight: 500; fill: #94a3b8; }
+      .body { font-family: Inter, system-ui, sans-serif; font-weight: 400; fill: #cbd5e1; }
+      .accent { fill: #2dd4bf; }
+      .pillar-title { font-family: Inter, system-ui, sans-serif; font-weight: 600; fill: #f8fafc; }
+    </style>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1080" height="1080" fill="url(#bg1)"/>
+
+  <!-- Subtle grid pattern -->
+  <g opacity="0.03">
+    <line x1="0" y1="0" x2="1080" y2="1080" stroke="#2dd4bf" stroke-width="1"/>
+    <line x1="1080" y1="0" x2="0" y2="1080" stroke="#2dd4bf" stroke-width="1"/>
+    <circle cx="540" cy="540" r="400" fill="none" stroke="#2dd4bf" stroke-width="0.5"/>
+    <circle cx="540" cy="540" r="300" fill="none" stroke="#2dd4bf" stroke-width="0.5"/>
+  </g>
+
+  <!-- Header -->
+  <text x="540" y="100" text-anchor="middle" class="subtitle" font-size="24">INTRODUCING</text>
+  <text x="540" y="160" text-anchor="middle" class="title" font-size="56">What is Radix Guild?</text>
+  <line x1="440" y1="185" x2="640" y2="185" stroke="#2dd4bf" stroke-width="2" opacity="0.6"/>
+
+  <!-- Center hub: Shield logo -->
+  <circle cx="540" cy="440" r="100" fill="#0f172a" stroke="#2dd4bf" stroke-width="3" filter="url(#glow)"/>
+  <path d="M540 370 L590 395 L590 440 C590 470 565 490 540 500 C515 490 490 470 490 440 L490 395 Z" fill="none" stroke="#2dd4bf" stroke-width="2.5" stroke-linejoin="round"/>
+  <path d="M555 410 A18 18 0 1 0 555 450 L555 430 L545 430" fill="none" stroke="#2dd4bf" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- Spoke lines -->
+  <line x1="440" y1="400" x2="200" y2="320" stroke="#2dd4bf" stroke-width="1.5" opacity="0.4"/>
+  <line x1="640" y1="400" x2="880" y2="320" stroke="#4ea8de" stroke-width="1.5" opacity="0.4"/>
+  <line x1="540" y1="540" x2="540" y2="700" stroke="#00e49f" stroke-width="1.5" opacity="0.4"/>
+
+  <!-- Pillar 1: Governance (top-left) -->
+  <g transform="translate(200, 240)">
+    <rect x="-120" y="-40" width="240" height="160" rx="16" fill="#1e293b" stroke="#2dd4bf" stroke-width="1.5" opacity="0.9"/>
+    <!-- Vote icon -->
+    <rect x="-20" y="-20" width="40" height="30" rx="4" fill="none" stroke="#2dd4bf" stroke-width="2"/>
+    <line x1="0" y1="10" x2="0" y2="30" stroke="#2dd4bf" stroke-width="2"/>
+    <text x="0" y="55" text-anchor="middle" class="pillar-title" font-size="22">Governance</text>
+    <text x="0" y="82" text-anchor="middle" class="body" font-size="15">Vote on proposals that</text>
+    <text x="0" y="100" text-anchor="middle" class="body" font-size="15">shape the community</text>
+  </g>
+
+  <!-- Pillar 2: Bounties (top-right) -->
+  <g transform="translate(880, 240)">
+    <rect x="-120" y="-40" width="240" height="160" rx="16" fill="#1e293b" stroke="#4ea8de" stroke-width="1.5" opacity="0.9"/>
+    <!-- XRD coin icon -->
+    <circle cx="0" cy="0" r="20" fill="none" stroke="#4ea8de" stroke-width="2"/>
+    <text x="0" y="7" text-anchor="middle" font-family="Inter, system-ui" font-weight="700" font-size="16" fill="#4ea8de">X</text>
+    <text x="0" y="55" text-anchor="middle" class="pillar-title" font-size="22">Bounties</text>
+    <text x="0" y="82" text-anchor="middle" class="body" font-size="15">Earn XRD for code,</text>
+    <text x="0" y="100" text-anchor="middle" class="body" font-size="15">design &amp; contributions</text>
+  </g>
+
+  <!-- Pillar 3: Badges (bottom-center) -->
+  <g transform="translate(540, 760)">
+    <rect x="-120" y="-40" width="240" height="160" rx="16" fill="#1e293b" stroke="#00e49f" stroke-width="1.5" opacity="0.9"/>
+    <!-- Badge/shield icon -->
+    <path d="M0 -25 L20 -12 L20 5 C20 18 10 25 0 30 C-10 25 -20 18 -20 5 L-20 -12 Z" fill="none" stroke="#00e49f" stroke-width="2" stroke-linejoin="round"/>
+    <text x="0" y="55" text-anchor="middle" class="pillar-title" font-size="22">Badges</text>
+    <text x="0" y="82" text-anchor="middle" class="body" font-size="15">On-chain NFT identity</text>
+    <text x="0" y="100" text-anchor="middle" class="body" font-size="15">&amp; reputation system</text>
+  </g>
+
+  <!-- Footer tagline -->
+  <text x="540" y="980" text-anchor="middle" class="subtitle" font-size="20">Community-built governance infrastructure for the Radix ecosystem</text>
+  <text x="540" y="1020" text-anchor="middle" class="accent" font-size="18">radix-guild.org • Open Source (MIT)</text>
+
+  <!-- Corner decoration -->
+  <path d="M0 0 L60 0 L0 60 Z" fill="#2dd4bf" opacity="0.1"/>
+  <path d="M1080 1080 L1020 1080 L1080 1020 Z" fill="#2dd4bf" opacity="0.1"/>
+</svg>

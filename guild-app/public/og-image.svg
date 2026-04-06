@@ -1,0 +1,67 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" width="1200" height="630">
+  <defs>
+    <linearGradient id="bgog" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0f172a"/>
+      <stop offset="50%" stop-color="#1e293b"/>
+      <stop offset="100%" stop-color="#0f172a"/>
+    </linearGradient>
+    <linearGradient id="accentog" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#2dd4bf"/>
+      <stop offset="100%" stop-color="#00e49f"/>
+    </linearGradient>
+    <filter id="glowog">
+      <feGaussianBlur stdDeviation="8" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <style>
+      .tog { font-family: Inter, system-ui, sans-serif; font-weight: 700; fill: #f8fafc; }
+      .sog { font-family: Inter, system-ui, sans-serif; font-weight: 500; fill: #94a3b8; }
+      .bog { font-family: Inter, system-ui, sans-serif; font-weight: 400; fill: #cbd5e1; }
+      .aog { fill: #2dd4bf; }
+    </style>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1200" height="630" fill="url(#bgog)"/>
+
+  <!-- Subtle background elements -->
+  <circle cx="900" cy="315" r="250" fill="none" stroke="#2dd4bf" stroke-width="0.5" opacity="0.05"/>
+  <circle cx="900" cy="315" r="200" fill="none" stroke="#2dd4bf" stroke-width="0.5" opacity="0.08"/>
+  <circle cx="900" cy="315" r="150" fill="none" stroke="#2dd4bf" stroke-width="0.5" opacity="0.1"/>
+
+  <!-- Shield logo (right side) -->
+  <g transform="translate(900, 315)" filter="url(#glowog)">
+    <path d="M0 -80 L60 -50 L60 10 C60 55 30 85 0 100 C-30 85 -60 55 -60 10 L-60 -50 Z" fill="none" stroke="url(#accentog)" stroke-width="3" stroke-linejoin="round"/>
+    <path d="M15 -30 A25 25 0 1 0 15 20 L15 -5 L5 -5" fill="none" stroke="url(#accentog)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+
+  <!-- Main text (left side) -->
+  <text x="80" y="200" class="tog" font-size="72">Radix Guild</text>
+  <text x="80" y="270" class="sog" font-size="28">Community-built governance infrastructure</text>
+  <text x="80" y="310" class="sog" font-size="28">for the Radix ecosystem</text>
+
+  <!-- Three pillars -->
+  <g transform="translate(80, 370)">
+    <rect x="0" y="0" width="180" height="50" rx="10" fill="#1e293b" stroke="#2dd4bf" stroke-width="1.5"/>
+    <text x="90" y="30" text-anchor="middle" class="aog" font-size="16" font-family="Inter, system-ui" font-weight="600">🗳️ Governance</text>
+  </g>
+  <g transform="translate(210, 370)">
+    <rect x="0" y="0" width="180" height="50" rx="10" fill="#1e293b" stroke="#4ea8de" stroke-width="1.5"/>
+    <text x="90" y="30" text-anchor="middle" font-size="16" font-family="Inter, system-ui" font-weight="600" fill="#4ea8de">💰 Bounties</text>
+  </g>
+  <g transform="translate(420, 370)">
+    <rect x="0" y="0" width="180" height="50" rx="10" fill="#1e293b" stroke="#00e49f" stroke-width="1.5"/>
+    <text x="90" y="30" text-anchor="middle" font-size="16" font-family="Inter, system-ui" font-weight="600" fill="#00e49f">🛡️ Badges</text>
+  </g>
+
+  <!-- URL -->
+  <text x="80" y="500" class="aog" font-size="20" font-family="Inter, system-ui" font-weight="500">radix-guild.org</text>
+  <text x="80" y="530" class="sog" font-size="16">Open Source (MIT) • Built on Radix</text>
+
+  <!-- Corner decorations -->
+  <path d="M0 0 L80 0 L0 80 Z" fill="#2dd4bf" opacity="0.06"/>
+  <path d="M1200 630 L1120 630 L1200 550 Z" fill="#2dd4bf" opacity="0.06"/>
+
+  <!-- Bottom accent line -->
+  <rect x="0" y="620" width="1200" height="10" fill="url(#accentog)" opacity="0.3"/>
+</svg>
