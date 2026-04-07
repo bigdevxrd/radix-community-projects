@@ -4,28 +4,25 @@
 
 ---
 
-Hey — I've built something for the Radix community and need a few OGs to test it before public launch.
+Hey — I've built governance tools for the Radix community and need your help testing before public launch.
 
-**Radix Governance** — a system for making community decisions. Free badge, vote from Telegram, earn XP with dice rolls. 20 governance proposals already live.
+**Radix Guild** — free badge, vote from Telegram, earn XP with dice rolls. 21 governance proposals, 6 foundation votes closing soon.
 
-3 minutes to try it:
+5 minutes to try it:
 1. Open @rad_gov
 2. `/register account_rdx1...` (your wallet address)
 3. Mint free badge: https://radixguild.com/mint
 4. `/proposals` to see what's being voted on
-5. Vote → earn XP → roll dice → level up
+5. Vote on the 6 foundation decisions — they shape the DAO
 
-The DAO Charter has 32 decisions the community needs to make. 6 are live now — the rest unlock based on what passes. It's a decision tree that builds the DAO from the ground up.
+The Charter has 32 decisions. 6 are live now — they unlock the rest. It's a decision tree that builds the DAO from the ground up.
 
 No XRD needed. Everything is free. Open source (MIT): github.com/bigdevxrd/radix-community-projects
 
-What I need from you:
-- Did the mint work?
-- Could you vote?
-- Does the decision tree on /proposals make sense?
-- What's broken or confusing?
+Questions or issues? Type `/feedback <your message>` in the bot — it creates a ticket.
 
-Thanks!
+Dashboard: https://radixguild.com
+Docs: https://radixguild.com/docs
 
 ---
 
@@ -33,25 +30,28 @@ Thanks!
 
 ---
 
-Radix Governance — beta testing
+**Radix Guild** — community governance is live
 
 Free badge. Vote from Telegram. Earn XP with dice rolls.
 
-20 proposals live — 6 foundation votes need your input NOW:
-• Adopt the Charter?
-• How many RAC seats?
-• Default voting period?
-• Approval thresholds?
+6 foundation votes need your input NOW:
+- Adopt the Charter?
+- How many RAC seats?
+- Default voting period?
+- Approval thresholds?
 
-These 6 decisions unlock 14 more. The DAO builds itself.
+These 6 decisions unlock 26 more. The DAO builds itself.
 
 Get started:
-1. @rad_gov → `/register` your wallet
+1. @rad_gov -> `/register` your wallet
 2. Mint badge (free): https://radixguild.com/mint
-3. `/proposals` → vote
+3. `/proposals` -> vote
+
+New to Radix? Start here: https://radixguild.com/docs
 
 Dashboard: https://radixguild.com
 GitHub: github.com/bigdevxrd/radix-community-projects
+Issues? `/feedback <message>` in the bot
 
 No XRD needed. Open source. Built by Big Dev.
 
@@ -61,54 +61,55 @@ No XRD needed. Open source. Built by Big Dev.
 
 ---
 
-**Title:** Radix Governance — Beta Testing (Community DAO Tooling)
+**Title:** Radix Guild — Community Governance Tools (Beta)
 
 **The problem:** The Radix community has no framework for making decisions together. Ideas float in Telegram and nothing gets done.
 
 **The solution:**
 
 ```
-💡 Idea → 🗳️ Vote → ✅ Decision → 💰 Fund → 🔨 Build → ✔️ Verify → 🎁 Reward
+Idea -> Vote -> Decision -> Fund -> Build -> Verify -> Reward
 ```
 
-**What's live:**
+**What's live at radixguild.com:**
 - Free on-chain badge (Scrypto v4, username-based NFT IDs)
-- Telegram bot with 30+ commands (propose, vote, bounty, game)
-- 20 governance proposals — 6 foundation votes live NOW
+- Telegram bot with 22+ commands (propose, vote, bounty, game)
+- 21 governance proposals — 6 foundation votes live NOW
 - Decision tree showing the full DAO setup path (32 parameters)
-- Bounty + escrow system (create → claim → submit → verify → pay)
-- Dice game on every governance action (bonus XP)
-- Dashboard with charter progress, bounty board, proposals
+- Bounty + escrow system (create, claim, submit, verify, pay)
+- Dice game on every governance action (bonus XP + leaderboard)
+- 13-page dashboard with docs, transparency, feedback system
+- 70 automated pipeline tests
 
-**The DAO Charter has 32 decisions that need community votes:**
+**Two types of voting:**
+- Off-chain (Telegram): Free, instant, badge-gated. For day-to-day decisions.
+- On-chain (CV2): XRD-weighted, permanent on the Radix ledger. Same Consultation v2 used by the Foundation.
+
+**The DAO Charter has 32 decisions the community needs to make:**
 
 Step 1 — Foundation (vote now): Charter, RAC seats, quorum, voting period, thresholds
 Step 2 — Configuration (auto-unlocks): Treasury limits, election rules, timing
 Step 3 — Operations (after config): First RAC election, first bounty fund
 
-**How to join the beta:**
-1. Message @rad_gov in Telegram
-2. `/register account_rdx1...`
-3. Mint badge: https://radixguild.com/mint (free)
-4. `/proposals` to vote
-5. `/game` to see your dice stats
+**How to join:**
+1. Get a Radix Wallet: https://wallet.radixdlt.com
+2. Message @rad_gov in Telegram
+3. `/register account_rdx1...`
+4. Mint badge: https://radixguild.com/mint (free)
+5. `/proposals` to vote
+6. `/feedback <message>` to report issues
 
-Everything is free. No XRD needed. Voting is off-chain (instant, free). Badges are on-chain (free mint).
+Everything is free. Open source (MIT).
 
 **Links:**
-- Bot: @rad_gov
 - Dashboard: https://radixguild.com
-- GitHub: github.com/bigdevxrd/radix-community-projects (MIT)
-- CrumbsUp DAO: crumbsup.io (search "Guild")
-- Charter: radix.wiki/ideas/radix-network-dao-charter
+- Docs: https://radixguild.com/docs
+- Transparency: https://radixguild.com/transparency
+- Bot: @rad_gov
+- GitHub: github.com/bigdevxrd/radix-community-projects
+- System health: https://radixguild.com/api/health
 
-Looking for feedback on:
-- The mint flow
-- The voting experience
-- The decision tree (does it make sense?)
-- What's missing?
-
-Open source. Built by Big Dev.
+Built by Big Dev.
 
 ---
 
@@ -116,16 +117,17 @@ Open source. Built by Big Dev.
 
 ---
 
-**Radix Governance** — open source community DAO tooling
+**Radix Guild** — open source community governance tooling
 
-Scrypto v4 badge manager + TG bot (30+ commands) + shadcn/ui dashboard + bounty escrow + dice game.
+Scrypto v4 badge manager + TG bot (22+ commands) + shadcn/ui dashboard (13 pages) + bounty escrow + dice game + support system.
 
-20 governance proposals live. Decision tree with 32 charter parameters and dependency tracking. Badge-gated voting with tier-based weights.
+21 governance proposals live. Decision tree with 32 charter parameters and dependency tracking. Proposal classification: Charter Vote (binding) / Community Vote / Temp Check. Live countdown timers.
 
-MIT licensed. 30 tests. Beta testing now.
+70 pipeline tests. MIT licensed. Beta testing now.
 
 Stack: Scrypto 1.3.1 / Grammy / Next.js 16 / shadcn/ui / SQLite / Caddy
+Domain: radixguild.com
+Bot: @rad_gov
+Health: radixguild.com/api/health
 
 github.com/bigdevxrd/radix-community-projects
-Bot: @rad_gov
-Dashboard: https://radixguild.com

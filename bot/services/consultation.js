@@ -89,9 +89,20 @@ function init(database) {
 
   // Start polling if component address is configured
   if (CV2_CONFIG.component) {
-    syncFromChain().catch(err => console.error("[CV2] Initial sync error:", err.message));
+    syncFromChain().catch(err => {
+      console.error("[CV2] Initial sync error:", err.message);
+      console.log("[CV2] KVS sync requires global entity addresses — internal_keyvaluestore_ addresses are not supported by Gateway API.");
+      console.log("[CV2] Component state reads work. KVS data sync will retry silently.");
+    });
     pollTimer = setInterval(() => {
-      syncFromChain().catch(err => console.error("[CV2] Sync error:", err.message));
+      syncFromChain().catch(err => {
+        syncErrors++;
+        // Only log every 50th error to avoid spam
+        if (syncErrors % 50 === 1) {
+          console.error("[CV2] Sync error (" + syncErrors + " total):", err.message);
+        }
+        db.prepare("UPDATE cv2_sync_state SET errors = errors + 1 WHERE id = 1").run();
+      });
     }, POLL_INTERVAL);
   } else {
     console.log("[CV2] No component address configured — sync disabled");
@@ -173,8 +184,6 @@ async function syncFromChain() {
       console.log(`[CV2] Synced: ${state.temperatureCheckCount} temp checks, ${state.proposalCount} proposals`);
     }
   } catch (err) {
-    syncErrors++;
-    db.prepare("UPDATE cv2_sync_state SET errors = errors + 1 WHERE id = 1").run();
     throw err;
   }
 }

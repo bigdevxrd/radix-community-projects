@@ -563,6 +563,49 @@ async function main() {
     assert(data.ok === true, "should return ok");
   });
 
+  // ── Feedback System ────────────────────────────────
+
+  console.log("\n  Feedback System:");
+
+  await test("GET /api/feedback returns ok", async () => {
+    const data = await fetchJson(API + "/feedback");
+    assert(data.ok === true);
+    assert(Array.isArray(data.data), "data should be array");
+  });
+
+  await test("GET /api/feedback/stats returns counts", async () => {
+    const data = await fetchJson(API + "/feedback/stats");
+    assert(data.ok === true);
+    assert(typeof data.data.open === "number");
+    assert(typeof data.data.responded === "number");
+    assert(typeof data.data.resolved === "number");
+    assert(typeof data.data.total === "number");
+    assert(data.data.total === data.data.open + data.data.responded + data.data.resolved, "total should match sum");
+  });
+
+  await test("GET /api/feedback?status=open returns ok", async () => {
+    const data = await fetchJson(API + "/feedback?status=open");
+    assert(data.ok === true);
+    assert(Array.isArray(data.data));
+  });
+
+  // ── Dashboard (complete) ──────────────────────────
+
+  console.log("\n  Dashboard (complete):");
+
+  await test("GET /feedback returns 200", async () => {
+    const resp = await fetch(GUILD + "/feedback");
+    assert(resp.ok, "should be 200");
+  });
+
+  await test("All 13 dashboard pages return 200", async () => {
+    const pages = ["", "/proposals", "/admin", "/mint", "/leaderboard", "/bounties", "/docs", "/game", "/profile", "/transparency", "/feedback"];
+    for (const p of pages) {
+      const resp = await fetch(GUILD + p);
+      assert(resp.ok, p + " should return 200");
+    }
+  });
+
   // ── Summary ────────────────────────────────────────
 
   console.log("\n  Results: " + passed + " passed, " + failed + " failed");
