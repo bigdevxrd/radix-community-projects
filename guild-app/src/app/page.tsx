@@ -102,6 +102,27 @@ function Dashboard() {
             </CardContent>
           </Card>
 
+          {/* New to Radix? */}
+          <Card className="border-dashed">
+            <CardContent className="pt-4 pb-4">
+              <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">New to Radix?</div>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <a href="https://wallet.radixdlt.com" target="_blank" className="block bg-muted rounded-lg p-3 no-underline text-foreground hover:bg-accent/10 transition-colors">
+                  <div className="font-semibold text-sm mb-0.5">Get a Wallet</div>
+                  <div className="text-[11px] text-muted-foreground">Download the official Radix Wallet (mobile + browser)</div>
+                </a>
+                <a href="https://radquest.io" target="_blank" className="block bg-muted rounded-lg p-3 no-underline text-foreground hover:bg-accent/10 transition-colors">
+                  <div className="font-semibold text-sm mb-0.5">Try RadQuest</div>
+                  <div className="text-[11px] text-muted-foreground">Learn Radix basics, earn rewards, set up your first account</div>
+                </a>
+                <Link href="/docs" className="block bg-muted rounded-lg p-3 no-underline text-foreground hover:bg-accent/10 transition-colors">
+                  <div className="font-semibold text-sm mb-0.5">Read the Guide</div>
+                  <div className="text-[11px] text-muted-foreground">How voting, badges, XP, and bounties work</div>
+                </Link>
+              </div>
+            </CardContent>
+          </Card>
+
           {/* Live stats visible even without wallet */}
           {data.stats && (
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">

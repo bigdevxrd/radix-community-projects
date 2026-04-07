@@ -902,11 +902,130 @@ bot.command("support", (ctx) => ctx.reply(
   "Need help?\n\n" +
   "• /faq — frequently asked questions\n" +
   "• /help — all bot commands\n" +
-  "• /readme — project overview + links\n\n" +
-  "Report bugs: " + GITHUB + "/issues\n" +
+  "• /feedback <message> — report an issue or share feedback\n" +
+  "• /mystatus — check your open tickets\n\n" +
+  "GitHub: " + GITHUB + "/issues\n" +
   "Contact: @bigdevxrd (Telegram DM)\n\n" +
   "This is a beta — feedback welcome!"
 ));
+
+// ── Feedback / Support Tickets ─────────────────────────────
+
+const { matchFaq } = require("./services/faq-matcher");
+
+bot.command("feedback", async (ctx) => {
+  const message = ctx.message.text.replace(/^\/feedback\s*/, "").trim();
+  if (!message) return ctx.reply("Usage: /feedback <your message>\n\nDescribe the issue or share your thoughts.");
+  if (message.length > 1000) return ctx.reply("Message too long (max 1000 chars). Please be concise.");
+
+  // Check FAQ match first
+  const faqResult = matchFaq(message);
+  if (faqResult.match) {
+    const kb = new InlineKeyboard()
+      .text("This helps, thanks!", "faq_resolved_" + ctx.from.id)
+      .text("Submit anyway", "faq_submit_" + ctx.from.id + "_" + encodeURIComponent(message.slice(0, 200)));
+
+    return ctx.reply(
+      "This might help:\n\n" +
+      "Q: " + faqResult.entry.q + "\n" +
+      "A: " + faqResult.entry.a + "\n\n" +
+      "Did this answer your question?",
+      { reply_markup: kb }
+    );
+  }
+
+  // No FAQ match — create ticket directly
+  const username = ctx.from.username || ctx.from.first_name || "anon";
+  const id = db.createFeedback(ctx.from.id, username, message);
+  ctx.reply("Ticket #" + id + " created. We'll review it soon.\n\nCheck status: /mystatus");
+});
+
+// FAQ callback: resolved (no ticket needed)
+bot.callbackQuery(/^faq_resolved_/, (ctx) => {
+  ctx.answerCallbackQuery("Glad that helped!");
+  ctx.editMessageText(ctx.callbackQuery.message.text + "\n\n✓ Resolved by FAQ");
+});
+
+// FAQ callback: submit anyway (create ticket despite FAQ match)
+bot.callbackQuery(/^faq_submit_/, (ctx) => {
+  const parts = ctx.callbackQuery.data.split("_");
+  const tgId = parseInt(parts[2]);
+  const message = decodeURIComponent(parts.slice(3).join("_"));
+  const username = ctx.from.username || ctx.from.first_name || "anon";
+  const id = db.createFeedback(tgId, username, message || "Feedback submitted after FAQ");
+  ctx.answerCallbackQuery("Ticket #" + id + " created");
+  ctx.editMessageText(ctx.callbackQuery.message.text + "\n\nTicket #" + id + " created. Check status: /mystatus");
+});
+
+bot.command("mystatus", (ctx) => {
+  const tickets = db.getFeedbackByUser(ctx.from.id);
+  if (tickets.length === 0) return ctx.reply("No feedback tickets. Use /feedback <message> to submit one.");
+
+  let text = "Your tickets:\n\n";
+  tickets.forEach(t => {
+    const date = new Date(t.created_at * 1000).toLocaleDateString();
+    text += "#" + t.id + " [" + t.status + "] " + date + "\n";
+    text += t.message.slice(0, 60) + (t.message.length > 60 ? "..." : "") + "\n";
+    if (t.admin_response) text += "→ " + t.admin_response.slice(0, 80) + "\n";
+    text += "\n";
+  });
+  ctx.reply(text);
+});
+
+// ── Admin Feedback Commands ────────────────────────────────
+
+bot.command("adminfeedback", async (ctx) => {
+  // Simple admin check — only creator can manage feedback
+  const ADMIN_IDS = [6102618406]; // Big Dev's TG ID
+  if (!ADMIN_IDS.includes(ctx.from.id)) return ctx.reply("Admin only.");
+
+  const args = ctx.message.text.split(/\s+/).slice(1);
+  const sub = args[0];
+
+  if (!sub || sub === "list") {
+    const tickets = db.getOpenFeedback(10);
+    if (tickets.length === 0) return ctx.reply("No open tickets.");
+    let text = "Open tickets (" + tickets.length + "):\n\n";
+    tickets.forEach(t => {
+      const date = new Date(t.created_at * 1000).toLocaleDateString();
+      text += "#" + t.id + " @" + (t.username || "anon") + " [" + date + "]\n";
+      text += t.message.slice(0, 80) + "\n\n";
+    });
+    return ctx.reply(text);
+  }
+
+  if (sub === "respond" && args[1]) {
+    const id = parseInt(args[1]);
+    const response = args.slice(2).join(" ");
+    if (!response) return ctx.reply("Usage: /adminfeedback respond <id> <message>");
+    const ticket = db.getFeedbackById(id);
+    if (!ticket) return ctx.reply("Ticket #" + id + " not found.");
+    db.respondToFeedback(id, response);
+    // Notify the user
+    try {
+      await bot.api.sendMessage(ticket.tg_id, "Update on your ticket #" + id + ":\n\n" + response + "\n\nThank you for your feedback!");
+    } catch (e) {}
+    return ctx.reply("Responded to ticket #" + id);
+  }
+
+  if (sub === "resolve" && args[1]) {
+    const id = parseInt(args[1]);
+    const ticket = db.getFeedbackById(id);
+    if (!ticket) return ctx.reply("Ticket #" + id + " not found.");
+    db.resolveFeedback(id);
+    try {
+      await bot.api.sendMessage(ticket.tg_id, "Your ticket #" + id + " has been resolved. Thank you!");
+    } catch (e) {}
+    return ctx.reply("Ticket #" + id + " resolved.");
+  }
+
+  if (sub === "stats") {
+    const stats = db.getFeedbackStats();
+    return ctx.reply("Feedback: " + stats.open + " open, " + stats.responded + " responded, " + stats.resolved + " resolved (" + stats.total + " total)");
+  }
+
+  ctx.reply("Usage:\n/adminfeedback — list open tickets\n/adminfeedback respond <id> <msg>\n/adminfeedback resolve <id>\n/adminfeedback stats");
+});
 
 // ── CV2 Network Governance Commands ──────────────────────
 

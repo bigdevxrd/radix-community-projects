@@ -284,6 +284,22 @@ function startApi() {
       }
     }
 
+    // ── Feedback Endpoints ────────────────────────────────
+
+    // GET /api/feedback — all tickets
+    if (url.pathname === "/api/feedback") {
+      const status = url.searchParams.get("status");
+      const tickets = status === "open" ? db.getOpenFeedback(50) : db.getAllFeedback(50);
+      res.writeHead(200);
+      return res.end(JSON.stringify({ ok: true, data: tickets }));
+    }
+
+    // GET /api/feedback/stats — ticket counts
+    if (url.pathname === "/api/feedback/stats") {
+      res.writeHead(200);
+      return res.end(JSON.stringify({ ok: true, data: db.getFeedbackStats() }));
+    }
+
     // ── CV2 Consultation Endpoints (feature-flagged) ────
 
     // GET /api/cv2/status — sync health

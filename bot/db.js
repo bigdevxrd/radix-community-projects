@@ -173,6 +173,22 @@ function init() {
     CREATE INDEX IF NOT EXISTS idx_achievements_address ON game_achievements(radix_address);
   `);
 
+  // Feedback / support tickets
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS feedback (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      tg_id INTEGER NOT NULL,
+      username TEXT,
+      category TEXT DEFAULT 'general',
+      message TEXT NOT NULL,
+      status TEXT DEFAULT 'open',
+      admin_response TEXT,
+      created_at INTEGER DEFAULT (strftime('%s','now')),
+      resolved_at INTEGER
+    );
+    CREATE INDEX IF NOT EXISTS idx_feedback_status ON feedback(status);
+  `);
+
   // Indexes for 20k+ scale
   db.exec(`
     CREATE INDEX IF NOT EXISTS idx_users_address ON users(radix_address);
@@ -756,6 +772,45 @@ module.exports = {
   getAchievements, getAchievementSummary, GRID_MILESTONES,
 };
 
+// ── Feedback / Support ──────────────────────────────────
+
+function createFeedback(tgId, username, message, category = "general") {
+  const stmt = db.prepare("INSERT INTO feedback (tg_id, username, message, category) VALUES (?, ?, ?, ?)");
+  const result = stmt.run(tgId, username, message, category);
+  return result.lastInsertRowid;
+}
+
+function getFeedbackByUser(tgId) {
+  return db.prepare("SELECT * FROM feedback WHERE tg_id = ? ORDER BY created_at DESC LIMIT 10").all(tgId);
+}
+
+function getOpenFeedback(limit = 20) {
+  return db.prepare("SELECT * FROM feedback WHERE status = 'open' ORDER BY created_at DESC LIMIT ?").all(limit);
+}
+
+function getAllFeedback(limit = 50) {
+  return db.prepare("SELECT * FROM feedback ORDER BY created_at DESC LIMIT ?").all(limit);
+}
+
+function respondToFeedback(id, response) {
+  return db.prepare("UPDATE feedback SET admin_response = ?, status = 'responded' WHERE id = ?").run(response, id);
+}
+
+function resolveFeedback(id) {
+  return db.prepare("UPDATE feedback SET status = 'resolved', resolved_at = strftime('%s','now') WHERE id = ?").run(id);
+}
+
+function getFeedbackStats() {
+  const open = db.prepare("SELECT COUNT(*) as c FROM feedback WHERE status = 'open'").get().c;
+  const responded = db.prepare("SELECT COUNT(*) as c FROM feedback WHERE status = 'responded'").get().c;
+  const resolved = db.prepare("SELECT COUNT(*) as c FROM feedback WHERE status = 'resolved'").get().c;
+  return { open, responded, resolved, total: open + responded + resolved };
+}
+
+function getFeedbackById(id) {
+  return db.prepare("SELECT * FROM feedback WHERE id = ?").get(id);
+}
+
 function cancelProposal(proposalId, tgId) {
   const p = db.prepare("SELECT * FROM proposals WHERE id = ? AND creator_tg_id = ?").get(proposalId, tgId);
   if (!p) return { ok: false, error: "not_found_or_not_owner" };
@@ -772,3 +827,11 @@ function getProposalHistory(limit = 10) {
 
 module.exports.cancelProposal = cancelProposal;
 module.exports.getProposalHistory = getProposalHistory;
+module.exports.createFeedback = createFeedback;
+module.exports.getFeedbackByUser = getFeedbackByUser;
+module.exports.getOpenFeedback = getOpenFeedback;
+module.exports.getAllFeedback = getAllFeedback;
+module.exports.respondToFeedback = respondToFeedback;
+module.exports.resolveFeedback = resolveFeedback;
+module.exports.getFeedbackStats = getFeedbackStats;
+module.exports.getFeedbackById = getFeedbackById;
