@@ -318,194 +318,203 @@ At $0.06/XRD (current). If XRD reaches $0.50 (previous ATH territory), that same
 
 ---
 
-## AI CREDITS MODEL (Governance Assistant)
+## AI ASSISTANT (Pay-Per-Use Service)
 
 ### How It Works
-Users deposit XRD to buy AI credits. Credits power the governance assistant (proposal drafting, charter analysis, bounty scoping, general help). The LLM runs server-side — users never touch an API key.
+Members deposit XRD → get AI credits. Credits power governance tools (proposal drafting, charter analysis, bounty scoping). The guild runs the LLM server-side. Members never touch an API key.
 
-### Pricing: 1:1.1 Ratio (10% Markup)
+### Pricing: At-Cost + 1% Admin Fee
 
-| Credits Purchased | XRD Cost | Markup | Platform Revenue |
-|-------------------|----------|--------|-----------------|
-| 100 credits | 110 XRD | 10 XRD | Covers AI API costs |
-| 500 credits | 550 XRD | 50 XRD | Surplus → treasury |
-| 1,000 credits | 1,100 XRD | 100 XRD | Meaningful treasury contribution |
+| What | Amount | Why |
+|------|--------|-----|
+| 1 AI credit | 1 XRD | Covers LLM API cost |
+| Admin fee | +1% (0.01 XRD) | Covers infrastructure overhead |
+| **Total per credit** | **1.01 XRD** | **Transparent, near-cost** |
 
-### Unit Economics
-- 1 AI credit = 1 governance assist call
-- Underlying cost per call: ~$0.002-0.01 (Claude Haiku/Sonnet API)
-- At $0.06/XRD: 1 credit = 0.06 USD worth of XRD deposited
-- Cost to serve: $0.005 average → margin per credit: ~$0.055 (92% gross margin)
-- At $0.50/XRD (bull market): margin per credit: ~$0.495
+This is a **service**, not a profit centre. The 1% covers server time, storage, and rate limiting. The guild doesn't mark up AI — it provides access at cost.
 
-### Credit Use Cases
-- "Help me write a proposal about treasury management" → 1 credit
-- "Summarize the charter status and what's next" → 1 credit
-- "Draft a bounty for website redesign" → 1 credit
-- "Explain the voting options for RAC seats" → 1 credit
-- "Analyze the results of proposal #5" → 1 credit
+### Hard Numbers
+- LLM cost per call: ~$0.002-0.01 (Claude Haiku for simple, Sonnet for complex)
+- At $0.06/XRD: 1 XRD = $0.06 → covers the API call with margin
+- At $0.50/XRD: 1 XRD = $0.50 → significant surplus flows to treasury
+- The admin fee (1%) at any XRD price is negligible — it's a rounding error, not revenue
+- **Real margin comes from XRD appreciation**, not from markup
+
+### Configurable Parameters (Charter Votes)
+All settings adjustable by community vote:
+
+| Parameter | Default | Adjustable? |
+|-----------|---------|-------------|
+| Credit price | 1 XRD | Yes — charter vote |
+| Admin fee | 1% | Yes — charter vote |
+| Daily limit per user | 20 credits | Yes — charter vote |
+| Model tier | Haiku (fast/cheap) | Yes — charter vote |
+| Free credits for new members | 5 | Yes — charter vote |
 
 ### Implementation
-- Dashboard: `/assist` page with credit balance, input field, response area
-- Bot: `/assist <question>` command (deducts 1 credit, returns AI response)
-- API: `POST /api/assist` (badge-gated, credit-gated, rate-limited)
-- Storage: `credits` table in SQLite (tg_id, balance, total_purchased, total_used)
-- Payment: User sends XRD to guild treasury wallet → bot confirms → credits added
-- On-chain verification: Transaction receipt proves payment
-
-### Dashboard Integration
-New `/assist` page:
-- Credit balance display
-- "Buy Credits" button → shows wallet address + amount
-- Chat-style interface for governance questions
-- Response history
-- Credit usage log
-
-### Revenue Projection (100 active users)
-| Scenario | Credits/mo/user | Monthly Revenue | Annual |
-|----------|----------------|----------------|--------|
-| Low | 5 | 50 XRD (~$3) | $36 |
-| Medium | 20 | 220 XRD (~$13) | $156 |
-| High | 50 | 550 XRD (~$33) | $396 |
-
-The 10% markup means the guild treasury grows with every AI interaction. No donations needed — usage funds the platform.
+- Dashboard: `/assist` page — credit balance, chat interface, usage log
+- Bot: `/assist <question>` — deducts 1 credit, returns AI response
+- API: `POST /api/assist` — badge-gated, credit-gated, rate-limited
+- Storage: `credits` table (tg_id, balance, total_purchased, total_used)
+- Payment: XRD to treasury wallet → bot confirms receipt → credits added
 
 ---
 
-## MINIMUM VIABLE INVESTMENT (MVI) MODEL
+## GUILD MEMBERSHIP & TREASURY MODEL
 
-### The Core Idea
+### The Elevator Pitch (30 seconds)
 
-The guild needs working capital to operate. Instead of donations or token sales, members invest in the services they want. Each member contributes to specific service categories. The guild operates transparently — every XRD is tracked and allocated.
+> Join for $10 in XRD. Pick which department gets it.
+> The guild builds Scrypto tools. Every tool earns on-chain royalties.
+> Royalties fund more tools. Your $10 becomes infrastructure that pays for itself.
+>
+> **$10 in → tools built → royalties earned → more tools built → forever.**
 
-### MVI: $100 USD Equivalent in XRD per Member
+### The Math (No Fluff)
 
-Each member commits to holding $100 USD worth of XRD as their guild stake. This isn't locked — it's a commitment to fund the services they value. They allocate across categories:
+**One-time membership: $10 USD equivalent in XRD**
+- Member picks allocation: Development, Infrastructure, Marketing, BD, Community
+- That's it. No monthly fees. No subscriptions. One payment, one vote on where it goes.
 
-```
-Example allocation for 1 member ($100 USD in XRD):
-  $1  → Development (code, features, bug fixes)
-  $2  → Marketing (content, outreach, partnerships)
-  $5  → Infrastructure (VPS, domain, monitoring, backups)
-  $3  → Business Development (pitches, partnerships, SaaS sales)
-  $1  → Community Projects (bounties, grants, events)
-  ─────
-  $12 monthly contribution (member keeps $88 as stake)
-```
+| Members | Treasury (one-time) | What It Covers |
+|---------|-------------------|----------------|
+| 10 | $100 | 1 year hosting + domain |
+| 50 | $500 | + first dev bounties |
+| 100 | $1,000 | + marketing + 10 bounties |
+| 500 | $5,000 | + serious development capacity |
+| 1,000 | $10,000 | + full operations for 12+ months |
 
-### Scaling Economics
+**But the treasury doesn't stay at $1,000.** It grows because of the royalty flywheel:
 
-| Members | Monthly Pool | Annual Pool | What It Funds |
-|---------|-------------|-------------|---------------|
-| 10 | $120 | $1,440 | Hosting + domain (covered) |
-| 50 | $600 | $7,200 | + Part-time dev bounties |
-| 100 | $1,200 | $14,400 | + Marketing + BD + support |
-| 500 | $6,000 | $72,000 | + Full-time contributor(s) |
-
-### Service Categories (Voted On by Charter)
-
-| Category | What It Funds | Priority |
-|----------|--------------|----------|
-| **Infrastructure** | VPS ($7/mo), domain ($1/mo), monitoring, backups, SSL | Critical — always funded first |
-| **Development** | Bug fixes, new features, code review, testing | High — keeps platform improving |
-| **Marketing** | Content creation, social media, conference presence | Medium — drives adoption |
-| **Business Dev** | SaaS sales, partnerships, DeFi project outreach | Medium — drives revenue |
-| **Community** | Bounties, grants, events, education | Growth — reinvests in ecosystem |
-
-### How Allocation Works
-
-1. **Member joins** → mints free badge → gets dashboard showing service categories
-2. **Member allocates** → chooses how their monthly contribution splits across categories
-3. **Treasury dashboard** → shows real-time totals per category
-4. **Working groups** → each category has a working group that proposes spending
-5. **Proposals** → spending proposals are voted on (charter-linked, binding)
-6. **Execution** → approved spending is released from category escrow
-7. **Reporting** → monthly "State of the Guild" shows what was spent and what was delivered
-
-### MVROI (Minimum Viable Return on Investment)
-
-Every XRD spent must produce measurable output. The MVROI framework:
-
-| Investment | Output | Measurement |
-|-----------|--------|-------------|
-| $7/mo infra | 99.9% uptime, <200ms API response | /api/health dashboard |
-| $50 dev bounty | 1 feature shipped, tests passing | GitHub commit + pipeline |
-| $20 marketing | 10+ new badge mints, 5+ new voters | /api/stats tracking |
-| $30 BD outreach | 1 SaaS lead or partnership | CRM / tracking doc |
-| $25 community bounty | 1 completed task, verified delivery | Bounty system on-chain |
-
-### The Start Page Pitch
-
-On the dashboard (visible to all visitors):
+### The Royalty Flywheel
 
 ```
-"The Guild runs on contributions, not donations.
-
-Hold $100 of XRD. Allocate $10-15/month to the services you value.
-100 members = $1,200/month working capital.
-
-Every XRD is tracked. Every spend is voted on. Every output is measured.
-
-Your money → Your vote → Your DAO."
+Member pays $10 → Treasury funds development
+    ↓
+Dev builds Scrypto component → Deployed to mainnet with royalties
+    ↓
+Every call to that component pays XRD → Flows to guild treasury
+    ↓
+Treasury funds more development → More components → More royalties
+    ↓
+LOOP (self-sustaining after critical mass)
 ```
 
-### Implementation Plan
+**Current royalty streams (already live):**
 
-**Phase 5 Addition (June):**
-- [ ] Design contribution flow (wallet → treasury → category allocation)
-- [ ] Build `/contribute` bot command
-- [ ] Build contribution dashboard page showing categories + totals
-- [ ] Treasury wallet with transparent on-chain tracking
-- [ ] Monthly allocation reporting
+| Component | Method | Royalty | Calls/Year (est) | Annual XRD |
+|-----------|--------|---------|-------------------|------------|
+| BadgeManager | mint | 1 XRD | 200 | 200 |
+| BadgeManager | update_xp | 0.1 XRD | 2,000 | 200 |
+| BadgeManager | update_tier | 0.25 XRD | 100 | 25 |
+| BadgeFactory | create_manager | 5 XRD | 10 | 50 |
+| **Total** | | | | **475 XRD/yr** |
 
-**Phase 6 Addition (July-Aug):**
-- [ ] Working group leads propose spending per category
-- [ ] Spending proposals go through charter vote system
-- [ ] Auto-release from category escrow on proposal pass
-- [ ] Monthly "State of the Guild" auto-generated report
+**With SaaS tenants (each deploys guild-built components):**
 
-**Phase 7 Addition (Sep+):**
-- [ ] MVROI dashboard — investment vs output per category
-- [ ] Member contribution history + recognition
-- [ ] Contributor leaderboard by category
-- [ ] Annual planning: community votes on next year's priorities
+| Tenants | Mints/yr | XP updates/yr | Annual Royalties |
+|---------|----------|---------------|-----------------|
+| 1 (Radix Guild) | 200 | 2,000 | 475 XRD |
+| 5 | 1,000 | 10,000 | 2,375 XRD |
+| 10 | 2,000 | 20,000 | 4,750 XRD |
+| 50 | 10,000 | 100,000 | 23,750 XRD |
+
+**At $0.06/XRD:** 4,750 XRD = $285/yr (covers all costs at 10 tenants)
+**At $0.50/XRD:** 4,750 XRD = $2,375/yr (funds serious operations)
+
+### Self-Sustainability Threshold
+
+| Scenario | Annual Costs | Annual Royalty Income | Sustainable? |
+|----------|-------------|----------------------|-------------|
+| Today (1 tenant, $0.06/XRD) | $94 | $28 | No — needs membership funds |
+| 5 tenants, $0.06/XRD | $94 | $142 | **Yes — royalties > costs** |
+| 10 tenants, $0.06/XRD | $150 | $285 | Yes — with surplus |
+| 10 tenants, $0.50/XRD | $150 | $2,375 | Yes — significant growth capital |
+
+**The guild becomes self-sustaining at ~5 tenants using guild-built components.** Membership fees are the bootstrap; royalties are the engine.
+
+### Department Allocation (Community-Controlled)
+
+Members allocate their $10 across departments. Departments and their budgets are charter parameters — the community can vote to add, remove, or rebalance at any time.
+
+**Default departments:**
+
+| Department | What It Funds | Example Spend |
+|-----------|--------------|---------------|
+| Infrastructure | Hosting, domain, monitoring, backups | $7/mo VPS, $1/mo domain |
+| Development | Features, bug fixes, Scrypto components | $50-200 per bounty |
+| Marketing | Content, outreach, community growth | $20-100 per campaign |
+| Business Dev | SaaS sales, partnerships, integrations | Time + travel |
+| Community | Bounties, grants, events, education | $25-100 per task |
+
+**All adjustable by charter vote:**
+- Add new department → charter proposal
+- Change allocation limits → charter proposal
+- Merge departments → charter proposal
+- Remove department → charter proposal
+
+### Transparency Rules (Non-Negotiable)
+
+1. Every XRD received is logged on-chain (treasury wallet is public)
+2. Every spend requires a passed proposal (charter-linked, binding)
+3. Monthly "State of the Guild" report auto-generated from on-chain data
+4. Royalty income visible in real-time on /transparency page
+5. Department balances visible on dashboard
+6. Anyone can audit — it's a public ledger
+
+### Configurable Parameters (All Charter Votes)
+
+| Parameter | Default | Who Changes It |
+|-----------|---------|---------------|
+| Membership fee | $10 USD equiv in XRD | Charter vote |
+| Department list | 5 departments | Charter vote |
+| Spending approval threshold | >60% | Charter vote |
+| Max single spend without vote | 50 XRD | Charter vote |
+| Monthly reporting | Required | Charter vote (can't be disabled in Y1) |
+| Royalty allocation | 100% to treasury | Charter vote |
+| Free badge minting | Yes (during beta) | Charter vote |
 
 ---
 
-## COMBINED REVENUE MODEL (Updated)
+## COMBINED ECONOMICS (Hard Facts)
 
 ### Revenue Streams
 
-| Stream | Type | When | Monthly (100 users) |
-|--------|------|------|-------------------|
-| Badge royalties | On-chain, automatic | Now (live) | ~100 XRD |
-| AI credits (10% markup) | Per-use, deposited | Phase 6 (Jul) | ~220 XRD |
-| Member contributions | Monthly allocation | Phase 5 (Jun) | ~$1,200 USD |
-| SaaS hosting | Per-customer | Phase 5 (Jun) | ~150 XRD |
-| Component royalties | On-chain, automatic | Now (live) | Variable |
+| Stream | Type | Recurring? | Controlled By |
+|--------|------|-----------|---------------|
+| Membership ($10 one-off) | Bootstrap capital | No — one-time | Charter (fee amount) |
+| Component royalties | On-chain, automatic | Yes — every call | Scrypto (immutable) |
+| AI credits (1% admin) | Per-use | Yes — per interaction | Charter (fee %) |
+| SaaS hosting fees | Per-customer | Yes — monthly | Market pricing |
 
-### 36-Month Sustainability Model
+### 36-Month Model
 
-The investment horizon is 36 months. Everything built now compounds:
+| Year | Members | Tenants | Royalties/yr | Treasury | Status |
+|------|---------|---------|-------------|----------|--------|
+| Y1 | 100 | 1-3 | ~500 XRD | $1,000 (membership) + $30 (royalties) | **Bootstrap** — membership funds ops |
+| Y2 | 300 | 5-10 | ~3,000 XRD | Growing | **Transition** — royalties approaching costs |
+| Y3 | 500+ | 10-20 | ~10,000+ XRD | Self-funding | **Sustainable** — royalties exceed all costs |
 
-| Year | Members | Monthly Revenue | What's Running |
-|------|---------|----------------|----------------|
-| Y1 (2026) | 50-100 | $100-300/mo | Hosting, dev bounties, marketing |
-| Y2 (2027) | 200-500 | $500-2,000/mo | Full contributor team, SaaS customers |
-| Y3 (2028) | 500-1,000 | $2,000-10,000/mo | Self-sustaining, multi-DAO, passive income |
+### Break-Even (The Only Number That Matters)
 
-### Break-Even Analysis
+**Fixed costs:** $94/year ($7.83/mo)
+**Royalty income at 5 tenants:** ~$142/year at $0.06/XRD
+**Break-even: 5 tenants using guild-built Scrypto components.**
 
-| Expense | Monthly | Funded By |
-|---------|---------|-----------|
-| VPS hosting | $7 | 1 member's infra allocation |
-| Domain | $1 | 1 member's infra allocation |
-| AI API costs | ~$5-50 | AI credit markup (92% margin) |
-| Dev bounties | $50-200 | 5-20 members' dev allocation |
-| Marketing | $20-100 | 2-10 members' marketing allocation |
-| **Total** | **$83-358** | **10-35 members** |
+No token. No speculation. No donations. Just code that earns royalties.
 
-**Break-even: ~15 contributing members.** Everything above that is growth capital.
+### The Value Loop (Why It's Bulletproof)
+
+```
+$10 membership → treasury
+treasury → funds Scrypto development (bounties)
+Scrypto component deployed → earns royalties on every call
+royalties → treasury
+treasury → funds more Scrypto development
+more components → more royalties → more development → more components
+```
+
+**Every dollar spent on development becomes a permanent royalty-earning asset on the Radix ledger.** The code doesn't depreciate. The royalties don't stop. The guild produces value that produces value.
 
 ---
 
@@ -516,8 +525,9 @@ The investment horizon is 36 months. Everything built now compounds:
 3. **The open source repo is your pitch deck** — every user is a testimonial
 4. **Track metrics** — badges minted, votes cast, proposals created
 5. **When someone says "I want this for my project"** — build SaaS config layer
-6. **When 20+ users are active** — build AI credits + contribution system
-7. **The MVI model goes on the start page** — show visitors the economics upfront
+6. **When 20+ members have badges** — launch membership + AI credits
+7. **All economics are charter-voteable** — the community adjusts everything
+8. **The math is on the start page** — show visitors the numbers upfront, no fluff
 
 ---
 
