@@ -361,6 +361,208 @@ async function main() {
     assert(resp.ok, "should be 200");
   });
 
+  // ── Health Endpoint ────────────────────────────────
+
+  console.log("\n  Health:");
+
+  await test("GET /api/health returns ok", async () => {
+    const data = await fetchJson(API + "/health");
+    assert(data.ok === true, "ok should be true");
+  });
+
+  await test("Health has required fields", async () => {
+    const data = await fetchJson(API + "/health");
+    const d = data.data;
+    assert(typeof d.uptime === "number", "uptime should be number");
+    assert(d.db === "connected", "db should be connected");
+    assert(typeof d.cv2 === "object", "cv2 should be object");
+    assert(typeof d.proposals === "object", "proposals should be object");
+    assert(typeof d.charter === "object", "charter should be object");
+    assert(d.version, "version should exist");
+  });
+
+  await test("Health uptime is positive", async () => {
+    const data = await fetchJson(API + "/health");
+    assert(data.data.uptime > 0, "uptime should be positive");
+  });
+
+  // ── Dashboard Pages (extended) ────────────────────
+
+  console.log("\n  Dashboard (all pages):");
+
+  await test("GET /transparency returns 200", async () => {
+    const resp = await fetch(GUILD + "/transparency");
+    assert(resp.ok, "should be 200");
+  });
+
+  await test("GET /docs returns 200", async () => {
+    const resp = await fetch(GUILD + "/docs");
+    assert(resp.ok, "should be 200");
+  });
+
+  await test("GET /profile returns 200", async () => {
+    const resp = await fetch(GUILD + "/profile");
+    assert(resp.ok, "should be 200");
+  });
+
+  await test("GET /game returns 200", async () => {
+    const resp = await fetch(GUILD + "/game");
+    assert(resp.ok, "should be 200");
+  });
+
+  // ── Error Handling ────────────────────────────────
+
+  console.log("\n  Error Handling:");
+
+  await test("POST to /api/stats returns 405", async () => {
+    const resp = await fetch(API + "/stats", { method: "POST" });
+    assert(resp.status === 405, "should be 405");
+  });
+
+  await test("Oversized URL returns 414", async () => {
+    const resp = await fetch(API + "/" + "x".repeat(520));
+    assert(resp.status === 414, "should be 414");
+  });
+
+  await test("OPTIONS /api/stats returns 200 (CORS preflight)", async () => {
+    const resp = await fetch(API + "/stats", { method: "OPTIONS" });
+    assert(resp.status === 200, "should be 200");
+  });
+
+  await test("GET /api/proposals/-1 returns 404", async () => {
+    const resp = await fetch(API + "/proposals/-1");
+    assert(resp.status === 404, "should be 404");
+  });
+
+  await test("GET /api/badge/short_address returns 404", async () => {
+    const resp = await fetch(API + "/badge/too_short");
+    assert(resp.status === 404, "malformed address should 404");
+  });
+
+  // ── Proposal Integrity ────────────────────────────
+
+  console.log("\n  Proposal Integrity:");
+
+  await test("All proposals have valid type", async () => {
+    const data = await fetchJson(API + "/proposals");
+    const validTypes = ["yesno", "poll", "temp"];
+    data.data.forEach(p => {
+      assert(validTypes.includes(p.type), "invalid type '" + p.type + "' on #" + p.id);
+    });
+  });
+
+  await test("Charter-linked proposals have valid param key", async () => {
+    const proposals = await fetchJson(API + "/proposals");
+    const charter = await fetchJson(API + "/charter");
+    const validKeys = charter.data.params.map(p => p.param_key);
+    proposals.data.forEach(p => {
+      if (p.charter_param) {
+        assert(validKeys.includes(p.charter_param), "invalid charter_param '" + p.charter_param + "' on #" + p.id);
+      }
+    });
+  });
+
+  await test("All proposals have created_at before ends_at", async () => {
+    const data = await fetchJson(API + "/proposals");
+    data.data.forEach(p => {
+      assert(p.created_at < p.ends_at, "created_at should be before ends_at on #" + p.id);
+    });
+  });
+
+  await test("No proposal has negative vote counts", async () => {
+    const data = await fetchJson(API + "/proposals");
+    data.data.forEach(p => {
+      Object.entries(p.counts).forEach(([opt, count]) => {
+        assert(count >= 0, "negative count for '" + opt + "' on #" + p.id);
+      });
+    });
+  });
+
+  // ── Charter Integrity ─────────────────────────────
+
+  console.log("\n  Charter Integrity:");
+
+  await test("All charter params have valid phase (1-3)", async () => {
+    const data = await fetchJson(API + "/charter");
+    data.data.params.forEach(p => {
+      assert([1, 2, 3].includes(p.phase), "invalid phase " + p.phase + " on " + p.param_key);
+    });
+  });
+
+  await test("Charter dependencies are valid JSON arrays", async () => {
+    const data = await fetchJson(API + "/charter");
+    data.data.params.forEach(p => {
+      if (p.depends_on) {
+        const deps = JSON.parse(p.depends_on);
+        assert(Array.isArray(deps), "depends_on should be array on " + p.param_key);
+      }
+    });
+  });
+
+  await test("Resolved charter params have values", async () => {
+    const data = await fetchJson(API + "/charter");
+    data.data.params.forEach(p => {
+      if (p.status === "resolved") {
+        assert(p.param_value !== null && p.param_value !== undefined, "resolved param " + p.param_key + " should have value");
+      }
+    });
+  });
+
+  // ── CV2 Health ────────────────────────────────────
+
+  console.log("\n  CV2 Health:");
+
+  await test("CV2 status has all required fields", async () => {
+    const data = await fetchJson(API + "/cv2/status");
+    const d = data.data;
+    assert(typeof d.enabled === "boolean", "enabled should be boolean");
+    assert(typeof d.deployed === "boolean", "deployed should be boolean");
+    assert(typeof d.polling === "boolean", "polling should be boolean");
+    assert(typeof d.errors === "number", "errors should be number");
+    assert(d.component, "component should exist");
+  });
+
+  await test("CV2 polling is active", async () => {
+    const data = await fetchJson(API + "/cv2/status");
+    assert(data.data.polling === true, "polling should be active");
+  });
+
+  await test("CV2 error count is tracked", async () => {
+    const data = await fetchJson(API + "/cv2/status");
+    assert(typeof data.data.errors === "number", "errors should be a number");
+    // Note: errors > 0 is OK (sync issues are expected), just verifying it's tracked
+  });
+
+  // ── Badge Edge Cases ──────────────────────────────
+
+  console.log("\n  Badge Edge Cases:");
+
+  await test("Badge for valid-format but non-existent address returns false", async () => {
+    const resp = await fetch(API + "/badge/account_rdx1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq/verify");
+    const data = await resp.json();
+    assert(data.ok === true);
+    assert(data.hasBadge === false, "non-existent address should have no badge");
+  });
+
+  await test("Badge for malformed address returns 404", async () => {
+    const resp = await fetch(API + "/badge/not_a_real_address");
+    assert(resp.status === 404, "malformed address should 404");
+  });
+
+  // ── Game Edge Cases ───────────────────────────────
+
+  console.log("\n  Game Edge Cases:");
+
+  await test("Game state for unknown address returns ok with null/empty", async () => {
+    const data = await fetchJson(API + "/game/account_rdx1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq");
+    assert(data.ok === true, "should return ok");
+  });
+
+  await test("Achievements for unknown address returns ok", async () => {
+    const data = await fetchJson(API + "/game/account_rdx1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq/achievements");
+    assert(data.ok === true, "should return ok");
+  });
+
   // ── Summary ────────────────────────────────────────
 
   console.log("\n  Results: " + passed + " passed, " + failed + " failed");

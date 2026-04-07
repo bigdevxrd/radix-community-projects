@@ -18,6 +18,21 @@ const PORTAL = process.env.PORTAL_URL || "https://radixguild.com";
 const DAO_URL = "https://www.crumbsup.io/#dao?id=4db790d7-4d75-49ed-a2e0-3514743809e0";
 const GITHUB = "https://github.com/bigdevxrd/radix-community-projects";
 const HOURS = 72;
+const DISCORD_WEBHOOK = process.env.DISCORD_WEBHOOK_URL || "";
+
+// ── Discord Webhook ───────────────────────────────────────
+async function notifyDiscord(content) {
+  if (!DISCORD_WEBHOOK) return;
+  try {
+    await fetch(DISCORD_WEBHOOK, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ content }),
+    });
+  } catch (e) {
+    console.error("[Discord] Webhook failed:", e.message);
+  }
+}
 
 // ── Helpers ─────────────────────────────────────────────
 
@@ -214,6 +229,7 @@ bot.command("propose", async (ctx) => {
   );
   db.updateProposalMessage(id, msg.message_id, ctx.chat.id);
   queueXpReward(user.radix_address, "propose");
+  notifyDiscord("**New Proposal #" + id + "** — " + title + "\nType: Yes/No/Amend | Ends: " + endsLabel() + "\nVote: " + PORTAL + "/proposals/" + id);
 
   // Notify about on-chain option
   try {
@@ -261,6 +277,7 @@ bot.command("poll", async (ctx) => {
   );
   db.updateProposalMessage(id, msg.message_id, ctx.chat.id);
   queueXpReward(user.radix_address, "poll");
+  notifyDiscord("**New Poll #" + id + "** — " + question + "\nOptions: " + options.join(", ") + " | Ends: " + endsLabel() + "\nVote: " + PORTAL + "/proposals/" + id);
 });
 
 // ── /temp (Temperature Check) ───────────────────────────
@@ -292,6 +309,7 @@ bot.command("temp", async (ctx) => {
   );
   db.updateProposalMessage(id, msg.message_id, ctx.chat.id);
   queueXpReward(user.radix_address, "temp");
+  notifyDiscord("**Temp Check #" + id + "** — " + question + "\nNon-binding, 24h | Vote: " + PORTAL + "/proposals/" + id);
 
   // Notify about on-chain option
   try {
@@ -1048,6 +1066,10 @@ async function checkExpiredProposals() {
       }
     }
 
+    // Notify Discord
+    const discordCounts = Object.entries(counts).sort((a, b) => b[1] - a[1]).map(([o, c]) => o + ": " + c).join(", ");
+    notifyDiscord("**Proposal #" + proposal.id + " — " + result.toUpperCase() + "**\n" + proposal.title + "\n" + discordCounts + " (" + total + " votes)\n" + PORTAL + "/proposals/" + proposal.id);
+
     // Post to RadixTalk (if API key configured)
     const rtTitle = "[Result] Proposal #" + proposal.id + ": " + proposal.title.slice(0, 80);
     const rtBody = formatProposalForRT(proposal, counts);
@@ -1072,6 +1094,7 @@ async function checkExpiredProposals() {
           } catch(e) {}
         }
         console.log("[Charter] " + proposal.charter_param + " = " + value);
+        notifyDiscord("**Charter Resolved** — " + paramTitle + " = " + value + "\nSee progress: " + PORTAL + "/proposals");
       }
     }
 
