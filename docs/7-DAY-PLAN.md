@@ -1,189 +1,84 @@
-# 7-Day Plan — April 7-13, 2026
+# Weekly Status — April 7, 2026
 
-## Strategy
+## What Happened This Week
 
-Build open source. Fork to SaaS when Stage 2 is stable.
-Community feedback drives priority. Beta testers are active.
+### Day 1-2 (Apr 6-7) — Domain + Polish + Support
 
-## Day 1 (Apr 7) — Feedback + Quick Fixes
+**Shipped:**
+- [x] Custom domain: radixguild.com (Hostinger, TLS via Caddy)
+- [x] Removed /guild basePath — dashboard at root
+- [x] Old sslip.io URLs redirect (301) to new domain
+- [x] /transparency page (costs, revenue, on-chain proof)
+- [x] Vote Now hero with live countdown timers on proposals
+- [x] Proposal classification: Charter Vote / Community Vote / Temp Check
+- [x] "How Voting Works" collapsible explainer (off-chain vs CV2)
+- [x] /api/health system health endpoint
+- [x] SEO upgrade (metadataBase, Twitter cards, OG tags)
+- [x] TG_BOT_URL centralized (was hardcoded in 7 files)
+- [x] Pipeline tests: 39 → 70 (health, feedback, error handling, integrity, edge cases)
+- [x] Discord webhook notifications (proposal create/close/charter resolution)
+- [x] Support system: /feedback, /mystatus, /adminfeedback commands
+- [x] FAQ matcher: 10 entries, keyword matching, suggest before ticket creation
+- [x] /feedback dashboard page for admin ticket management
+- [x] "New to Radix?" onboarding card (wallet download, RadQuest, docs)
+- [x] Docs page rewrite: quick start, voting guide, XP/tiers, commands, FAQ
+- [x] Bounty page hardened: pipeline visualization, status bug fix
+- [x] README updated with all new features
+- [x] TESTER-INVITE.md refreshed for outreach
+- [x] CV2 sync error spam silenced (Gateway API limitation documented)
+- [x] 4 GitHub issues closed (#70, #71, #45, #68)
+- [x] docs/ROADMAP.md: 7-phase plan + economics model
+- [x] Deploy script fixed (/opt/rad-dao/ path)
+- [x] Wallet security feedback documented
 
-Priority: respond to what beta testers find.
+**Stats:** 13 dashboard pages, 70 pipeline tests, 20+ API endpoints, 22+ bot commands
 
-- [ ] Check bot logs for errors from real users
-- [ ] Check dashboard for any broken flows
-- [ ] Fix any bugs reported
-- [ ] Fund bot signer account (5 XRD transfer)
-- [ ] Test TG→CV2 bridge with real proposal
-- [ ] Monitor, respond to TG group
+### Active Proposals (P1-P6)
+- 6 foundation charter votes live (1/3 votes each)
+- Expiring ~Apr 8 — outreach in progress
+- If they expire: re-propose with lessons learned
 
-## Day 2 (Apr 8) — Working Groups (Stage 2a)
+## Remaining Open Issues (9)
 
-Design + build session. Working groups are the next structural piece.
+| # | Title | Priority |
+|---|-------|----------|
+| 69 | Charter guided wizard | Week 3 |
+| 58 | CV2 Phase 2: Self-host dApp + vote-collector | Phase 4+ |
+| 44 | CrumbsUp proposal sync | Phase 4+ |
+| 36 | Record demo video | When ready |
+| 34 | On-chain proposal outcomes | Phase 4+ |
+| 33 | Vote delegation | Phase 4+ |
+| 32 | Multi-DAO badge federation | Phase 5+ |
+| 9 | Build Manager Registry | Phase 5+ |
+| 8 | Build DAO Manager blueprint | Phase 5+ |
 
-- [ ] Design: working_groups + working_group_members tables
-- [ ] Build: bot commands (/groups, /group join, /group create)
-- [ ] Build: dashboard /groups page
-- [ ] Build: API endpoints (GET /api/groups, GET /api/groups/:id)
-- [ ] Deploy + test
-- [ ] Seed 3 initial groups: Product, Ecosystem, Community
+## Next Week Plan (Apr 14-20)
 
-## Day 3 (Apr 9) — Polish + Achievement NFTs
+### If P1-P6 pass (enough votes):
+- [ ] Charter Phase 1 resolves — 6 parameters set
+- [ ] Phase 2 params unlock (20 configuration decisions)
+- [ ] Celebrate + announce results
+- [ ] Begin Phase 2 voting
 
-- [ ] Build: achievement NFT minting script (mint-achievement.js)
-- [ ] Deploy: achievement badge schema on-chain (create_manager call)
-- [ ] Wire: batch signer writes game data to badge extra_data
-- [ ] Test: complete a grid → achievement NFT minted to wallet
-- [ ] Polish: any UI issues from Day 1-2 feedback
-- [ ] Update HOW-IT-WORKS doc with working groups
+### If P1-P6 expire (not enough votes):
+- [ ] Analyze: why didn't people vote?
+- [ ] Adjust min_votes threshold (maybe 1 instead of 3 for bootstrap)
+- [ ] Re-propose with better messaging
+- [ ] Consider: /vote command improvements for lower friction
 
-## Day 4 (Apr 10) — RAC Election System (Stage 2b)
+### Either way:
+- [ ] Process beta feedback (/adminfeedback)
+- [ ] Charter guided wizard (#69)
+- [ ] Monitor /api/health for issues
+- [ ] Track metrics: badges minted, votes cast, proposals created
+- [ ] Set up Discord webhook (need DISCORD_WEBHOOK_URL in bot .env)
 
-Prerequisites: Charter Phase 1 votes completed (or override for testing).
+## Full Schedule: docs/ROADMAP.md
 
-- [ ] Design: election flow (nomination → discussion → vote)
-- [ ] Build: /election, /nominate, /candidates bot commands
-- [ ] Build: election uses CV2 on-chain voting for binding results
-- [ ] Build: dashboard election page
-- [ ] Test full cycle: nominate → vote → winners announced
-
-## Day 5 (Apr 11) — Group Proposals + Dashboard Cleanup
-
-- [ ] Build: proposals tagged to working groups (Stage 2c)
-- [ ] Build: group leads can create bounties
-- [ ] Address #70: dashboard home cleanup
-- [ ] Address #69: charter guided wizard
-- [ ] Deploy + test
-
-## Day 6 (Apr 12) — SaaS Fork Preparation
-
-- [ ] Audit: what's generic vs guild-specific in the codebase
-- [ ] Create: guild-saas branch or update existing guild-saas repo
-- [ ] Add: config layer for multi-tenant (different badge schemas, different TG bots)
-- [ ] Add: royalty/pricing model to badge minting
-- [ ] Design: white-label dashboard (configurable branding)
-- [ ] Document: what a "customer" deployment looks like
-
-## Day 7 (Apr 13) — Testing + Launch Prep
-
-- [ ] Full regression test (pipeline should be 45+ tests by now)
-- [ ] Security audit on new features
-- [ ] Update all docs
-- [ ] Record demo video (#36)
-- [ ] Prepare launch post for wider community
-- [ ] Review: is Stage 2 stable enough to fork?
-
-## Definition of Done (end of week)
-
-- [ ] Working groups live with 3 seeded groups
-- [ ] Achievement NFTs minting on grid completion
-- [ ] RAC election system functional (even if no election yet)
-- [ ] Group proposals working
-- [ ] SaaS fork started with multi-tenant config
-- [ ] 45+ pipeline tests
-- [ ] Demo video recorded
-- [ ] Zero critical bugs from beta feedback
-
-## SaaS Fork Strategy
-
-When to fork: after Day 5 (Stage 2 stable).
-
-What's different in SaaS:
-- Multi-tenant: one deployment serves multiple DAOs
-- Custom branding: logo, colors, domain per DAO
-- Royalties: badge minting charges XRD (configurable per DAO)
-- Managed hosting: Big Dev operates the infrastructure
-- Premium features: advanced analytics, custom badge schemas, priority support
-
-What stays open source:
-- All core governance logic
-- Badge system (BadgeFactory + Manager)
-- Voting (TG + CV2)
-- Bounty + escrow
-- Grid game
-- All docs
-
-Fork point: guild-saas repo gets a config layer on top of the open source base. Same code, different deployment config.
-
-## Week 2 Plan (Apr 14-20)
-
-### Day 8 (Apr 14) — Governance Assistant MVP
-
-- [ ] Simplify agent-tools: strip executor, keep scan + context + LLM ask
-- [ ] Build: governance-specific prompts (charter rules, proposal templates)
-- [ ] Build: POST /api/assist endpoint (badge-gated, rate limited)
-- [ ] Build: pay-per-use model (0.5 XRD per assist, configurable)
-- [ ] Wire: XRD payment → treasury escrow on each assist call
-- [ ] Test: "help me write a proposal about X" → formatted proposal draft
-
-### Day 9 (Apr 15) — Dashboard Assistant UI
-
-- [ ] Build: sidebar assistant component on dashboard
-- [ ] Input: text field + context selector (proposal/bounty/charter/general)
-- [ ] Output: formatted response with action buttons (create proposal, create bounty)
-- [ ] Bot: /assist command in TG for same functionality
-- [ ] Deploy + test with beta testers
-
-### Day 10 (Apr 16) — Achievement NFT Minting
-
-- [ ] Fund bot signer account (if not done)
-- [ ] Deploy achievement badge schema on-chain (create_manager call)
-- [ ] Build: mint-achievement.js script
-- [ ] Wire: batch signer writes game data to badge extra_data
-- [ ] Wire: milestone NFT minting on 5th/10th grid completion
-- [ ] Test: complete grid → NFT appears in wallet
-
-### Day 11 (Apr 17) — Multi-Sig Treasury Prep
-
-- [ ] Research: Radix native access rules for M-of-N signing
-- [ ] Design: treasury account with RAC member badges as signers
-- [ ] Build: treasury dashboard page (balance, pending, history)
-- [ ] Build: /treasury bot command
-- [ ] Document: treasury management guide
-
-### Day 12 (Apr 18) — SaaS Fork + Pricing
-
-- [ ] Fork: create guild-saas branch from current main
-- [ ] Add: config layer (tenant ID, branding, pricing)
-- [ ] Add: royalty on badge minting (configurable XRD per mint)
-- [ ] Add: assist API markup (SaaS takes cut of per-use fees)
-- [ ] Add: white-label dashboard config (logo, colors, name)
-- [ ] Document: SaaS deployment guide
-
-### Day 13-14 (Apr 19-20) — Testing + Community
-
-- [ ] Full regression (target 50+ pipeline tests)
-- [ ] Security audit on new features
-- [ ] Process beta tester feedback backlog
-- [ ] Update all docs
-- [ ] Community call or forum post with progress update
-- [ ] Plan Week 3 based on feedback
-
-## Revenue Model (Pay-Per-Use)
-
-```
-Badge holder uses governance assistant
-  → LLM API call costs ~$0.002
-  → User pays 0.5 XRD per assist
-  → XRD deposited to guild treasury escrow
-  → Treasury grows from real usage
-  → No pre-funding needed
-
-SaaS version:
-  → Same model + platform fee
-  → Host charges 1 XRD per assist (keeps 0.5, passes 0.5 to DAO)
-  → Badge minting: free (open source) vs 1 XRD (SaaS hosted)
-```
-
-## Full Stage Schedule
-
-| Stage | What | When | Status |
-|-------|------|------|--------|
-| 1 | Foundation (badges, voting, CV2, game) | Apr 3-6 | Done |
-| 2a | Working groups | Apr 8 | Week 1 |
-| 2b | RAC election | Apr 10 | Week 1 |
-| 2c | Group proposals | Apr 11 | Week 1 |
-| 3 | Treasury + multi-sig | Apr 17 | Week 2 |
-| 4 | Legal entity + federation | TBD | Community decides |
-| 5 | Governance assistant (pay-per-use) | Apr 14-15 | Week 2 |
-| SaaS | Fork + pricing + white-label | Apr 18 | Week 2 |
-| NFTs | Achievement minting on-chain | Apr 16 | Week 2 |
+| Month | Phase | Status |
+|-------|-------|--------|
+| Apr | Beta + Polish | **In Progress** — Week 1-2 done |
+| May | SaaS Config Layer | Planned |
+| Jun | Pitch + First Customer | Planned |
+| Jul-Aug | Revenue Features | Planned |
+| Sep+ | Scale | Planned |
