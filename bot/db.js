@@ -222,6 +222,9 @@ function init() {
     seedCfg.run("require_application_above_xrd", "100");
   }
 
+  // Feedback migration: add radix_address for web-based submissions
+  try { db.exec("ALTER TABLE feedback ADD COLUMN radix_address TEXT"); } catch(e) {}
+
   // Indexes for marketplace queries
   db.exec(`
     CREATE INDEX IF NOT EXISTS idx_bounties_category ON bounties(category, status);
@@ -953,14 +956,18 @@ module.exports = {
 
 // ── Feedback / Support ──────────────────────────────────
 
-function createFeedback(tgId, username, message, category = "general") {
-  const stmt = db.prepare("INSERT INTO feedback (tg_id, username, message, category) VALUES (?, ?, ?, ?)");
-  const result = stmt.run(tgId, username, message, category);
+function createFeedback(tgId, username, message, category = "general", radixAddress = null) {
+  const stmt = db.prepare("INSERT INTO feedback (tg_id, username, message, category, radix_address) VALUES (?, ?, ?, ?, ?)");
+  const result = stmt.run(tgId, username, message, category, radixAddress);
   return result.lastInsertRowid;
 }
 
 function getFeedbackByUser(tgId) {
   return db.prepare("SELECT * FROM feedback WHERE tg_id = ? ORDER BY created_at DESC LIMIT 10").all(tgId);
+}
+
+function getFeedbackByAddress(address) {
+  return db.prepare("SELECT * FROM feedback WHERE radix_address = ? ORDER BY created_at DESC LIMIT 20").all(address);
 }
 
 function getOpenFeedback(limit = 20) {
@@ -1016,6 +1023,7 @@ module.exports.getFilteredBounties = getFilteredBounties;
 module.exports.checkExpiredBounties = checkExpiredBounties;
 module.exports.createFeedback = createFeedback;
 module.exports.getFeedbackByUser = getFeedbackByUser;
+module.exports.getFeedbackByAddress = getFeedbackByAddress;
 module.exports.getOpenFeedback = getOpenFeedback;
 module.exports.getAllFeedback = getAllFeedback;
 module.exports.respondToFeedback = respondToFeedback;

@@ -833,15 +833,84 @@ bot.command("leaderboard", (ctx) => {
 
 // ── /charter ───────────────────────────────────────────
 
-bot.command("charter", (ctx) => {
+bot.command("charter", async (ctx) => {
+  const args = ctx.message.text.split(/\s+/).slice(1);
+  const sub = args[0];
+
+  // /charter guide — interactive guided voting
+  if (sub === "guide") {
+    const user = await requireBadge(ctx);
+    if (!user) return;
+
+    const status = db.getCharterStatus();
+    const ready = db.getReadyParams();
+
+    if (ready.length === 0) {
+      return ctx.reply(
+        "Charter Progress: " + status.resolved + "/" + status.total + " resolved\n\n" +
+        "No parameters ready to vote on right now.\n" +
+        (status.resolved === 0 ? "The 6 foundation proposals need votes first. Type /proposals to see them." : "Waiting for dependencies to resolve.")
+      );
+    }
+
+    // Find active proposals linked to ready charter params
+    const activeProposals = db.getActiveProposals();
+    const charterProposals = activeProposals.filter(p => p.charter_param && ready.some(r => r.param_key === p.charter_param));
+
+    if (charterProposals.length === 0) {
+      let msg = "Charter Progress: " + status.resolved + "/" + status.total + " resolved\n\n";
+      msg += ready.length + " parameters are ready but no active proposals yet.\n\n";
+      msg += "Ready to propose:\n";
+      ready.slice(0, 5).forEach(p => {
+        const opts = p.options ? JSON.parse(p.options) : null;
+        msg += "\n" + p.title + "\n";
+        if (opts) msg += "Options: " + opts.join(", ") + "\n";
+      });
+      msg += "\nCreate a proposal with /propose or /poll to start voting.";
+      return ctx.reply(msg);
+    }
+
+    // Show guided voting with inline keyboards
+    let msg = "Charter Guided Voting\n\n" +
+      "Progress: " + status.resolved + "/" + status.total + " (" + Math.round(status.resolved / status.total * 100) + "%)\n" +
+      charterProposals.length + " charter votes active — vote below!\n\n";
+
+    // Show first 3 charter proposals with vote prompts
+    for (const p of charterProposals.slice(0, 3)) {
+      const counts = db.getVoteCounts(p.id);
+      const total = Object.values(counts).reduce((a, b) => a + b, 0);
+      const timeLeft = p.ends_at - Math.floor(Date.now() / 1000);
+      const hours = Math.max(0, Math.round(timeLeft / 3600));
+
+      msg += "#" + p.id + " " + p.title + "\n";
+      msg += "Votes: " + total + "/" + p.min_votes + " | " + hours + "h left\n";
+      if (Object.keys(counts).length > 0) {
+        Object.entries(counts).forEach(([opt, count]) => {
+          msg += "  " + opt + ": " + count + "\n";
+        });
+      }
+      msg += "\n";
+    }
+
+    msg += "Vote with /vote <id> or tap the buttons on proposal messages.\n";
+    msg += "Each vote earns +10 XP + a dice roll!";
+
+    const kb = new InlineKeyboard();
+    charterProposals.slice(0, 3).forEach(p => {
+      kb.text("Vote on #" + p.id, "charter_vote_" + p.id).row();
+    });
+    kb.text("View all proposals", "charter_view_all");
+
+    return ctx.reply(msg, { reply_markup: kb });
+  }
+
+  // Default: /charter — show status
   const status = db.getCharterStatus();
   const ready = db.getReadyParams();
 
-  let msg = "Radix DAO Charter Status\n\n" +
-    "Total parameters: " + status.total + "\n" +
-    "Resolved: " + status.resolved + "\n" +
-    "Voting: " + status.voting + "\n" +
-    "Pending: " + status.tbd + "\n\n";
+  let msg = "Radix DAO Charter\n\n" +
+    "Progress: " + status.resolved + "/" + status.total + " (" + Math.round(status.resolved / status.total * 100) + "%)\n" +
+    "Resolved: " + status.resolved + " | Voting: " + status.voting + " | Pending: " + status.tbd + "\n\n";
 
   if (ready.length > 0) {
     msg += "Ready to vote (" + ready.length + "):\n";
@@ -849,6 +918,7 @@ bot.command("charter", (ctx) => {
       msg += "  " + p.param_key + " — " + p.title + "\n";
     });
     if (ready.length > 10) msg += "  ... and " + (ready.length - 10) + " more\n";
+    msg += "\nUse /charter guide for interactive voting!";
   }
 
   const resolved = db.getCharterParams().filter(p => p.status === "resolved");
@@ -859,8 +929,39 @@ bot.command("charter", (ctx) => {
     });
   }
 
-  msg += "\nFull charter: radix.wiki/ideas/radix-network-dao-charter";
+  msg += "\nDashboard: " + PORTAL + "/proposals\nCharter: radix.wiki/ideas/radix-network-dao-charter";
   ctx.reply(msg);
+});
+
+// Charter guide callback: vote on specific proposal
+bot.callbackQuery(/^charter_vote_(\d+)$/, async (ctx) => {
+  const id = parseInt(ctx.match[1]);
+  const proposal = db.getProposal(id);
+  if (!proposal || proposal.status !== "active") {
+    return ctx.answerCallbackQuery({ text: "This vote has ended.", show_alert: true });
+  }
+  const counts = db.getVoteCounts(id);
+  // Re-post the proposal with vote buttons
+  let kb;
+  if (proposal.type === "yesno") {
+    kb = buildYesNoKeyboard(id, counts);
+  } else {
+    const opts = proposal.options ? JSON.parse(proposal.options) : [];
+    kb = buildPollKeyboard(id, opts, counts);
+  }
+  const total = Object.values(counts).reduce((a, b) => a + b, 0);
+  await ctx.reply(
+    "Charter Vote #" + id + "\n\n" +
+    proposal.title + "\n\n" +
+    "Votes: " + total + "/" + proposal.min_votes + "\n" +
+    "Charter param: " + (proposal.charter_param || "none"),
+    { reply_markup: kb }
+  );
+  await ctx.answerCallbackQuery();
+});
+
+bot.callbackQuery("charter_view_all", async (ctx) => {
+  await ctx.answerCallbackQuery({ text: "Use /proposals to see all active votes", show_alert: true });
 });
 
 // ── /faq ───────────────────────────────────────────────
@@ -939,7 +1040,7 @@ bot.command("mint", (ctx) => ctx.reply(
 ));
 bot.command("dao", (ctx) => ctx.reply("Guild DAO:\n" + DAO_URL));
 bot.command("source", (ctx) => ctx.reply("Source:\n" + GITHUB));
-bot.command("charter", (ctx) => ctx.reply("DAO Charter:\nhttps://radix.wiki/ideas/radix-network-dao-charter"));
+// charter command defined above with /charter guide support
 bot.command("mvd", (ctx) => ctx.reply("Minimum Viable DAO discussion:\nhttps://radixtalk.com/t/design-our-minimum-viable-dao-mvd/2258"));
 bot.command("wiki", (ctx) => ctx.reply("Radix Wiki:\nhttps://radix.wiki/ecosystem"));
 bot.command("talk", (ctx) => ctx.reply("RadixTalk forum:\nhttps://radixtalk.com"));

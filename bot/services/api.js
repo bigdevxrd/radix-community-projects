@@ -52,9 +52,10 @@ function startApi() {
 
     const url = new URL(req.url, "http://localhost");
 
-    // Allow GET + POST for game board routes, GET only for everything else
+    // Allow GET + POST for game board routes and feedback, GET only for everything else
     const isGamePost = req.method === "POST" && url.pathname.includes("/board/");
-    if (req.method !== "GET" && !isGamePost) {
+    const isFeedbackPost = req.method === "POST" && url.pathname === "/api/feedback";
+    if (req.method !== "GET" && !isGamePost && !isFeedbackPost) {
       res.writeHead(405);
       return res.end(JSON.stringify({ ok: false, error: "method_not_allowed" }));
     }
@@ -316,10 +317,41 @@ function startApi() {
 
     // ── Feedback Endpoints ────────────────────────────────
 
-    // GET /api/feedback — all tickets
+    // POST /api/feedback — create ticket from dashboard
+    if (url.pathname === "/api/feedback" && req.method === "POST") {
+      try {
+        const body = await readBody(req);
+        if (!body.message || !body.message.trim()) {
+          res.writeHead(400);
+          return res.end(JSON.stringify({ ok: false, error: "message_required" }));
+        }
+        const id = db.createFeedback(
+          0, // tg_id = 0 for web submissions
+          body.username || "web-user",
+          body.message.trim().slice(0, 1000),
+          body.category || "general",
+          body.address || null
+        );
+        res.writeHead(200);
+        return res.end(JSON.stringify({ ok: true, data: { id } }));
+      } catch (e) {
+        res.writeHead(400);
+        return res.end(JSON.stringify({ ok: false, error: "invalid_body" }));
+      }
+    }
+
+    // GET /api/feedback — all tickets or filtered by address
     if (url.pathname === "/api/feedback") {
       const status = url.searchParams.get("status");
-      const tickets = status === "open" ? db.getOpenFeedback(50) : db.getAllFeedback(50);
+      const address = url.searchParams.get("address");
+      let tickets;
+      if (address) {
+        tickets = db.getFeedbackByAddress(address);
+      } else if (status === "open") {
+        tickets = db.getOpenFeedback(50);
+      } else {
+        tickets = db.getAllFeedback(50);
+      }
       res.writeHead(200);
       return res.end(JSON.stringify({ ok: true, data: tickets }));
     }
