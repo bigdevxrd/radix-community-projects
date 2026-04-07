@@ -2,13 +2,13 @@
 
 ## Context
 
-Radix Guild v1.0.0 is live at radixguild.com with 39/39 tests passing, custom domain, 12 dashboard pages, TG bot with 22+ commands, on-chain badges, two-tier governance, bounties, gamification, and a transparency page. The open source repo is the sales demo. The private guild-saas repo is the revenue engine.
+Radix Guild is live at radixguild.com — 14 dashboard pages, 70 pipeline tests, 22+ bot commands, on-chain badges, two-tier governance, task marketplace with categories/milestones/fees, gamification, support system, and full transparency.
 
-**Goal:** Turn this world-class dApp into a sustainable business while growing the Radix community.
+**Goal:** Build the Web3 task marketplace for Radix — then for the wider ecosystem. Open source core, fees + royalties fund the guild treasury.
 
-**First target customer:** Radix Foundation / RAC — if they adopt it, the ecosystem follows.
+**Revenue model:** 2.5% platform fee on task payouts + Scrypto component royalties + SaaS hosting. All charter-voteable. A percentage of all revenue flows back to the guild treasury.
 
-**Timeline:** Monthly milestones. No rush. Planning makes perfect.
+**Timeline:** Monthly milestones. Marketplace is the primary income engine.
 
 ---
 
@@ -101,6 +101,78 @@ The Badge Manager Scrypto components have royalties configured on mainnet. These
 | Agent Wallet | `account_rdx128lggt503h7m2dhzqnrkkqv4zklxcjmdggr8xxtqy8e47p7fkmd8cx` |
 
 To claim: present Owner Badge, call `claim_royalties()` on each component. Royalties withdraw to the caller's wallet.
+
+---
+
+## TASK MARKETPLACE (Primary Income Engine)
+
+The bounty system evolves into a full task marketplace. 5 phases, detailed plan in `docs/MARKETPLACE-PLAN.md`.
+
+### Phase 1A: Enhanced Task Board — SHIPPED (Apr 7)
+- [x] 6 task categories (dev, design, content, marketing, testing, general)
+- [x] Platform config: 2.5% fee, min/max XRD, deadlines (charter-voteable)
+- [x] Bounty detail page (`/bounties/[id]`) with fee breakdown, criteria, milestones, applications
+- [x] Filtered API (`?category=development&sort=reward_desc`)
+- [x] Database: milestones, applications, categories, platform_config tables
+
+### Phase 1B-C: Bot + Dashboard Polish (Apr 14-27)
+- [ ] Bot wizard expansion: 3 → 7 steps (category, difficulty, deadline, criteria)
+- [ ] Category filter pills on bounties page
+- [ ] Deadline countdown on bounty cards
+- [ ] Hourly cron: auto-cancel expired open tasks
+- [ ] `/bounty apply`, `/bounty approve`, `/bounty cancel` commands
+
+### Phase 2: On-Chain Escrow (May-Jun)
+- [ ] TaskEscrow Scrypto component (atomic escrow → verify → pay)
+- [ ] Receipt NFT pattern (creator gets non-transferable receipt)
+- [ ] Royalties: create_task 0.5 XRD, verify_task 0.25 XRD
+- [ ] Dashboard `/bounties/create` web form with wallet signing
+- [ ] Auto-refund after deadline + grace period
+
+### Phase 3: Marketplace UX (Jul-Aug)
+- [ ] Worker/client profiles with ratings
+- [ ] Skill-based matching ("recommended for you")
+- [ ] Notification system (bot DMs + dashboard bell)
+- [ ] `/marketplace` discovery page
+
+### Phase 4: SaaS + Multi-Tenant (Sep-Oct)
+- [ ] TaskEscrowFactory (10 XRD factory royalty per deployment)
+- [ ] White-label marketplace per tenant
+- [ ] Configurable fee % per tenant
+
+### Phase 5: Wider Market (Nov+)
+- [ ] Multi-currency (XRD + stablecoins)
+- [ ] Cross-community federation
+- [ ] External API with webhooks
+
+### Revenue Flow — How Fees Fund the Guild
+
+```
+Task created (100 XRD)
+  ├── 97.5 XRD → Escrow (held for worker)
+  ├── 2.5 XRD → Platform fee vault
+  │     ├── 50% → Guild treasury (community fund)
+  │     └── 50% → Operations (hosting, dev, admin)
+  └── 0.5 XRD → Component royalty (on-chain, automatic)
+        └── 100% → Guild treasury
+
+Task verified → 97.5 XRD released to worker
+  └── 0.25 XRD → Component royalty (on-chain, automatic)
+
+Every task funds the guild. Every component call earns royalties.
+The code produces value that produces value.
+```
+
+### Revenue Split (Charter-Voteable)
+
+| Revenue Source | Guild Treasury | Operations | Worker |
+|---------------|---------------|------------|--------|
+| Task reward | 0% | 0% | 100% of net |
+| Platform fee (2.5%) | 50% | 50% | 0% |
+| Component royalties | 100% | 0% | 0% |
+| SaaS hosting fees | 50% | 50% | 0% |
+
+All percentages adjustable by charter vote. The community decides the split.
 
 ---
 

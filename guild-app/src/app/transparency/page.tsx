@@ -13,11 +13,13 @@ const COSTS = [
 ];
 
 const REVENUE = [
-  { source: "Badge minting royalty", amount: `${ROYALTIES.mint} XRD per mint`, status: "live", note: "On-chain, goes to component owner" },
-  { source: "Tier update royalty", amount: `${ROYALTIES.update_tier} XRD`, status: "live", note: "On-chain component royalty" },
-  { source: "XP update royalty", amount: `${ROYALTIES.update_xp} XRD`, status: "live", note: "On-chain component royalty" },
-  { source: "Governance assistant", amount: "0.5 XRD per use", status: "planned", note: "LLM-powered proposal drafting" },
-  { source: "SaaS hosting", amount: "TBD", status: "planned", note: "White-label for other DAOs" },
+  { source: "Task marketplace fee", amount: "2.5% per task", status: "live", note: "Charged on creation. 50% treasury, 50% operations." },
+  { source: "Badge minting royalty", amount: `${ROYALTIES.mint} XRD per mint`, status: "live", note: "On-chain component royalty → treasury" },
+  { source: "Tier update royalty", amount: `${ROYALTIES.update_tier} XRD`, status: "live", note: "On-chain component royalty → treasury" },
+  { source: "XP update royalty", amount: `${ROYALTIES.update_xp} XRD`, status: "live", note: "On-chain component royalty → treasury" },
+  { source: "Task escrow royalties", amount: "0.5 + 0.25 XRD", status: "planned", note: "Per task creation + verification (on-chain)" },
+  { source: "Governance assistant", amount: "1% admin fee", status: "planned", note: "At-cost AI service, 1% covers overhead" },
+  { source: "SaaS hosting", amount: "20-50 XRD/mo", status: "planned", note: "White-label deployments for other DAOs" },
 ];
 
 function TransparencyContent() {
@@ -88,6 +90,34 @@ function TransparencyContent() {
           <p><strong>Who controls?</strong> Big Dev holds the admin badge. It transfers to the elected RAC (Radix Advisory Council) when Charter Step 3 completes.</p>
           <p><strong>What happens if Big Dev disappears?</strong> Everything is open source (MIT). Anyone can fork the code and deploy their own instance. On-chain badges and CV2 votes persist independently on the Radix ledger.</p>
           <p><strong>Can the community take over?</strong> Yes. That is the explicit goal. Charter Steps 1-3 build the governance structure. Step 4 is self-governing.</p>
+        </CardContent>
+      </Card>
+
+      {/* Revenue Split */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-sm uppercase tracking-wide text-muted-foreground">Where the Money Goes</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3 text-sm">
+          <div className="space-y-2">
+            {[
+              { source: "Platform fee (2.5%)", split: "50% guild treasury, 50% operations", note: "Charged on task creation" },
+              { source: "Component royalties", split: "100% guild treasury", note: "Automatic on-chain — every component call" },
+              { source: "SaaS hosting fees", split: "50% guild treasury, 50% operations", note: "From white-label deployments" },
+              { source: "Task rewards", split: "100% to worker", note: "The guild never touches the worker's payout" },
+            ].map(r => (
+              <div key={r.source} className="py-2 border-b last:border-0">
+                <div className="flex items-center justify-between">
+                  <span className="font-medium">{r.source}</span>
+                  <span className="text-xs text-primary font-mono">{r.split}</span>
+                </div>
+                <div className="text-[11px] text-muted-foreground">{r.note}</div>
+              </div>
+            ))}
+          </div>
+          <div className="bg-muted rounded-lg p-3 text-xs text-muted-foreground">
+            All percentages are charter-voteable. The community can adjust the split at any time through a binding governance proposal.
+          </div>
         </CardContent>
       </Card>
 
