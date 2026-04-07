@@ -1,0 +1,12 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "guild-app",
+      "runtimeExecutable": "/usr/local/bin/npx",
+      "runtimeArgs": ["next", "dev", "--port", "3000"],
+      "port": 3000,
+      "cwd": "/Users/bigdev/Projects/radix-community-projects/guild-app"
+    }
+  ]
+}

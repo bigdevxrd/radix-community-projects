@@ -13,7 +13,9 @@ Radix Guild is live at radixguild.com — 14 dashboard pages, 70 pipeline tests,
 ---
 
 ## PHASE 1: BUILD (Apr 3-5) — DONE
-## PHASE 2: POLISH + DOMAIN (Apr 6) — DONE
+## PHASE 2: POLISH + DOMAIN (Apr 6-7) — DONE
+
+**Shipped in 1 day:** Custom domain, 14 pages (was 10), 70 tests (was 39), proposal classification, Vote Now hero + countdowns, support system, FAQ matcher, task marketplace Phase 1 (categories, milestones, applications, fees, detail page, wizard, cron), transparency page, docs overhaul, onboarding card, Discord webhook, economics model, strategic architecture, 14 commits.
 
 ---
 
@@ -21,34 +23,29 @@ Radix Guild is live at radixguild.com — 14 dashboard pages, 70 pipeline tests,
 
 **Goal:** Get 20-50 real users. Collect feedback. Prove the system works with real governance.
 
-### Week 1 (Apr 7-13): Beta Launch
-- [ ] Announce radixguild.com in Radix TG groups
-- [ ] Post on RadixTalk forum (TESTER-INVITE.md is ready)
+### Week 1 (Apr 7-13): Beta Launch + Outreach
+- [x] Announce radixguild.com in Radix TG groups (in progress)
+- [ ] Post on RadixTalk forum (TESTER-INVITE.md ready)
 - [ ] Post in Radix Discord #developers
 - [ ] DM 10-20 Radix OGs personally
-- [ ] Monitor bot logs daily, fix bugs within 24h
-- [ ] Fund bot signer account (5 XRD)
-- [ ] Test full mint → vote → XP flow on production
+- [x] Fund bot signer account (5 XRD — done, wallet recovery issue noted)
+- [x] 14 dashboard pages live + 70 tests passing
+- [x] Support system live (/feedback + FAQ matcher)
+- [x] Task marketplace Phase 1 complete (categories, fees, wizard, cron)
+- [ ] Set DISCORD_WEBHOOK_URL on VPS
+- [ ] Monitor P1-P6 vote results (expire ~Apr 8)
 
 ### Week 2 (Apr 14-20): Respond to Feedback
-- [ ] Fix reported bugs (prioritize by user impact)
-- [ ] Process Charter foundation votes (6 live proposals)
-- [ ] Track: how many badges minted, votes cast, proposals created
-- [ ] Identify friction points in onboarding
-- [ ] Review open PRs (#48, #50, #51, #39, #37)
-
-### Week 3 (Apr 21-27): Polish Round 2
-- [ ] "New to Radix?" onboarding card (#71)
-- [ ] Dashboard home cleanup (#70)
+- [ ] Fix reported bugs (use /adminfeedback to track)
+- [ ] Process Charter foundation votes (P1-P6 results)
 - [ ] Charter guided wizard (#69)
-- [ ] Any UX fixes from beta feedback
-- [ ] Update docs based on real user questions
+- [ ] Track metrics via /api/health + /api/stats
+- [ ] Demo video (#36) if time permits
 
-### Week 4 (Apr 28-30): Metrics & Assessment
-- [ ] Compile beta metrics: users, badges, votes, proposals, bounties
+### Week 3-4 (Apr 21-30): Assessment
+- [ ] Compile beta metrics: badges minted, votes cast, proposals created
 - [ ] Write "State of the Guild" post for community
-- [ ] Identify which Phase 4 features users actually want
-- [ ] Decision: is Stage 2 (working groups) needed yet?
+- [ ] Decision: what does the community want next?
 
 **Success criteria:** 20+ badges minted, 50+ votes cast, 3+ community-created proposals, zero critical bugs for 7 days.
 
