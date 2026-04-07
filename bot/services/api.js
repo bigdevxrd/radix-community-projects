@@ -52,10 +52,11 @@ function startApi() {
 
     const url = new URL(req.url, "http://localhost");
 
-    // Allow GET + POST for game board routes and feedback, GET only for everything else
+    // Allow GET + POST for game board routes, feedback, and bounties, GET only for everything else
     const isGamePost = req.method === "POST" && url.pathname.includes("/board/");
     const isFeedbackPost = req.method === "POST" && url.pathname === "/api/feedback";
-    if (req.method !== "GET" && !isGamePost && !isFeedbackPost) {
+    const isBountyPost = req.method === "POST" && url.pathname === "/api/bounties";
+    if (req.method !== "GET" && !isGamePost && !isFeedbackPost && !isBountyPost) {
       res.writeHead(405);
       return res.end(JSON.stringify({ ok: false, error: "method_not_allowed" }));
     }
@@ -189,6 +190,29 @@ function startApi() {
       const top = db.getGameLeaderboard(20);
       res.writeHead(200);
       return res.end(JSON.stringify({ ok: true, data: top }));
+    }
+
+    // POST /api/bounties — create task from dashboard
+    if (url.pathname === "/api/bounties" && req.method === "POST") {
+      try {
+        const body = await readBody(req);
+        if (!body.title || !body.reward_xrd) {
+          res.writeHead(400);
+          return res.end(JSON.stringify({ ok: false, error: "title and reward_xrd required" }));
+        }
+        const deadlineSec = body.deadline_days ? Math.floor(Date.now() / 1000) + body.deadline_days * 86400 : null;
+        const id = db.createBounty(body.title.slice(0, 500), parseFloat(body.reward_xrd), 0, {
+          description: body.description || null,
+          category: body.category || "general",
+          difficulty: body.difficulty || "medium",
+          deadline: deadlineSec,
+        });
+        res.writeHead(200);
+        return res.end(JSON.stringify({ ok: true, data: { id } }));
+      } catch (e) {
+        res.writeHead(400);
+        return res.end(JSON.stringify({ ok: false, error: "invalid_body" }));
+      }
     }
 
     // GET /api/bounties — bounty list + stats (with filters)
