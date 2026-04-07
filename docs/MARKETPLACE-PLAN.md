@@ -8,6 +8,8 @@ The Radix Guild bounty system is MVP-grade (SQLite escrow tracking, admin-manage
 
 **The moat:** Radix atomic composability means escrow → verify → pay happens in ONE transaction. No intermediary can intercept. The code IS the contract. Component royalties compound across every deployment.
 
+**Strategic separation:** Governance (voting, charter) is free and drives adoption. The marketplace (tasks, escrow, fees) is the revenue engine. Same codebase, feature-flagged — no fork needed. The badge is the bridge between both. See ROADMAP.md for the dual-product architecture.
+
 ---
 
 ## 5 Phases, 17+ Weeks

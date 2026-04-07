@@ -104,6 +104,68 @@ To claim: present Owner Badge, call `claim_royalties()` on each component. Royal
 
 ---
 
+## STRATEGIC ARCHITECTURE: TWO PRODUCTS, ONE CODEBASE
+
+The guild produces two products from one codebase. No fork needed — feature flags control what's enabled.
+
+### The Two Products
+
+| Product | Purpose | Revenue | Who Pays |
+|---------|---------|---------|----------|
+| **Governance** | Voting, charter, CV2, proposals, game | Free | Nobody — drives adoption |
+| **Marketplace** | Tasks, bounties, escrow, profiles, matching | 2.5% fee + royalties | Task creators |
+
+### Why Not Fork?
+
+- **Badge is the bridge** — your identity works in both products. Free governance gets people in. Marketplace monetizes their work.
+- **Shared infrastructure** — bot, dashboard, API, database. One deployment, two value streams.
+- **Network effect** — governance users become marketplace users. Reputation earned voting carries over to task completion.
+- **No code duplication** — one codebase to maintain, one test suite, one deploy pipeline.
+
+### How It Works
+
+```
+tenant.config.js:
+  features:
+    governance: true      ← FREE (always on for community)
+    marketplace: true     ← FEE-GENERATING (opt-in per deployment)
+    game: true            ← ENGAGEMENT (always on)
+    cv2: true             ← ON-CHAIN VOTING (opt-in)
+  fees:
+    platformFeePct: 2.5   ← marketplace fee (charter-voteable)
+    treasurySharePct: 50  ← % of fees to guild treasury
+```
+
+### The Business Model
+
+```
+FREE: Connect wallet → mint badge → vote on proposals → earn XP → play game
+  ↓
+PAID: Post a task → fund escrow → worker delivers → 2.5% fee → guild treasury
+  ↓
+PASSIVE: Every Scrypto component call → royalty → guild treasury
+  ↓
+SAAS: Other communities deploy their own → hosting fee + component royalties
+```
+
+**The funnel:** Free governance attracts users. Users with badges become marketplace participants. Marketplace generates fees. Fees fund development. Development produces more royalty-earning code. The flywheel spins.
+
+### Low Friction for Community
+
+| Action | Cost to User | Revenue to Guild |
+|--------|-------------|-----------------|
+| Mint badge | Free | Component royalty (waived in beta) |
+| Vote on proposal | Free | Nothing |
+| Create temp check | Free | Nothing |
+| Play dice game | Free | Nothing |
+| Earn XP | Free | Component royalty (0.1 XRD) |
+| **Post a task** | **2.5% of reward** | **Fee + component royalty** |
+| **Complete a task** | **Free** | **Nothing — worker gets 100%** |
+
+The community gets governance for free. The marketplace earns when real value moves.
+
+---
+
 ## TASK MARKETPLACE (Primary Income Engine)
 
 The bounty system evolves into a full task marketplace. 5 phases, detailed plan in `docs/MARKETPLACE-PLAN.md`.
