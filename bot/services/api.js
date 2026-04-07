@@ -190,12 +190,42 @@ function startApi() {
       return res.end(JSON.stringify({ ok: true, data: top }));
     }
 
-    // GET /api/bounties — bounty list + stats
+    // GET /api/bounties — bounty list + stats (with filters)
     if (url.pathname === "/api/bounties") {
-      const bounties = db.getAllBounties();
+      const category = url.searchParams.get("category");
+      const status = url.searchParams.get("status");
+      const difficulty = url.searchParams.get("difficulty");
+      const sort = url.searchParams.get("sort");
+      const bounties = (category || status || difficulty || sort)
+        ? db.getFilteredBounties({ category, status, difficulty, sort })
+        : db.getAllBounties();
       const stats = db.getBountyStats();
       res.writeHead(200);
       return res.end(JSON.stringify({ ok: true, data: { bounties, stats } }));
+    }
+
+    // GET /api/bounties/categories — list categories
+    if (url.pathname === "/api/bounties/categories") {
+      res.writeHead(200);
+      return res.end(JSON.stringify({ ok: true, data: db.getCategories() }));
+    }
+
+    // GET /api/bounties/config — platform configuration
+    if (url.pathname === "/api/bounties/config") {
+      res.writeHead(200);
+      return res.end(JSON.stringify({ ok: true, data: db.getPlatformConfig() }));
+    }
+
+    // GET /api/bounties/:id — single bounty detail with milestones + applications
+    const bountyDetailMatch = url.pathname.match(/^\/api\/bounties\/(\d+)$/);
+    if (bountyDetailMatch) {
+      const detail = db.getBountyDetail(parseInt(bountyDetailMatch[1]));
+      if (!detail) {
+        res.writeHead(404);
+        return res.end(JSON.stringify({ ok: false, error: "not_found" }));
+      }
+      res.writeHead(200);
+      return res.end(JSON.stringify({ ok: true, data: detail }));
     }
 
     // GET /api/escrow — escrow balance + transactions

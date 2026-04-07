@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import Link from "next/link";
 import { API_URL, TG_BOT_URL } from "@/lib/constants";
 
 interface Bounty {
@@ -207,7 +208,7 @@ function BountiesContent() {
                 <div className="flex items-start justify-between mb-2">
                   <div className="min-w-0">
                     <span className="text-muted-foreground font-mono text-xs mr-2">#{b.id}</span>
-                    <span className="font-semibold text-sm">{b.title}</span>
+                    <Link href={`/bounties/${b.id}`} className="font-semibold text-sm hover:text-primary no-underline text-foreground">{b.title}</Link>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
                     <span className="font-mono text-sm font-bold text-primary">{b.reward_xrd} XRD</span>

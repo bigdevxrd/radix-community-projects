@@ -126,6 +126,109 @@ function init() {
   // Seed escrow wallet singleton
   db.prepare("INSERT OR IGNORE INTO escrow_wallet (id) VALUES (1)").run();
 
+  // ── Bounty marketplace migrations ──
+  // Safe ALTER TABLE — silently fails if column already exists
+  try { db.exec("ALTER TABLE bounties ADD COLUMN category TEXT DEFAULT 'general'"); } catch(e) {}
+  try { db.exec("ALTER TABLE bounties ADD COLUMN difficulty TEXT DEFAULT 'medium'"); } catch(e) {}
+  try { db.exec("ALTER TABLE bounties ADD COLUMN deadline INTEGER"); } catch(e) {}
+  try { db.exec("ALTER TABLE bounties ADD COLUMN acceptance_criteria TEXT"); } catch(e) {}
+  try { db.exec("ALTER TABLE bounties ADD COLUMN tags TEXT"); } catch(e) {}
+  try { db.exec("ALTER TABLE bounties ADD COLUMN skills_required TEXT"); } catch(e) {}
+  try { db.exec("ALTER TABLE bounties ADD COLUMN priority TEXT DEFAULT 'normal'"); } catch(e) {}
+  try { db.exec("ALTER TABLE bounties ADD COLUMN platform_fee_pct REAL DEFAULT 2.5"); } catch(e) {}
+  try { db.exec("ALTER TABLE bounties ADD COLUMN fee_collected_xrd REAL DEFAULT 0"); } catch(e) {}
+  try { db.exec("ALTER TABLE bounties ADD COLUMN description_long TEXT"); } catch(e) {}
+  try { db.exec("ALTER TABLE bounties ADD COLUMN cancelled_at INTEGER"); } catch(e) {}
+  try { db.exec("ALTER TABLE bounties ADD COLUMN cancel_reason TEXT"); } catch(e) {}
+  try { db.exec("ALTER TABLE bounties ADD COLUMN source TEXT DEFAULT 'bot'"); } catch(e) {}
+  try { db.exec("ALTER TABLE escrow_wallet ADD COLUMN total_fees_collected_xrd REAL DEFAULT 0"); } catch(e) {}
+
+  // Bounty milestones (partial delivery)
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS bounty_milestones (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      bounty_id INTEGER NOT NULL,
+      title TEXT NOT NULL,
+      description TEXT,
+      percentage INTEGER NOT NULL,
+      amount_xrd REAL NOT NULL,
+      status TEXT DEFAULT 'pending',
+      submitted_at INTEGER,
+      verified_at INTEGER,
+      paid_at INTEGER,
+      paid_tx TEXT,
+      FOREIGN KEY (bounty_id) REFERENCES bounties(id)
+    );
+    CREATE INDEX IF NOT EXISTS idx_milestones_bounty ON bounty_milestones(bounty_id);
+  `);
+
+  // Bounty applications (apply model for tasks >100 XRD)
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS bounty_applications (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      bounty_id INTEGER NOT NULL,
+      applicant_tg_id INTEGER NOT NULL,
+      applicant_address TEXT NOT NULL,
+      pitch TEXT,
+      estimated_hours INTEGER,
+      status TEXT DEFAULT 'pending',
+      created_at INTEGER DEFAULT (strftime('%s','now')),
+      FOREIGN KEY (bounty_id) REFERENCES bounties(id)
+    );
+    CREATE INDEX IF NOT EXISTS idx_applications_bounty ON bounty_applications(bounty_id, status);
+  `);
+
+  // Bounty categories (admin-configurable)
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS bounty_categories (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL UNIQUE,
+      description TEXT,
+      icon TEXT,
+      sort_order INTEGER DEFAULT 0
+    );
+  `);
+
+  // Seed default categories
+  const catCount = db.prepare("SELECT COUNT(*) as c FROM bounty_categories").get();
+  if (catCount.c === 0) {
+    const seedCats = db.prepare("INSERT OR IGNORE INTO bounty_categories (name, description, icon, sort_order) VALUES (?, ?, ?, ?)");
+    seedCats.run("development", "Code, smart contracts, tooling", "code", 1);
+    seedCats.run("design", "UI/UX, graphics, branding", "palette", 2);
+    seedCats.run("content", "Docs, articles, tutorials", "file-text", 3);
+    seedCats.run("marketing", "Social, outreach, community", "megaphone", 4);
+    seedCats.run("testing", "QA, security audits, reviews", "shield", 5);
+    seedCats.run("general", "Everything else", "circle", 6);
+  }
+
+  // Platform configuration (charter-voteable settings)
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS platform_config (
+      key TEXT PRIMARY KEY,
+      value TEXT NOT NULL,
+      updated_at INTEGER DEFAULT (strftime('%s','now'))
+    );
+  `);
+
+  // Seed default config
+  const cfgCount = db.prepare("SELECT COUNT(*) as c FROM platform_config").get();
+  if (cfgCount.c === 0) {
+    const seedCfg = db.prepare("INSERT OR IGNORE INTO platform_config (key, value) VALUES (?, ?)");
+    seedCfg.run("platform_fee_pct", "2.5");
+    seedCfg.run("min_bounty_xrd", "5");
+    seedCfg.run("max_bounty_xrd", "50000");
+    seedCfg.run("deadline_default_days", "14");
+    seedCfg.run("deadline_max_days", "90");
+    seedCfg.run("require_application_above_xrd", "100");
+  }
+
+  // Indexes for marketplace queries
+  db.exec(`
+    CREATE INDEX IF NOT EXISTS idx_bounties_category ON bounties(category, status);
+    CREATE INDEX IF NOT EXISTS idx_bounties_deadline ON bounties(deadline);
+    CREATE INDEX IF NOT EXISTS idx_bounties_difficulty ON bounties(difficulty, status);
+  `);
+
   // Grid game state
   db.exec(`
     CREATE TABLE IF NOT EXISTS game_state (
@@ -472,6 +575,77 @@ function getBountyStats() {
   const totalPaid = db.prepare("SELECT COALESCE(SUM(reward_xrd), 0) as t FROM bounties WHERE status = 'paid'").get().t;
   const escrow = getEscrowBalance();
   return { open, assigned, submitted, verified, paid, totalPaid, escrow };
+}
+
+// ── Marketplace Extensions ───────────────────────────────
+
+function getCategories() {
+  return db.prepare("SELECT * FROM bounty_categories ORDER BY sort_order").all();
+}
+
+function getPlatformConfig() {
+  const rows = db.prepare("SELECT key, value FROM platform_config").all();
+  const config = {};
+  rows.forEach(r => { config[r.key] = r.value; });
+  return config;
+}
+
+function getBountyDetail(id) {
+  const bounty = db.prepare("SELECT * FROM bounties WHERE id = ?").get(id);
+  if (!bounty) return null;
+  const counts = db.prepare("SELECT vote FROM votes WHERE proposal_id = ?").all(bounty.proposal_id || -1);
+  const milestones = db.prepare("SELECT * FROM bounty_milestones WHERE bounty_id = ? ORDER BY id").all(id);
+  const applications = db.prepare("SELECT * FROM bounty_applications WHERE bounty_id = ? ORDER BY created_at DESC").all(id);
+  return { ...bounty, milestones, applications };
+}
+
+function createApplication(bountyId, tgId, address, pitch, estimatedHours) {
+  const stmt = db.prepare("INSERT INTO bounty_applications (bounty_id, applicant_tg_id, applicant_address, pitch, estimated_hours) VALUES (?, ?, ?, ?, ?)");
+  return stmt.run(bountyId, tgId, address, pitch, estimatedHours).lastInsertRowid;
+}
+
+function approveApplication(applicationId) {
+  const app = db.prepare("SELECT * FROM bounty_applications WHERE id = ?").get(applicationId);
+  if (!app) return { ok: false, error: "not_found" };
+  // Reject all other applications
+  db.prepare("UPDATE bounty_applications SET status = 'rejected' WHERE bounty_id = ? AND id != ?").run(app.bounty_id, applicationId);
+  // Accept this one
+  db.prepare("UPDATE bounty_applications SET status = 'accepted' WHERE id = ?").run(applicationId);
+  // Assign the bounty
+  const now = Math.floor(Date.now() / 1000);
+  db.prepare("UPDATE bounties SET assignee_tg_id = ?, assignee_address = ?, status = 'assigned', assigned_at = ? WHERE id = ? AND status = 'open'")
+    .run(app.applicant_tg_id, app.applicant_address, now, app.bounty_id);
+  return { ok: true, bountyId: app.bounty_id, applicant: app.applicant_tg_id };
+}
+
+function cancelBounty(id, reason) {
+  const now = Math.floor(Date.now() / 1000);
+  const result = db.prepare("UPDATE bounties SET status = 'cancelled', cancelled_at = ?, cancel_reason = ? WHERE id = ? AND status = 'open'")
+    .run(now, reason, id);
+  return result.changes > 0;
+}
+
+function getFilteredBounties({ category, status, difficulty, sort, limit = 50 } = {}) {
+  let query = "SELECT * FROM bounties WHERE 1=1";
+  const params = [];
+  if (category && category !== "all") { query += " AND category = ?"; params.push(category); }
+  if (status && status !== "all") { query += " AND status = ?"; params.push(status); }
+  if (difficulty && difficulty !== "all") { query += " AND difficulty = ?"; params.push(difficulty); }
+  if (sort === "reward_desc") query += " ORDER BY reward_xrd DESC";
+  else if (sort === "deadline") query += " ORDER BY deadline ASC NULLS LAST";
+  else if (sort === "newest") query += " ORDER BY created_at DESC";
+  else query += " ORDER BY created_at DESC";
+  query += " LIMIT ?";
+  params.push(limit);
+  return db.prepare(query).all(...params);
+}
+
+function checkExpiredBounties() {
+  const now = Math.floor(Date.now() / 1000);
+  // Auto-cancel open bounties past deadline
+  const expired = db.prepare("UPDATE bounties SET status = 'cancelled', cancelled_at = ?, cancel_reason = 'deadline_expired' WHERE status = 'open' AND deadline IS NOT NULL AND deadline < ?")
+    .run(now, now);
+  return expired.changes;
 }
 
 // ── Grid Game ──────────────────────────────────────────
@@ -827,6 +1001,14 @@ function getProposalHistory(limit = 10) {
 
 module.exports.cancelProposal = cancelProposal;
 module.exports.getProposalHistory = getProposalHistory;
+module.exports.getCategories = getCategories;
+module.exports.getPlatformConfig = getPlatformConfig;
+module.exports.getBountyDetail = getBountyDetail;
+module.exports.createApplication = createApplication;
+module.exports.approveApplication = approveApplication;
+module.exports.cancelBounty = cancelBounty;
+module.exports.getFilteredBounties = getFilteredBounties;
+module.exports.checkExpiredBounties = checkExpiredBounties;
 module.exports.createFeedback = createFeedback;
 module.exports.getFeedbackByUser = getFeedbackByUser;
 module.exports.getOpenFeedback = getOpenFeedback;
