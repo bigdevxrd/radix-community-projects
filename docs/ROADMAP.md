@@ -318,13 +318,206 @@ At $0.06/XRD (current). If XRD reaches $0.50 (previous ATH territory), that same
 
 ---
 
+## AI CREDITS MODEL (Governance Assistant)
+
+### How It Works
+Users deposit XRD to buy AI credits. Credits power the governance assistant (proposal drafting, charter analysis, bounty scoping, general help). The LLM runs server-side — users never touch an API key.
+
+### Pricing: 1:1.1 Ratio (10% Markup)
+
+| Credits Purchased | XRD Cost | Markup | Platform Revenue |
+|-------------------|----------|--------|-----------------|
+| 100 credits | 110 XRD | 10 XRD | Covers AI API costs |
+| 500 credits | 550 XRD | 50 XRD | Surplus → treasury |
+| 1,000 credits | 1,100 XRD | 100 XRD | Meaningful treasury contribution |
+
+### Unit Economics
+- 1 AI credit = 1 governance assist call
+- Underlying cost per call: ~$0.002-0.01 (Claude Haiku/Sonnet API)
+- At $0.06/XRD: 1 credit = 0.06 USD worth of XRD deposited
+- Cost to serve: $0.005 average → margin per credit: ~$0.055 (92% gross margin)
+- At $0.50/XRD (bull market): margin per credit: ~$0.495
+
+### Credit Use Cases
+- "Help me write a proposal about treasury management" → 1 credit
+- "Summarize the charter status and what's next" → 1 credit
+- "Draft a bounty for website redesign" → 1 credit
+- "Explain the voting options for RAC seats" → 1 credit
+- "Analyze the results of proposal #5" → 1 credit
+
+### Implementation
+- Dashboard: `/assist` page with credit balance, input field, response area
+- Bot: `/assist <question>` command (deducts 1 credit, returns AI response)
+- API: `POST /api/assist` (badge-gated, credit-gated, rate-limited)
+- Storage: `credits` table in SQLite (tg_id, balance, total_purchased, total_used)
+- Payment: User sends XRD to guild treasury wallet → bot confirms → credits added
+- On-chain verification: Transaction receipt proves payment
+
+### Dashboard Integration
+New `/assist` page:
+- Credit balance display
+- "Buy Credits" button → shows wallet address + amount
+- Chat-style interface for governance questions
+- Response history
+- Credit usage log
+
+### Revenue Projection (100 active users)
+| Scenario | Credits/mo/user | Monthly Revenue | Annual |
+|----------|----------------|----------------|--------|
+| Low | 5 | 50 XRD (~$3) | $36 |
+| Medium | 20 | 220 XRD (~$13) | $156 |
+| High | 50 | 550 XRD (~$33) | $396 |
+
+The 10% markup means the guild treasury grows with every AI interaction. No donations needed — usage funds the platform.
+
+---
+
+## MINIMUM VIABLE INVESTMENT (MVI) MODEL
+
+### The Core Idea
+
+The guild needs working capital to operate. Instead of donations or token sales, members invest in the services they want. Each member contributes to specific service categories. The guild operates transparently — every XRD is tracked and allocated.
+
+### MVI: $100 USD Equivalent in XRD per Member
+
+Each member commits to holding $100 USD worth of XRD as their guild stake. This isn't locked — it's a commitment to fund the services they value. They allocate across categories:
+
+```
+Example allocation for 1 member ($100 USD in XRD):
+  $1  → Development (code, features, bug fixes)
+  $2  → Marketing (content, outreach, partnerships)
+  $5  → Infrastructure (VPS, domain, monitoring, backups)
+  $3  → Business Development (pitches, partnerships, SaaS sales)
+  $1  → Community Projects (bounties, grants, events)
+  ─────
+  $12 monthly contribution (member keeps $88 as stake)
+```
+
+### Scaling Economics
+
+| Members | Monthly Pool | Annual Pool | What It Funds |
+|---------|-------------|-------------|---------------|
+| 10 | $120 | $1,440 | Hosting + domain (covered) |
+| 50 | $600 | $7,200 | + Part-time dev bounties |
+| 100 | $1,200 | $14,400 | + Marketing + BD + support |
+| 500 | $6,000 | $72,000 | + Full-time contributor(s) |
+
+### Service Categories (Voted On by Charter)
+
+| Category | What It Funds | Priority |
+|----------|--------------|----------|
+| **Infrastructure** | VPS ($7/mo), domain ($1/mo), monitoring, backups, SSL | Critical — always funded first |
+| **Development** | Bug fixes, new features, code review, testing | High — keeps platform improving |
+| **Marketing** | Content creation, social media, conference presence | Medium — drives adoption |
+| **Business Dev** | SaaS sales, partnerships, DeFi project outreach | Medium — drives revenue |
+| **Community** | Bounties, grants, events, education | Growth — reinvests in ecosystem |
+
+### How Allocation Works
+
+1. **Member joins** → mints free badge → gets dashboard showing service categories
+2. **Member allocates** → chooses how their monthly contribution splits across categories
+3. **Treasury dashboard** → shows real-time totals per category
+4. **Working groups** → each category has a working group that proposes spending
+5. **Proposals** → spending proposals are voted on (charter-linked, binding)
+6. **Execution** → approved spending is released from category escrow
+7. **Reporting** → monthly "State of the Guild" shows what was spent and what was delivered
+
+### MVROI (Minimum Viable Return on Investment)
+
+Every XRD spent must produce measurable output. The MVROI framework:
+
+| Investment | Output | Measurement |
+|-----------|--------|-------------|
+| $7/mo infra | 99.9% uptime, <200ms API response | /api/health dashboard |
+| $50 dev bounty | 1 feature shipped, tests passing | GitHub commit + pipeline |
+| $20 marketing | 10+ new badge mints, 5+ new voters | /api/stats tracking |
+| $30 BD outreach | 1 SaaS lead or partnership | CRM / tracking doc |
+| $25 community bounty | 1 completed task, verified delivery | Bounty system on-chain |
+
+### The Start Page Pitch
+
+On the dashboard (visible to all visitors):
+
+```
+"The Guild runs on contributions, not donations.
+
+Hold $100 of XRD. Allocate $10-15/month to the services you value.
+100 members = $1,200/month working capital.
+
+Every XRD is tracked. Every spend is voted on. Every output is measured.
+
+Your money → Your vote → Your DAO."
+```
+
+### Implementation Plan
+
+**Phase 5 Addition (June):**
+- [ ] Design contribution flow (wallet → treasury → category allocation)
+- [ ] Build `/contribute` bot command
+- [ ] Build contribution dashboard page showing categories + totals
+- [ ] Treasury wallet with transparent on-chain tracking
+- [ ] Monthly allocation reporting
+
+**Phase 6 Addition (July-Aug):**
+- [ ] Working group leads propose spending per category
+- [ ] Spending proposals go through charter vote system
+- [ ] Auto-release from category escrow on proposal pass
+- [ ] Monthly "State of the Guild" auto-generated report
+
+**Phase 7 Addition (Sep+):**
+- [ ] MVROI dashboard — investment vs output per category
+- [ ] Member contribution history + recognition
+- [ ] Contributor leaderboard by category
+- [ ] Annual planning: community votes on next year's priorities
+
+---
+
+## COMBINED REVENUE MODEL (Updated)
+
+### Revenue Streams
+
+| Stream | Type | When | Monthly (100 users) |
+|--------|------|------|-------------------|
+| Badge royalties | On-chain, automatic | Now (live) | ~100 XRD |
+| AI credits (10% markup) | Per-use, deposited | Phase 6 (Jul) | ~220 XRD |
+| Member contributions | Monthly allocation | Phase 5 (Jun) | ~$1,200 USD |
+| SaaS hosting | Per-customer | Phase 5 (Jun) | ~150 XRD |
+| Component royalties | On-chain, automatic | Now (live) | Variable |
+
+### 36-Month Sustainability Model
+
+The investment horizon is 36 months. Everything built now compounds:
+
+| Year | Members | Monthly Revenue | What's Running |
+|------|---------|----------------|----------------|
+| Y1 (2026) | 50-100 | $100-300/mo | Hosting, dev bounties, marketing |
+| Y2 (2027) | 200-500 | $500-2,000/mo | Full contributor team, SaaS customers |
+| Y3 (2028) | 500-1,000 | $2,000-10,000/mo | Self-sustaining, multi-DAO, passive income |
+
+### Break-Even Analysis
+
+| Expense | Monthly | Funded By |
+|---------|---------|-----------|
+| VPS hosting | $7 | 1 member's infra allocation |
+| Domain | $1 | 1 member's infra allocation |
+| AI API costs | ~$5-50 | AI credit markup (92% margin) |
+| Dev bounties | $50-200 | 5-20 members' dev allocation |
+| Marketing | $20-100 | 2-10 members' marketing allocation |
+| **Total** | **$83-358** | **10-35 members** |
+
+**Break-even: ~15 contributing members.** Everything above that is growth capital.
+
+---
+
 ## WHAT TO DO RIGHT NOW
 
-1. **Don't build SaaS yet.** Focus on beta testing (Phase 3)
+1. **Don't build SaaS or AI yet.** Focus on beta testing (Phase 3)
 2. **Let the community validate the product** before adding complexity
 3. **The open source repo is your pitch deck** — every user is a testimonial
 4. **Track metrics** — badges minted, votes cast, proposals created
-5. **When someone says "I want this for my project"** — that's when you build the config layer
+5. **When someone says "I want this for my project"** — build SaaS config layer
+6. **When 20+ users are active** — build AI credits + contribution system
+7. **The MVI model goes on the start page** — show visitors the economics upfront
 
 ---
 
