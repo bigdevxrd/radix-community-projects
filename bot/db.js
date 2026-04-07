@@ -508,8 +508,13 @@ function getReadyParams() {
 
 function createBounty(title, rewardXrd, creatorTgId, opts = {}) {
   const result = db.prepare(
-    "INSERT INTO bounties (title, description, reward_xrd, reward_xp, creator_tg_id, github_issue, proposal_id) VALUES (?, ?, ?, ?, ?, ?, ?)"
-  ).run(title, opts.description || null, rewardXrd, opts.rewardXp || 0, creatorTgId, opts.githubIssue || null, opts.proposalId || null);
+    "INSERT INTO bounties (title, description, reward_xrd, reward_xp, creator_tg_id, github_issue, proposal_id, category, difficulty, deadline, platform_fee_pct) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+  ).run(
+    title, opts.description || null, rewardXrd, opts.rewardXp || 0, creatorTgId,
+    opts.githubIssue || null, opts.proposalId || null,
+    opts.category || "general", opts.difficulty || "medium",
+    opts.deadline || null, 2.5
+  );
   return result.lastInsertRowid;
 }
 

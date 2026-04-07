@@ -11,12 +11,15 @@ import { API_URL, TG_BOT_URL } from "@/lib/constants";
 interface Bounty {
   id: number; title: string; description: string | null;
   reward_xrd: number; reward_xp: number; status: string;
+  category: string; difficulty: string; priority: string;
+  deadline: number | null; platform_fee_pct: number;
   creator_tg_id: number; assignee_tg_id: number | null;
   assignee_address: string | null; github_issue: string | null;
   github_pr: string | null; created_at: number;
   assigned_at: number | null; submitted_at: number | null;
   verified_at: number | null; paid_at: number | null; paid_tx: string | null;
 }
+interface Category { id: number; name: string; description: string; icon: string; sort_order: number; }
 interface BountyStats {
   open: number; assigned: number; submitted: number;
   verified: number; paid: number; totalPaid: number;
@@ -29,20 +32,35 @@ interface EscrowTx {
 }
 
 const STATUS_COLORS: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
-  open: "default", assigned: "secondary", submitted: "outline", verified: "outline", paid: "default",
+  open: "default", assigned: "secondary", submitted: "outline", verified: "outline", paid: "default", cancelled: "destructive",
 };
 const STATUS_TEXT_COLORS: Record<string, string> = {
   open: "text-primary", assigned: "text-yellow-500", submitted: "text-blue-400",
   verified: "text-blue-400", paid: "text-muted-foreground",
 };
+const DIFFICULTY_COLORS: Record<string, string> = {
+  easy: "text-green-400", medium: "text-yellow-500", hard: "text-orange-400", expert: "text-red-400",
+};
+
+function deadlineCountdown(deadline: number | null): string | null {
+  if (!deadline) return null;
+  const diff = deadline * 1000 - Date.now();
+  if (diff <= 0) return "Expired";
+  const d = Math.floor(diff / 86400000);
+  const h = Math.floor((diff % 86400000) / 3600000);
+  if (d > 0) return `${d}d ${h}h`;
+  return `${h}h left`;
+}
 
 function BountiesContent() {
   const [bounties, setBounties] = useState<Bounty[]>([]);
   const [stats, setStats] = useState<BountyStats | null>(null);
   const [transactions, setTransactions] = useState<EscrowTx[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [filter, setFilter] = useState("all");
+  const [catFilter, setCatFilter] = useState("all");
   const [showTxs, setShowTxs] = useState(false);
 
   const fetchData = () => {
@@ -50,17 +68,20 @@ function BountiesContent() {
     Promise.all([
       fetch(API_URL + "/bounties").then(r => r.json()),
       fetch(API_URL + "/escrow").then(r => r.json()).catch(() => null),
-    ]).then(([d, e]) => {
+      fetch(API_URL + "/bounties/categories").then(r => r.json()).catch(() => null),
+    ]).then(([d, e, c]) => {
       setBounties(d.data?.bounties || []);
       setStats(d.data?.stats || null);
       setTransactions(e?.data?.transactions || []);
+      setCategories(c?.data || []);
       setLoading(false);
     }).catch(() => { setError(true); setLoading(false); });
   };
 
   useEffect(() => { fetchData(); }, []);
 
-  const filtered = filter === "all" ? bounties : bounties.filter(b => b.status === filter);
+  let filtered = filter === "all" ? bounties : bounties.filter(b => b.status === filter);
+  if (catFilter !== "all") filtered = filtered.filter(b => b.category === catFilter);
 
   return (
     <div className="space-y-5">
@@ -177,7 +198,7 @@ function BountiesContent() {
         </div>
       )}
 
-      {/* Filter */}
+      {/* Status Filter */}
       <div className="flex items-center gap-2 overflow-x-auto">
         {["all", "open", "assigned", "submitted", "verified", "paid"].map(f => (
           <Button key={f} variant={filter === f ? "default" : "ghost"} size="sm"
@@ -186,6 +207,21 @@ function BountiesContent() {
           </Button>
         ))}
       </div>
+
+      {/* Category Filter */}
+      {categories.length > 0 && (
+        <div className="flex items-center gap-1.5 overflow-x-auto">
+          <span className="text-[10px] text-muted-foreground uppercase tracking-wide shrink-0">Category:</span>
+          <Button variant={catFilter === "all" ? "secondary" : "ghost"} size="sm"
+            onClick={() => setCatFilter("all")} className="text-[11px] h-7 px-2">All</Button>
+          {categories.map(c => (
+            <Button key={c.name} variant={catFilter === c.name ? "secondary" : "ghost"} size="sm"
+              onClick={() => setCatFilter(c.name)} className="text-[11px] h-7 px-2 capitalize">
+              {c.name}
+            </Button>
+          ))}
+        </div>
+      )}
 
       {/* Bounty List */}
       {loading ? (
@@ -215,6 +251,24 @@ function BountiesContent() {
                     <Badge variant={STATUS_COLORS[b.status] || "secondary"}>{b.status}</Badge>
                   </div>
                 </div>
+                {/* Category + Difficulty + Deadline */}
+                <div className="flex flex-wrap gap-1.5 mb-2">
+                  {b.category && b.category !== "general" && (
+                    <Badge variant="outline" className="text-[9px] capitalize">{b.category}</Badge>
+                  )}
+                  {b.difficulty && b.difficulty !== "medium" && (
+                    <Badge variant="outline" className={`text-[9px] capitalize ${DIFFICULTY_COLORS[b.difficulty] || ""}`}>{b.difficulty}</Badge>
+                  )}
+                  {b.priority && b.priority !== "normal" && (
+                    <Badge variant="destructive" className="text-[9px] capitalize">{b.priority}</Badge>
+                  )}
+                  {(() => {
+                    const dl = deadlineCountdown(b.deadline);
+                    if (!dl) return null;
+                    const urgent = dl === "Expired" || (b.deadline && b.deadline * 1000 - Date.now() < 86400000);
+                    return <Badge variant={urgent ? "destructive" : "secondary"} className="text-[9px] font-mono">{dl}</Badge>;
+                  })()}
+                </div>
                 {b.description && (
                   <p className="text-xs text-muted-foreground mb-2">{b.description.slice(0, 120)}{b.description.length > 120 ? "..." : ""}</p>
                 )}
@@ -224,6 +278,7 @@ function BountiesContent() {
                     <span>Assignee: {b.assignee_address.slice(0, 12)}...{b.assignee_address.slice(-4)}</span>
                   )}
                   {b.reward_xp > 0 && <span>+{b.reward_xp} XP</span>}
+                  {b.platform_fee_pct > 0 && <span className="text-[10px]">{b.platform_fee_pct}% fee</span>}
                 </div>
                 {(b.github_issue || b.github_pr) && (
                   <div className="flex gap-3 mt-2">

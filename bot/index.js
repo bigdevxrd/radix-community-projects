@@ -682,6 +682,54 @@ bot.command("bounty", async (ctx) => {
     return;
   }
 
+  if (sub === "cancel") {
+    const id = parseInt(args[1]);
+    const reason = args.slice(2).join(" ") || "Cancelled by creator";
+    if (!id) return ctx.reply("Usage: /bounty cancel <id> [reason]");
+    const bounty = db.getBounty(id);
+    if (!bounty) return ctx.reply("Bounty #" + id + " not found.");
+    if (bounty.creator_tg_id !== ctx.from.id) return ctx.reply("Only the creator can cancel.");
+    const ok = db.cancelBounty(id, reason);
+    if (!ok) return ctx.reply("Can only cancel open bounties.");
+    ctx.reply("Bounty #" + id + " cancelled.\nReason: " + reason);
+    notifyDiscord("**Task #" + id + " cancelled** — " + bounty.title + "\nReason: " + reason);
+    return;
+  }
+
+  if (sub === "apply") {
+    const user = await requireBadge(ctx);
+    if (!user) return;
+    const id = parseInt(args[1]);
+    const pitch = args.slice(2).join(" ");
+    if (!id) return ctx.reply("Usage: /bounty apply <id> [why you're the right person]");
+    const bounty = db.getBounty(id);
+    if (!bounty) return ctx.reply("Bounty #" + id + " not found.");
+    if (bounty.status !== "open") return ctx.reply("Bounty is not open for applications.");
+    const appId = db.createApplication(id, ctx.from.id, user.radix_address, pitch || null, null);
+    ctx.reply("Applied to bounty #" + id + " (application #" + appId + ")\n\nThe creator will review and approve.\nView: " + PORTAL + "/bounties/" + id);
+    return;
+  }
+
+  if (sub === "approve") {
+    const appId = parseInt(args[1]);
+    if (!appId) return ctx.reply("Usage: /bounty approve <application_id>");
+    const result = db.approveApplication(appId);
+    if (!result.ok) return ctx.reply("Error: " + result.error);
+    ctx.reply("Application #" + appId + " approved! Bounty #" + result.bountyId + " assigned.");
+    // Notify applicant
+    try {
+      await bot.api.sendMessage(result.applicant, "Your application was approved! You're assigned to bounty #" + result.bountyId + ".\nSubmit work: /bounty submit " + result.bountyId + " <pr_url>");
+    } catch(e) {}
+    return;
+  }
+
+  if (sub === "categories") {
+    const cats = db.getCategories();
+    let msg = "Task Categories:\n\n";
+    cats.forEach(c => { msg += "• " + c.name + " — " + c.description + "\n"; });
+    return ctx.reply(msg);
+  }
+
   if (sub === "fund") {
     const xrd = parseFloat(args[1]);
     const txHash = args[2];
@@ -692,7 +740,22 @@ bot.command("bounty", async (ctx) => {
     return;
   }
 
-  ctx.reply("Bounty commands:\n/bounty list — open bounties\n/bounty stats — stats + escrow\n/bounty create <xrd> <title>\n/bounty claim <id>\n/bounty submit <id> <pr_url>\n/bounty verify <id> (admin)\n/bounty pay <id> <tx_hash> (admin)\n/bounty fund <xrd> <tx_hash> (admin)");
+  ctx.reply(
+    "Task commands:\n\n" +
+    "/bounty — guided menu\n" +
+    "/bounty list — open tasks\n" +
+    "/bounty stats — stats + escrow\n" +
+    "/bounty create <xrd> <title> — quick create\n" +
+    "/bounty claim <id> — claim a task\n" +
+    "/bounty apply <id> [pitch] — apply for tasks >100 XRD\n" +
+    "/bounty cancel <id> [reason] — cancel your task\n" +
+    "/bounty submit <id> <pr_url> — submit work\n" +
+    "/bounty categories — list categories\n" +
+    "/bounty verify <id> — verify delivery (admin)\n" +
+    "/bounty pay <id> <tx_hash> — release payment (admin)\n" +
+    "/bounty approve <app_id> — approve applicant (creator)\n" +
+    "/bounty fund <xrd> <tx_hash> — fund escrow (admin)"
+  );
 });
 
 // ── /badges ────────────────────────────────────────────
@@ -1238,6 +1301,19 @@ setInterval(async () => {
     console.error("[AutoClose] Background task failed:", e.message);
   }
 }, 5 * 60 * 1000);
+
+// Check expired bounties every hour
+setInterval(() => {
+  try {
+    const cancelled = db.checkExpiredBounties();
+    if (cancelled > 0) {
+      console.log("[Tasks] Auto-cancelled " + cancelled + " expired open task(s)");
+      notifyDiscord("**" + cancelled + " expired task(s) auto-cancelled** — past deadline with no assignee");
+    }
+  } catch (e) {
+    console.error("[Tasks] Deadline check failed:", e.message);
+  }
+}, 60 * 60 * 1000);
 
 // ── Start ───────────────────────────────────────────────
 

@@ -99,12 +99,75 @@ function setupGuidedWizards(bot, db, PORTAL, requireBadge, queueXpReward) {
   bot.callbackQuery("bounty_create_start", async (ctx) => {
     const user = await requireBadge(ctx);
     if (!user) return;
-    wizardStates.set(ctx.from.id, { wizard: "bounty_create", step: "amount" });
+    wizardStates.set(ctx.from.id, { wizard: "bounty_create", step: "amount", category: "general", difficulty: "medium", deadline: null });
     await ctx.editMessageText(
-      "Create a Bounty\n\n" +
-      "Step 1/3: How much XRD reward?\n\n" +
-      "Type the amount (e.g. 25)"
+      "Create a Task\n\n" +
+      "Step 1/5: How much XRD reward?\n\n" +
+      "Type the amount (e.g. 50)\n" +
+      "A 2.5% platform fee supports the guild."
     );
+    await ctx.answerCallbackQuery();
+  });
+
+  // Category selection
+  bot.callbackQuery(/^bounty_cat_(.+)$/, async (ctx) => {
+    const state = wizardStates.get(ctx.from.id);
+    if (!state || state.step !== "category") return ctx.answerCallbackQuery();
+    state.category = ctx.match[1];
+    state.step = "difficulty";
+    const kb = new InlineKeyboard()
+      .text("Easy", "bounty_diff_easy").text("Medium", "bounty_diff_medium").row()
+      .text("Hard", "bounty_diff_hard").text("Expert", "bounty_diff_expert");
+    await ctx.editMessageText(
+      "Step 4/5: Difficulty level?\n\n" +
+      "Category: " + state.category
+    );
+    await ctx.editMessageReplyMarkup({ reply_markup: kb });
+    await ctx.answerCallbackQuery();
+  });
+
+  // Difficulty selection
+  bot.callbackQuery(/^bounty_diff_(.+)$/, async (ctx) => {
+    const state = wizardStates.get(ctx.from.id);
+    if (!state || state.step !== "difficulty") return ctx.answerCallbackQuery();
+    state.difficulty = ctx.match[1];
+    state.step = "deadline";
+    const kb = new InlineKeyboard()
+      .text("1 week", "bounty_dl_7").text("2 weeks", "bounty_dl_14").row()
+      .text("1 month", "bounty_dl_30").text("No deadline", "bounty_dl_0");
+    await ctx.editMessageText("Step 5/5: Deadline?");
+    await ctx.editMessageReplyMarkup({ reply_markup: kb });
+    await ctx.answerCallbackQuery();
+  });
+
+  // Deadline selection → confirm
+  bot.callbackQuery(/^bounty_dl_(\d+)$/, async (ctx) => {
+    const state = wizardStates.get(ctx.from.id);
+    if (!state || state.step !== "deadline") return ctx.answerCallbackQuery();
+    const days = parseInt(ctx.match[1]);
+    state.deadline = days > 0 ? Math.floor(Date.now() / 1000) + days * 86400 : null;
+    state.deadlineDays = days;
+    state.step = "confirm";
+
+    const fee = (state.amount * 0.025).toFixed(1);
+    const net = (state.amount - parseFloat(fee)).toFixed(1);
+    const dlStr = days > 0 ? days + " days" : "None";
+
+    const kb = new InlineKeyboard()
+      .text("Create Task", "bounty_create_confirm")
+      .text("Cancel", "bounty_cancel");
+    await ctx.editMessageText(
+      "Create Task — Confirm\n\n" +
+      "Title: " + state.title + "\n" +
+      "Reward: " + state.amount + " XRD\n" +
+      "Category: " + state.category + "\n" +
+      "Difficulty: " + state.difficulty + "\n" +
+      "Deadline: " + dlStr + "\n\n" +
+      "Platform fee (2.5%): " + fee + " XRD\n" +
+      "Worker receives: " + net + " XRD\n\n" +
+      "Submit?"
+    );
+    await ctx.editMessageReplyMarkup({ reply_markup: kb });
     await ctx.answerCallbackQuery();
   });
 
@@ -198,34 +261,33 @@ function setupGuidedWizards(bot, db, PORTAL, requireBadge, queueXpReward) {
     if (state.wizard === "bounty_create" && state.step === "amount") {
       const amount = parseInt(text);
       if (!amount || amount <= 0) {
-        ctx.reply("Enter a positive number (e.g. 25)");
+        ctx.reply("Enter a positive number (e.g. 50)");
+        return true;
+      }
+      if (amount < 5) {
+        ctx.reply("Minimum 5 XRD per task.");
         return true;
       }
       state.amount = amount;
       state.step = "title";
-      ctx.reply("Step 2/3: What's the bounty title?\n\nDescribe the task in one line.");
+      ctx.reply("Step 2/5: What's the task title?\n\nDescribe the work in one line.");
       return true;
     }
 
-    // Bounty create: title step
+    // Bounty create: title step → category selection (inline keyboard)
     if (state.wizard === "bounty_create" && state.step === "title") {
       if (text.length > 500) {
         ctx.reply("Too long (max 500 chars). Try shorter.");
         return true;
       }
       state.title = text;
-      state.step = "confirm";
+      state.step = "category";
 
       const kb = new InlineKeyboard()
-        .text("Create Bounty", "bounty_create_confirm")
-        .text("Cancel", "bounty_cancel");
-      ctx.reply(
-        "Create Bounty — Confirm\n\n" +
-        "Title: " + state.title + "\n" +
-        "Reward: " + state.amount + " XRD\n\n" +
-        "Submit?",
-        { reply_markup: kb }
-      );
+        .text("Development", "bounty_cat_development").text("Design", "bounty_cat_design").row()
+        .text("Content", "bounty_cat_content").text("Marketing", "bounty_cat_marketing").row()
+        .text("Testing", "bounty_cat_testing").text("General", "bounty_cat_general");
+      ctx.reply("Step 3/5: Category?", { reply_markup: kb });
       return true;
     }
 
@@ -236,18 +298,31 @@ function setupGuidedWizards(bot, db, PORTAL, requireBadge, queueXpReward) {
   bot.callbackQuery("bounty_create_confirm", async (ctx) => {
     const state = wizardStates.get(ctx.from.id);
     if (!state || state.wizard !== "bounty_create") {
-      await ctx.answerCallbackQuery({ text: "No active bounty wizard.", show_alert: true });
+      await ctx.answerCallbackQuery({ text: "No active task wizard.", show_alert: true });
       return;
     }
     const user = db.getUser(ctx.from.id);
-    const id = db.createBounty(state.title, state.amount, ctx.from.id);
+    const id = db.createBounty(state.title, state.amount, ctx.from.id, {
+      category: state.category || "general",
+      difficulty: state.difficulty || "medium",
+      deadline: state.deadline || null,
+    });
     queueXpReward(user.radix_address, "propose");
     wizardStates.delete(ctx.from.id);
+
+    const fee = (state.amount * 0.025).toFixed(1);
+    const net = (state.amount - parseFloat(fee)).toFixed(1);
+    const dlStr = state.deadlineDays > 0 ? state.deadlineDays + " days" : "No deadline";
+
     await ctx.editMessageText(
-      "Bounty #" + id + " created!\n\n" +
+      "Task #" + id + " created!\n\n" +
       state.title + "\n" +
-      "Reward: " + state.amount + " XRD\n\n" +
-      "Others can claim it with /bounty"
+      "Reward: " + state.amount + " XRD (" + net + " to worker, " + fee + " fee)\n" +
+      "Category: " + (state.category || "general") + "\n" +
+      "Difficulty: " + (state.difficulty || "medium") + "\n" +
+      "Deadline: " + dlStr + "\n\n" +
+      "Others can claim it with /bounty\n" +
+      "View: " + PORTAL + "/bounties/" + id
     );
     await ctx.answerCallbackQuery();
   });
