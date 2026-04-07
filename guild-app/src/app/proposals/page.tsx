@@ -17,6 +17,7 @@ interface Proposal {
   id: number; title: string; type: string; status: string;
   created_at: number; ends_at: number;
   counts: Record<string, number>; total_votes: number;
+  charter_param?: string; category?: string;
 }
 interface CV2Status {
   enabled: boolean; deployed: boolean; component: string;
@@ -46,6 +47,33 @@ const STATUS_VARIANT: Record<string, "default" | "secondary" | "destructive" | "
   needs_amendment: "outline",
 };
 
+function useCountdown(endTimestamp: number) {
+  const [now, setNow] = useState(Date.now());
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 60000);
+    return () => clearInterval(t);
+  }, []);
+  const diff = endTimestamp * 1000 - now;
+  if (diff <= 0) return "Ended";
+  const days = Math.floor(diff / 86400000);
+  const hours = Math.floor((diff % 86400000) / 3600000);
+  const mins = Math.floor((diff % 3600000) / 60000);
+  if (days > 0) return `${days}d ${hours}h left`;
+  if (hours > 0) return `${hours}h ${mins}m left`;
+  return `${mins}m left`;
+}
+
+function Countdown({ endsAt }: { endsAt: number }) {
+  const text = useCountdown(endsAt);
+  const diff = endsAt * 1000 - Date.now();
+  const urgent = diff > 0 && diff < 86400000;
+  return (
+    <span className={`text-xs font-mono ${urgent ? "text-red-400 font-bold" : "text-muted-foreground"}`}>
+      {text}
+    </span>
+  );
+}
+
 function ProposalsContent() {
   const { account, connected, rdt } = useWallet();
   const [proposals, setProposals] = useState<Proposal[]>([]);
@@ -54,6 +82,7 @@ function ProposalsContent() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [showArchived, setShowArchived] = useState(false);
+  const [showHowItWorks, setShowHowItWorks] = useState(false);
   const [cv2Status, setCv2Status] = useState<CV2Status | null>(null);
   const [cv2Proposals, setCv2Proposals] = useState<CV2Proposal[]>([]);
   const [showCreateTC, setShowCreateTC] = useState(false);
@@ -115,6 +144,10 @@ function ProposalsContent() {
   const archived = proposals.filter((p) => p.status !== "active");
   const visible = showArchived ? proposals : active;
 
+  // Sort active proposals: soonest-ending first
+  const sortedActive = [...active].sort((a, b) => a.ends_at - b.ends_at);
+  const heroVotes = sortedActive.slice(0, 3);
+
   return (
     <div className="space-y-5">
       {/* Error State */}
@@ -127,7 +160,98 @@ function ProposalsContent() {
         </Card>
       )}
 
-      {/* Stats */}
+      {/* ═══ VOTE NOW HERO ═══ */}
+      {!loading && heroVotes.length > 0 && (
+        <Card className="border-primary/30 bg-gradient-to-br from-card to-primary/5">
+          <CardHeader className="pb-2">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-sm uppercase tracking-wide text-primary">Vote Now</CardTitle>
+              <Badge variant="default" className="text-xs">{active.length} active</Badge>
+            </div>
+            <p className="text-xs text-muted-foreground">These decisions shape the DAO. Your badge = your vote.</p>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {heroVotes.map(p => {
+              const leadingOpt = Object.entries(p.counts).sort(([, a], [, b]) => b - a)[0];
+              return (
+                <Link key={p.id} href={`/proposals/${p.id}`} className="block bg-background/80 rounded-lg p-3 no-underline text-foreground hover:bg-background transition-colors">
+                  <div className="flex items-start justify-between gap-3 mb-2">
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-semibold leading-tight">{p.title}</div>
+                      <div className="flex items-center gap-2 mt-1">
+                        <Badge variant="outline" className="text-[9px] font-mono">{p.charter_param || p.type}</Badge>
+                        <span className="text-[11px] text-muted-foreground">{p.total_votes} vote{p.total_votes !== 1 ? "s" : ""}</span>
+                      </div>
+                    </div>
+                    <Countdown endsAt={p.ends_at} />
+                  </div>
+                  {leadingOpt && p.total_votes > 0 && (
+                    <div className="flex items-center gap-2">
+                      <span className="text-[11px] text-muted-foreground w-16 capitalize truncate">{leadingOpt[0]}</span>
+                      <Progress value={Math.round((leadingOpt[1] / p.total_votes) * 100)} className="h-1.5 flex-1" />
+                      <span className="text-[10px] font-mono text-muted-foreground">{Math.round((leadingOpt[1] / p.total_votes) * 100)}%</span>
+                    </div>
+                  )}
+                </Link>
+              );
+            })}
+            {active.length > 3 && (
+              <div className="text-xs text-muted-foreground text-center">+ {active.length - 3} more active votes below</div>
+            )}
+            <a href={TG_BOT_URL} target="_blank" className="block">
+              <Button variant="default" size="sm" className="w-full">Vote in Telegram</Button>
+            </a>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* ═══ HOW VOTING WORKS ═══ */}
+      <div>
+        <button onClick={() => setShowHowItWorks(!showHowItWorks)}
+          className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1 transition-colors">
+          <span>{showHowItWorks ? "▾" : "▸"}</span>
+          <span>How does voting work?</span>
+        </button>
+        {showHowItWorks && (
+          <Card className="mt-2">
+            <CardContent className="pt-4 pb-4 space-y-3 text-sm">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="bg-muted rounded-lg p-3">
+                  <div className="flex items-center gap-2 mb-1">
+                    <Badge variant="secondary" className="text-[9px]">Off-Chain</Badge>
+                    <span className="font-semibold text-xs">Telegram Voting</span>
+                  </div>
+                  <ul className="text-xs text-muted-foreground space-y-1">
+                    <li>Free — no transaction fees</li>
+                    <li>Badge-gated — 1 badge = 1 vote</li>
+                    <li>Day-to-day decisions + charter votes</li>
+                    <li>Vote with <code className="bg-background px-1 rounded">/vote</code> in @rad_gov</li>
+                  </ul>
+                </div>
+                <div className="bg-muted rounded-lg p-3">
+                  <div className="flex items-center gap-2 mb-1">
+                    <Badge variant="outline" className="text-[9px]">On-Chain</Badge>
+                    <span className="font-semibold text-xs">Consultation v2</span>
+                  </div>
+                  <ul className="text-xs text-muted-foreground space-y-1">
+                    <li>Formal — recorded on the Radix ledger</li>
+                    <li>XRD-weighted — vote power = XRD staked</li>
+                    <li>Binding decisions + treasury proposals</li>
+                    <li>Vote here on the dashboard with your Radix Wallet</li>
+                  </ul>
+                </div>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Both systems are visible on this page. Off-chain votes run in Telegram for speed. On-chain votes
+                use the same <strong>Consultation v2</strong> component used by the Radix Foundation — your votes
+                are permanent and verifiable on the ledger.
+              </p>
+            </CardContent>
+          </Card>
+        )}
+      </div>
+
+      {/* ═══ STATS ═══ */}
       {stats && (
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {[
@@ -146,21 +270,19 @@ function ProposalsContent() {
         </div>
       )}
 
-      {/* DAO MVD Decision Tree */}
+      {/* ═══ DECISION MAP ═══ */}
       {charter && (
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-sm uppercase tracking-wide text-muted-foreground">DAO Setup — Decision Map</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            {/* Progress */}
             <div className="flex items-center justify-between text-sm">
               <span className="text-muted-foreground">{charter.status.resolved} of {charter.status.total} decisions made</span>
               <span className="font-mono text-primary font-bold">{Math.round((charter.status.resolved / charter.status.total) * 100)}%</span>
             </div>
             <Progress value={(charter.status.resolved / charter.status.total) * 100} className="h-2" />
 
-            {/* Decision Flow */}
             <div className="space-y-2">
               {[
                 { phase: 1, label: "STEP 1: Foundation", desc: "Charter, quorum, voting rules", icon: "🏛️" },
@@ -171,7 +293,6 @@ function ProposalsContent() {
                 const resolved = params.filter((p: CharterParam) => p.status === "resolved").length;
                 const total = params.length;
                 const ready = charter.ready?.filter((p: CharterParam) => p.phase === step.phase).length || 0;
-                const pct = total > 0 ? Math.round((resolved / total) * 100) : 0;
                 const isActive = ready > 0;
                 const isDone = resolved === total && total > 0;
 
@@ -196,7 +317,6 @@ function ProposalsContent() {
               })}
             </div>
 
-            {/* Ready to vote */}
             {charter.ready && charter.ready.length > 0 && (
               <div>
                 <div className="text-xs font-semibold text-muted-foreground mb-2">Ready to vote ({charter.ready.length}):</div>
@@ -231,23 +351,24 @@ function ProposalsContent() {
         </Card>
       )}
 
-      {/* Network Governance (On-Chain CV2) */}
+      {/* ═══ ON-CHAIN GOVERNANCE (CV2) ═══ */}
       {cv2Status && cv2Status.enabled && (
         <Card>
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <CardTitle className="text-sm uppercase tracking-wide text-muted-foreground">Network Governance</CardTitle>
-                <Badge variant="outline" className="text-[9px]">On-Chain</Badge>
+                <CardTitle className="text-sm uppercase tracking-wide text-muted-foreground">On-Chain Governance</CardTitle>
+                <Badge variant="outline" className="text-[9px]">Consultation v2</Badge>
               </div>
               <Badge variant={cv2Status.deployed ? "default" : "secondary"} className="text-[9px]">
-                {cv2Status.deployed ? "Live" : "Pending"}
+                {cv2Status.deployed ? "Live on Mainnet" : "Pending"}
               </Badge>
             </div>
           </CardHeader>
           <CardContent className="space-y-3">
             <div className="text-xs text-muted-foreground">
-              Formal on-chain governance powered by Consultation v2. Votes are XRD-weighted.
+              Formal governance on the Radix ledger. Votes are XRD-weighted and permanent.
+              This is the same Consultation v2 system used by the Radix Foundation.
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
               <div className="bg-muted rounded-lg px-3 py-2">
@@ -304,12 +425,11 @@ function ProposalsContent() {
                 })}
               </div>
             ) : (
-              <div className="text-center py-4">
-                <p className="text-muted-foreground text-xs mb-2">No on-chain consultations yet.</p>
+              <div className="text-center py-3">
+                <p className="text-muted-foreground text-xs">No on-chain consultations yet. Create a temperature check to start formal governance.</p>
               </div>
             )}
 
-            {/* Create Temperature Check */}
             {!showCreateTC && (
               <Button variant="default" size="sm" onClick={() => {
                 if (!connected) { alert("Connect your wallet first"); return; }
@@ -339,31 +459,30 @@ function ProposalsContent() {
             )}
 
             <div className="text-[10px] text-muted-foreground">
-              Component: <span className="font-mono">{cv2Status.component.slice(0, 20)}...</span>
+              Component: <a href={`https://dashboard.radixdlt.com/component/${cv2Status.component}`} target="_blank" className="font-mono text-primary hover:underline">{cv2Status.component.slice(0, 20)}...</a>
             </div>
           </CardContent>
         </Card>
       )}
 
-      {/* Two-tier label */}
-      <div className="flex items-center gap-2 text-xs text-muted-foreground">
-        <Badge variant="secondary" className="text-[9px]">Off-Chain</Badge>
-        <span>Guild votes below are free, badge-gated, managed via Telegram</span>
-      </div>
-
-      {/* Filter */}
+      {/* ═══ ALL PROPOSALS ═══ */}
       <div className="flex items-center justify-between">
-        <span className="text-sm text-muted-foreground">
-          {active.length} active{archived.length > 0 ? `, ${archived.length} archived` : ""}
-        </span>
-        {archived.length > 0 && (
-          <Button variant="ghost" size="sm" onClick={() => setShowArchived(!showArchived)}>
-            {showArchived ? "Show Active Only" : "Show All"}
-          </Button>
-        )}
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-semibold">All Proposals</span>
+          <Badge variant="secondary" className="text-[9px]">Off-Chain</Badge>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-muted-foreground">
+            {active.length} active{archived.length > 0 ? `, ${archived.length} archived` : ""}
+          </span>
+          {archived.length > 0 && (
+            <Button variant="ghost" size="sm" onClick={() => setShowArchived(!showArchived)}>
+              {showArchived ? "Active Only" : "Show All"}
+            </Button>
+          )}
+        </div>
       </div>
 
-      {/* Proposals */}
       {loading ? (
         <div className="space-y-3">{[1,2,3].map(i => (
           <Card key={i}><CardContent className="p-4 space-y-3"><Skeleton className="h-4 w-48" /><Skeleton className="h-3 w-full" /><Skeleton className="h-2 w-full" /></CardContent></Card>
@@ -380,12 +499,15 @@ function ProposalsContent() {
                     <span className="text-muted-foreground font-mono text-xs mr-2">#{p.id}</span>
                     <Link href={`/proposals/${p.id}`} className="font-semibold text-sm hover:text-primary no-underline text-foreground">{p.title}</Link>
                   </div>
-                  <Badge variant={STATUS_VARIANT[p.status] || "secondary"}>{p.status}</Badge>
+                  <div className="flex items-center gap-2 shrink-0">
+                    {p.status === "active" && <Countdown endsAt={p.ends_at} />}
+                    <Badge variant={STATUS_VARIANT[p.status] || "secondary"}>{p.status}</Badge>
+                  </div>
                 </div>
                 <div className="flex gap-3 text-[11px] text-muted-foreground mb-3">
                   <span>{p.type || "Vote"}</span>
-                  <span>{new Date(p.created_at * 1000).toLocaleDateString()}</span>
-                  <span>Ends {new Date(p.ends_at * 1000).toLocaleDateString()}</span>
+                  {p.charter_param && <Badge variant="outline" className="text-[8px] font-mono">{p.charter_param}</Badge>}
+                  <span>{p.total_votes} vote{p.total_votes !== 1 ? "s" : ""}</span>
                 </div>
                 {Object.keys(p.counts).length > 0 && (
                   <div className="space-y-1.5">

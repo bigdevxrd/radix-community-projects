@@ -17,16 +17,34 @@ interface GameState {
   last_roll_value: number; jackpots: number;
 }
 
+interface ActiveProposal {
+  id: number; title: string; status: string; ends_at: number;
+  counts: Record<string, number>; total_votes: number;
+  charter_param?: string;
+}
+
 interface DashboardData {
   stats: { total_proposals: number; active_proposals: number; total_voters: number; pending_xp_rewards: number } | null;
   charter: { status: { total: number; resolved: number; voting: number; tbd: number }; ready: { param_key: string; title: string }[] } | null;
   bounties: { stats: { open: number; assigned: number; submitted: number; verified: number; paid: number; totalPaid: number; escrow: { funded: number; released: number; available: number } }; bounties: { id: number; title: string; reward_xrd: number; status: string }[] } | null;
   game: GameState | null;
+  activeVotes: ActiveProposal[] | null;
+}
+
+function countdown(endsAt: number): string {
+  const diff = endsAt * 1000 - Date.now();
+  if (diff <= 0) return "Ended";
+  const d = Math.floor(diff / 86400000);
+  const h = Math.floor((diff % 86400000) / 3600000);
+  const m = Math.floor((diff % 3600000) / 60000);
+  if (d > 0) return `${d}d ${h}h left`;
+  if (h > 0) return `${h}h ${m}m left`;
+  return `${m}m left`;
 }
 
 function Dashboard() {
   const { account, connected, badge, badgeLoading } = useWallet();
-  const [data, setData] = useState<DashboardData>({ stats: null, charter: null, bounties: null, game: null });
+  const [data, setData] = useState<DashboardData>({ stats: null, charter: null, bounties: null, game: null, activeVotes: null });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
 
@@ -36,10 +54,12 @@ function Dashboard() {
       fetch(API_URL + "/stats").then(r => r.json()).catch(() => null),
       fetch(API_URL + "/charter").then(r => r.json()).catch(() => null),
       fetch(API_URL + "/bounties").then(r => r.json()).catch(() => null),
-    ]).then(([s, c, b]) => {
+      fetch(API_URL + "/proposals?status=active").then(r => r.json()).catch(() => null),
+    ]).then(([s, c, b, p]) => {
       const allNull = !s?.data && !c?.data && !b?.data;
       if (allNull) setError(true);
-      setData(prev => ({ ...prev, stats: s?.data || null, charter: c?.data || null, bounties: b?.data || null }));
+      const votes = p?.data ? [...p.data].sort((a: ActiveProposal, b: ActiveProposal) => a.ends_at - b.ends_at).slice(0, 3) : null;
+      setData(prev => ({ ...prev, stats: s?.data || null, charter: c?.data || null, bounties: b?.data || null, activeVotes: votes }));
       setLoading(false);
     }).catch(() => { setError(true); setLoading(false); });
   };
@@ -174,6 +194,35 @@ function Dashboard() {
                 </div>
               ))}
             </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Active Votes — urgency highlight */}
+      {data.activeVotes && data.activeVotes.length > 0 && (
+        <Card className="border-primary/30">
+          <CardHeader className="pb-2">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-sm uppercase tracking-wide text-primary">Voting Now</CardTitle>
+              <Link href="/proposals"><Button variant="ghost" size="sm">See All</Button></Link>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {data.activeVotes.map(v => (
+              <Link key={v.id} href={`/proposals/${v.id}`}
+                className="flex items-center justify-between py-2 px-3 bg-muted rounded-lg no-underline text-foreground hover:bg-accent/10 transition-colors">
+                <div className="flex-1 min-w-0 mr-3">
+                  <div className="text-sm font-medium leading-tight truncate">{v.title}</div>
+                  <div className="text-[11px] text-muted-foreground mt-0.5">{v.total_votes} vote{v.total_votes !== 1 ? "s" : ""}</div>
+                </div>
+                <span className={`text-xs font-mono shrink-0 ${(v.ends_at * 1000 - Date.now()) < 86400000 ? "text-red-400 font-bold" : "text-muted-foreground"}`}>
+                  {countdown(v.ends_at)}
+                </span>
+              </Link>
+            ))}
+            <a href={TG_BOT_URL} target="_blank" className="block">
+              <Button variant="default" size="sm" className="w-full mt-1">Vote in Telegram</Button>
+            </a>
           </CardContent>
         </Card>
       )}
