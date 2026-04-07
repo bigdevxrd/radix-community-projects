@@ -201,7 +201,9 @@ function startApi() {
           return res.end(JSON.stringify({ ok: false, error: "title and reward_xrd required" }));
         }
         const deadlineSec = body.deadline_days ? Math.floor(Date.now() / 1000) + body.deadline_days * 86400 : null;
-        const id = db.createBounty(body.title.slice(0, 500), parseFloat(body.reward_xrd), 0, {
+        // Use admin TG ID for web-created tasks (FK constraint requires valid user)
+        const ADMIN_TG_ID = 6102618406;
+        const id = db.createBounty(body.title.slice(0, 500), parseFloat(body.reward_xrd), ADMIN_TG_ID, {
           description: body.description || null,
           category: body.category || "general",
           difficulty: body.difficulty || "medium",
@@ -210,8 +212,9 @@ function startApi() {
         res.writeHead(200);
         return res.end(JSON.stringify({ ok: true, data: { id } }));
       } catch (e) {
+        console.error("[API] POST /api/bounties error:", e.message);
         res.writeHead(400);
-        return res.end(JSON.stringify({ ok: false, error: "invalid_body" }));
+        return res.end(JSON.stringify({ ok: false, error: e.message || "invalid_body" }));
       }
     }
 
