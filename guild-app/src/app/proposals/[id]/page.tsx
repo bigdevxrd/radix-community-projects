@@ -25,6 +25,18 @@ const STATUS_VARIANT: Record<string, "default" | "secondary" | "destructive" | "
   needs_amendment: "outline",
 };
 
+type ProposalClass = "charter_vote" | "community_vote" | "temp_check";
+function classifyProposal(p: ProposalDetail): ProposalClass {
+  if (p.type === "temp") return "temp_check";
+  if (p.charter_param) return "charter_vote";
+  return "community_vote";
+}
+const CLASS_LABEL: Record<ProposalClass, { label: string; badge: "default" | "secondary" | "outline"; desc: string }> = {
+  charter_vote: { label: "Binding Decision", badge: "default", desc: "This vote directly updates the DAO Charter. The result is binding." },
+  community_vote: { label: "Community Vote", badge: "secondary", desc: "A formal community vote. Results inform DAO direction." },
+  temp_check: { label: "Gauging Interest", badge: "outline", desc: "A quick, non-binding pulse check. 24 hours, low threshold." },
+};
+
 function ProposalDetailContent() {
   const params = useParams();
   const id = params?.id;
@@ -120,8 +132,13 @@ function ProposalDetailContent() {
               {proposal.status}
             </Badge>
           </div>
+          {(() => { const cls = classifyProposal(proposal); const cfg = CLASS_LABEL[cls]; return (
+            <div className="flex items-center gap-2 mb-2">
+              <Badge variant={cfg.badge} className="text-xs">{cfg.label}</Badge>
+              <span className="text-xs text-muted-foreground">{cfg.desc}</span>
+            </div>
+          ); })()}
           <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
-            <span>Type: <span className="text-foreground capitalize">{proposal.type || "Vote"}</span></span>
             <span>Created: {createdDate.toLocaleDateString()}</span>
             <span>{isActive ? timeLeftStr : "Ended " + endDate.toLocaleDateString()}</span>
             <span>Min votes: {proposal.min_votes}</span>

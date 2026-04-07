@@ -47,6 +47,29 @@ const STATUS_VARIANT: Record<string, "default" | "secondary" | "destructive" | "
   needs_amendment: "outline",
 };
 
+// ── Proposal Classification ──
+type ProposalClass = "charter_vote" | "community_vote" | "temp_check";
+
+function classifyProposal(p: Proposal): ProposalClass {
+  if (p.type === "temp") return "temp_check";
+  if (p.charter_param) return "charter_vote";
+  return "community_vote";
+}
+
+const CLASS_CONFIG: Record<ProposalClass, { label: string; badge: "default" | "secondary" | "outline"; cta: string; border: string }> = {
+  charter_vote: { label: "Binding Decision", badge: "default", cta: "Vote now — this shapes the DAO", border: "border-l-4 border-l-primary" },
+  community_vote: { label: "Community Vote", badge: "secondary", cta: "Have your say", border: "border-l-4 border-l-muted-foreground/30" },
+  temp_check: { label: "Gauging Interest", badge: "outline", cta: "Quick pulse check — non-binding", border: "border-l-4 border-l-muted-foreground/15" },
+};
+
+// Sort: charter votes first, then community, then temp checks
+function classSort(a: Proposal, b: Proposal): number {
+  const order: Record<ProposalClass, number> = { charter_vote: 0, community_vote: 1, temp_check: 2 };
+  const diff = order[classifyProposal(a)] - order[classifyProposal(b)];
+  if (diff !== 0) return diff;
+  return a.ends_at - b.ends_at; // soonest-ending first within same class
+}
+
 function useCountdown(endTimestamp: number) {
   const [now, setNow] = useState(Date.now());
   useEffect(() => {
@@ -144,8 +167,8 @@ function ProposalsContent() {
   const archived = proposals.filter((p) => p.status !== "active");
   const visible = showArchived ? proposals : active;
 
-  // Sort active proposals: soonest-ending first
-  const sortedActive = [...active].sort((a, b) => a.ends_at - b.ends_at);
+  // Sort active: charter votes first, then by deadline
+  const sortedActive = [...active].sort(classSort);
   const heroVotes = sortedActive.slice(0, 3);
 
   return (
@@ -172,14 +195,17 @@ function ProposalsContent() {
           </CardHeader>
           <CardContent className="space-y-3">
             {heroVotes.map(p => {
+              const cls = classifyProposal(p);
+              const cfg = CLASS_CONFIG[cls];
               const leadingOpt = Object.entries(p.counts).sort(([, a], [, b]) => b - a)[0];
               return (
-                <Link key={p.id} href={`/proposals/${p.id}`} className="block bg-background/80 rounded-lg p-3 no-underline text-foreground hover:bg-background transition-colors">
+                <Link key={p.id} href={`/proposals/${p.id}`} className={`block bg-background/80 rounded-lg p-3 no-underline text-foreground hover:bg-background transition-colors ${cfg.border}`}>
                   <div className="flex items-start justify-between gap-3 mb-2">
                     <div className="flex-1 min-w-0">
                       <div className="text-sm font-semibold leading-tight">{p.title}</div>
                       <div className="flex items-center gap-2 mt-1">
-                        <Badge variant="outline" className="text-[9px] font-mono">{p.charter_param || p.type}</Badge>
+                        <Badge variant={cfg.badge} className="text-[9px]">{cfg.label}</Badge>
+                        {p.charter_param && <Badge variant="outline" className="text-[8px] font-mono">{p.charter_param}</Badge>}
                         <span className="text-[11px] text-muted-foreground">{p.total_votes} vote{p.total_votes !== 1 ? "s" : ""}</span>
                       </div>
                     </div>
@@ -491,46 +517,50 @@ function ProposalsContent() {
         <p className="text-muted-foreground text-sm py-8 text-center">No proposals yet.</p>
       ) : (
         <div className="space-y-3">
-          {visible.map((p) => (
-            <Card key={p.id}>
-              <CardContent className="pt-4 pb-4">
-                <div className="flex items-start justify-between mb-2">
-                  <div>
-                    <span className="text-muted-foreground font-mono text-xs mr-2">#{p.id}</span>
-                    <Link href={`/proposals/${p.id}`} className="font-semibold text-sm hover:text-primary no-underline text-foreground">{p.title}</Link>
+          {[...visible].sort(classSort).map((p) => {
+            const cls = classifyProposal(p);
+            const cfg = CLASS_CONFIG[cls];
+            return (
+              <Card key={p.id} className={p.status === "active" ? cfg.border : ""}>
+                <CardContent className="pt-4 pb-4">
+                  <div className="flex items-start justify-between mb-2">
+                    <div>
+                      <span className="text-muted-foreground font-mono text-xs mr-2">#{p.id}</span>
+                      <Link href={`/proposals/${p.id}`} className="font-semibold text-sm hover:text-primary no-underline text-foreground">{p.title}</Link>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      {p.status === "active" && <Countdown endsAt={p.ends_at} />}
+                      <Badge variant={STATUS_VARIANT[p.status] || "secondary"}>{p.status}</Badge>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2 shrink-0">
-                    {p.status === "active" && <Countdown endsAt={p.ends_at} />}
-                    <Badge variant={STATUS_VARIANT[p.status] || "secondary"}>{p.status}</Badge>
+                  <div className="flex flex-wrap gap-2 text-[11px] text-muted-foreground mb-3">
+                    <Badge variant={cfg.badge} className="text-[9px]">{cfg.label}</Badge>
+                    {p.charter_param && <Badge variant="outline" className="text-[8px] font-mono">{p.charter_param}</Badge>}
+                    <span>{p.total_votes} vote{p.total_votes !== 1 ? "s" : ""}</span>
                   </div>
-                </div>
-                <div className="flex gap-3 text-[11px] text-muted-foreground mb-3">
-                  <span>{p.type || "Vote"}</span>
-                  {p.charter_param && <Badge variant="outline" className="text-[8px] font-mono">{p.charter_param}</Badge>}
-                  <span>{p.total_votes} vote{p.total_votes !== 1 ? "s" : ""}</span>
-                </div>
-                {Object.keys(p.counts).length > 0 && (
-                  <div className="space-y-1.5">
-                    {Object.entries(p.counts).map(([opt, count]) => {
-                      const pct = p.total_votes > 0 ? Math.round((count / p.total_votes) * 100) : 0;
-                      return (
-                        <div key={opt} className="flex items-center gap-2">
-                          <span className="text-[11px] text-muted-foreground w-16 capitalize">{opt}</span>
-                          <Progress value={pct} className="h-2 flex-1" />
-                          <span className="text-[11px] font-mono text-muted-foreground w-14 text-right">{count} ({pct}%)</span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-                {p.status === "active" && (
-                  <a href={TG_BOT_URL} target="_blank">
-                    <Button variant="default" size="sm" className="mt-3">Vote in Telegram</Button>
-                  </a>
-                )}
-              </CardContent>
-            </Card>
-          ))}
+                  {Object.keys(p.counts).length > 0 && (
+                    <div className="space-y-1.5">
+                      {Object.entries(p.counts).map(([opt, count]) => {
+                        const pct = p.total_votes > 0 ? Math.round((count / p.total_votes) * 100) : 0;
+                        return (
+                          <div key={opt} className="flex items-center gap-2">
+                            <span className="text-[11px] text-muted-foreground w-16 capitalize">{opt}</span>
+                            <Progress value={pct} className="h-2 flex-1" />
+                            <span className="text-[11px] font-mono text-muted-foreground w-14 text-right">{count} ({pct}%)</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                  {p.status === "active" && (
+                    <a href={TG_BOT_URL} target="_blank">
+                      <Button variant="default" size="sm" className="mt-3">{cfg.cta}</Button>
+                    </a>
+                  )}
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
       )}
 

@@ -66,6 +66,28 @@ function startApi() {
       return res.end(JSON.stringify({ ok: false, error: "rate_limit_exceeded" }));
     }
 
+    // GET /api/health — system health check
+    if (url.pathname === "/api/health") {
+      const { getXpQueue } = require("./xp");
+      const cv2Status = cv2.getSyncStatus();
+      const activeProposals = db.getActiveProposals();
+      const charterStatus = db.getCharterStatus();
+      res.writeHead(200);
+      return res.end(JSON.stringify({
+        ok: true,
+        data: {
+          uptime: Math.floor(process.uptime()),
+          db: "connected",
+          cv2: { enabled: cv2Status.enabled, lastSync: cv2Status.lastSync, errors: cv2Status.errors },
+          proposals: { active: activeProposals.length, total: db.getTotalProposals() },
+          charter: { resolved: charterStatus.resolved, total: charterStatus.total },
+          xpQueue: getXpQueue().length,
+          memory: Math.round(process.memoryUsage().heapUsed / 1024 / 1024) + "MB",
+          version: "1.1.0",
+        }
+      }));
+    }
+
     // GET /api/proposals — proposals with vote counts (paginated)
     if (url.pathname === "/api/proposals") {
       // Don't close here — let the bot's checkExpiredProposals() handle results properly
