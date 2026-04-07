@@ -65,8 +65,35 @@ function BountiesContent() {
     <div className="space-y-5">
       <div>
         <h1 className="text-xl font-bold">Bounty Board</h1>
-        <p className="text-muted-foreground text-sm mt-1">Earn XRD and XP by completing bounties</p>
+        <p className="text-muted-foreground text-sm mt-1">Earn XRD and XP by completing tasks for the community.</p>
       </div>
+
+      {/* How Bounties Work */}
+      <Card>
+        <CardContent className="pt-4 pb-4">
+          <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">How It Works</div>
+          <div className="flex items-center gap-1 flex-wrap">
+            {[
+              { label: "Create", desc: "Admin posts a task + reward" },
+              { label: "Claim", desc: "/bounty claim <id>" },
+              { label: "Submit", desc: "/bounty submit <id>" },
+              { label: "Verify", desc: "Admin reviews delivery" },
+              { label: "Pay", desc: "XRD released from escrow" },
+            ].map((s, i) => (
+              <div key={s.label} className="flex items-center gap-1">
+                {i > 0 && <span className="text-muted-foreground text-xs mx-0.5">&rarr;</span>}
+                <div className="bg-muted rounded px-2 py-1 text-center">
+                  <div className="text-[11px] font-semibold">{s.label}</div>
+                  <div className="text-[9px] text-muted-foreground">{s.desc}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="text-[11px] text-muted-foreground mt-2">
+            All bounty commands run in <a href={TG_BOT_URL} target="_blank" className="text-primary hover:underline">@rad_gov</a> on Telegram. Escrow holds XRD until delivery is verified.
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Error State */}
       {error && !loading && (
@@ -226,7 +253,7 @@ function BountiesContent() {
                       </div>
                     );
                   })}
-                  <span className="text-[10px] text-muted-foreground ml-1 capitalize">{bounties.length > 0 ? filtered[0]?.status : ""}</span>
+                  <span className="text-[10px] text-muted-foreground ml-1 capitalize">{b.status}</span>
                 </div>
               </CardContent>
             </Card>
