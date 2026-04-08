@@ -18,6 +18,7 @@ interface Bounty {
   github_pr: string | null; created_at: number;
   assigned_at: number | null; submitted_at: number | null;
   verified_at: number | null; paid_at: number | null; paid_tx: string | null;
+  funded: number;
 }
 interface Category { id: number; name: string; description: string; icon: string; sort_order: number; }
 interface BountyStats {
@@ -146,22 +147,13 @@ function BountiesContent() {
         </div>
       )}
 
-      {/* Escrow Balance */}
+      {/* Funding Summary */}
       {stats && (
-        <Card>
-          <CardContent className="px-4 py-3">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="text-[10px] text-muted-foreground uppercase tracking-wider">Escrow Balance</div>
-                <div className="text-lg font-bold font-mono text-primary">{stats.escrow.available} XRD</div>
-              </div>
-              <div className="text-right text-xs text-muted-foreground">
-                <div>Funded: {stats.escrow.funded} XRD</div>
-                <div>Released: {stats.escrow.released} XRD</div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        <div className="flex items-center gap-3 text-xs text-muted-foreground">
+          <span>Funded tasks: {bounties.filter(b => b.funded).length}</span>
+          <span>Unfunded: {bounties.filter(b => !b.funded && b.status === "open").length}</span>
+          <span>Total value: {bounties.reduce((a, b) => a + b.reward_xrd, 0)} XRD</span>
+        </div>
       )}
 
       {/* Escrow Transactions */}
@@ -248,6 +240,11 @@ function BountiesContent() {
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
                     <span className="font-mono text-sm font-bold text-primary">{b.reward_xrd} XRD</span>
+                    {b.status === "open" && (
+                      <Badge variant={b.funded ? "default" : "outline"} className={`text-[9px] ${b.funded ? "" : "text-muted-foreground"}`}>
+                        {b.funded ? "Funded" : "Seeking Sponsor"}
+                      </Badge>
+                    )}
                     <Badge variant={STATUS_COLORS[b.status] || "secondary"}>{b.status}</Badge>
                   </div>
                 </div>

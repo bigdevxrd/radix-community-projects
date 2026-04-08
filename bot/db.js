@@ -222,6 +222,9 @@ function init() {
     seedCfg.run("require_application_above_xrd", "100");
   }
 
+  // Escrow: per-task funding (funded/unfunded)
+  try { db.exec("ALTER TABLE bounties ADD COLUMN funded INTEGER DEFAULT 0"); } catch(e) {}
+
   // Feedback migration: add radix_address for web-based submissions
   try { db.exec("ALTER TABLE feedback ADD COLUMN radix_address TEXT"); } catch(e) {}
 
@@ -526,8 +529,12 @@ function getOpenBounties() { return db.prepare("SELECT * FROM bounties WHERE sta
 function getAllBounties() { return db.prepare("SELECT * FROM bounties ORDER BY created_at DESC").all(); }
 
 function assignBounty(id, tgId, radixAddress) {
+  const bounty = getBounty(id);
+  if (!bounty) return { changes: 0, error: "not_found" };
+  if (bounty.status !== "open") return { changes: 0, error: "not_open" };
+  if (!bounty.funded) return { changes: 0, error: "not_funded" };
   const now = Math.floor(Date.now() / 1000);
-  return db.prepare("UPDATE bounties SET assignee_tg_id = ?, assignee_address = ?, status = 'assigned', assigned_at = ? WHERE id = ? AND status = 'open'")
+  return db.prepare("UPDATE bounties SET assignee_tg_id = ?, assignee_address = ?, status = 'assigned', assigned_at = ? WHERE id = ? AND status = 'open' AND funded = 1")
     .run(tgId, radixAddress, now, id);
 }
 
@@ -555,9 +562,21 @@ function payBounty(id, txHash) {
   return { ok: true };
 }
 
+function fundTask(bountyId, txHash) {
+  const bounty = getBounty(bountyId);
+  if (!bounty) return { ok: false, error: "not_found" };
+  if (bounty.funded) return { ok: false, error: "already_funded" };
+  if (bounty.status !== "open") return { ok: false, error: "not_open" };
+  db.prepare("UPDATE bounties SET funded = 1 WHERE id = ?").run(bountyId);
+  db.prepare("UPDATE escrow_wallet SET total_funded_xrd = total_funded_xrd + ? WHERE id = 1").run(bounty.reward_xrd);
+  db.prepare("INSERT INTO bounty_transactions (bounty_id, tx_type, amount_xrd, tx_hash, description) VALUES (?, 'deposit', ?, ?, ?)")
+    .run(bountyId, bounty.reward_xrd, txHash, "Task #" + bountyId + " funded: " + bounty.title.slice(0, 40));
+  return { ok: true, amount: bounty.reward_xrd };
+}
+
 function fundEscrow(amountXrd, txHash) {
   db.prepare("UPDATE escrow_wallet SET total_funded_xrd = total_funded_xrd + ? WHERE id = 1").run(amountXrd);
-  db.prepare("INSERT INTO bounty_transactions (bounty_id, tx_type, amount_xrd, tx_hash, description) VALUES (NULL, 'deposit', ?, ?, 'Escrow funded')")
+  db.prepare("INSERT INTO bounty_transactions (bounty_id, tx_type, amount_xrd, tx_hash, description) VALUES (NULL, 'deposit', ?, ?, 'General escrow deposit')")
     .run(amountXrd, txHash);
 }
 
@@ -1013,6 +1032,7 @@ function getProposalHistory(limit = 10) {
 
 module.exports.cancelProposal = cancelProposal;
 module.exports.getProposalHistory = getProposalHistory;
+module.exports.fundTask = fundTask;
 module.exports.getCategories = getCategories;
 module.exports.getPlatformConfig = getPlatformConfig;
 module.exports.getBountyDetail = getBountyDetail;

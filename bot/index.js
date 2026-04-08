@@ -642,8 +642,11 @@ bot.command("bounty", async (ctx) => {
     const id = parseInt(args[1]);
     if (!id) return ctx.reply("Usage: /bounty claim <id>");
     const result = db.assignBounty(id, ctx.from.id, user.radix_address);
-    if (result.changes === 0) return ctx.reply("Bounty not found or already claimed.");
-    ctx.reply("Bounty #" + id + " claimed! Submit your work with: /bounty submit " + id + " <github_pr_url>");
+    if (result.error === "not_funded") return ctx.reply("Task #" + id + " isn't funded yet. A sponsor needs to fund it first.\nSponsors: /bounty fund " + id + " <tx_hash>");
+    if (result.error === "not_found") return ctx.reply("Task #" + id + " not found.");
+    if (result.error === "not_open") return ctx.reply("Task #" + id + " is not open for claiming.");
+    if (result.changes === 0) return ctx.reply("Could not claim task #" + id + ".");
+    ctx.reply("Task #" + id + " claimed! Submit your work with: /bounty submit " + id + " <deliverable_url>");
     return;
   }
 
@@ -731,12 +734,14 @@ bot.command("bounty", async (ctx) => {
   }
 
   if (sub === "fund") {
-    const xrd = parseFloat(args[1]);
+    const id = parseInt(args[1]);
     const txHash = args[2];
-    if (!xrd || !txHash) return ctx.reply("Usage: /bounty fund <xrd_amount> <tx_hash>");
-    db.fundEscrow(xrd, txHash);
-    const e = db.getEscrowBalance();
-    ctx.reply("Escrow funded: +" + xrd + " XRD\nAvailable: " + e.available + " XRD\nTX: " + txHash.slice(0, 30) + "...");
+    if (!id || !txHash) return ctx.reply("Usage: /bounty fund <task_id> <tx_hash>\n\nFunds a specific task. Send the XRD, then record the tx hash here.");
+    const result = db.fundTask(id, txHash);
+    if (!result.ok) return ctx.reply("Error: " + result.error);
+    const bounty = db.getBounty(id);
+    ctx.reply("Task #" + id + " FUNDED! " + result.amount + " XRD\n" + bounty.title + "\n\nWorkers can now claim this task.\nTX: " + txHash.slice(0, 30) + "...");
+    notifyDiscord("**Task #" + id + " funded** — " + result.amount + " XRD\n" + bounty.title + "\nWorkers can now claim: " + PORTAL + "/bounties/" + id);
     return;
   }
 

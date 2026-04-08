@@ -305,13 +305,13 @@ async function main() {
 
   console.log("\n  Dashboard (extended):");
 
-  await test("GET /leaderboard returns 200", async () => {
-    const resp = await fetch(GUILD + "/leaderboard");
+  await test("GET /game returns 200 (includes leaderboard)", async () => {
+    const resp = await fetch(GUILD + "/game");
     assert(resp.ok, "should be 200");
   });
 
   await test("All dashboard pages contain expected HTML", async () => {
-    const pages = ["", "/proposals", "/admin", "/mint", "/leaderboard"];
+    const pages = ["", "/proposals", "/admin", "/mint", "/game"];
     for (const p of pages) {
       const resp = await fetch(GUILD + p);
       assert(resp.ok, p + " should return 200");
@@ -390,8 +390,8 @@ async function main() {
 
   console.log("\n  Dashboard (all pages):");
 
-  await test("GET /transparency returns 200", async () => {
-    const resp = await fetch(GUILD + "/transparency");
+  await test("GET /docs returns 200 (includes transparency)", async () => {
+    const resp = await fetch(GUILD + "/docs");
     assert(resp.ok, "should be 200");
   });
 
@@ -598,8 +598,8 @@ async function main() {
     assert(resp.ok, "should be 200");
   });
 
-  await test("All 14 dashboard pages return 200", async () => {
-    const pages = ["", "/proposals", "/admin", "/mint", "/leaderboard", "/bounties", "/bounties/2", "/docs", "/game", "/profile", "/transparency", "/feedback"];
+  await test("All 12 dashboard pages return 200", async () => {
+    const pages = ["", "/proposals", "/admin", "/mint", "/bounties", "/bounties/3", "/docs", "/game", "/profile", "/feedback"];
     for (const p of pages) {
       const resp = await fetch(GUILD + p);
       assert(resp.ok, p + " should return 200");

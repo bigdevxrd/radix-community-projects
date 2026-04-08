@@ -130,7 +130,7 @@ function ProfileContent() {
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
               <CardTitle className="text-sm uppercase tracking-wide text-muted-foreground">Dice Game</CardTitle>
-              <Link href="/leaderboard"><Button variant="ghost" size="sm">Leaderboard</Button></Link>
+              <Link href="/game#leaderboard"><Button variant="ghost" size="sm">Leaderboard</Button></Link>
             </div>
           </CardHeader>
           <CardContent>

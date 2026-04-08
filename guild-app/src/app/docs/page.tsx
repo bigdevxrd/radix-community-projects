@@ -2,7 +2,7 @@
 import { AppShell } from "@/components/AppShell";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { TG_BOT_URL } from "@/lib/constants";
+import { TG_BOT_URL, MANAGER, BADGE_NFT } from "@/lib/constants";
 import Link from "next/link";
 
 const QUICK_START = [
@@ -96,10 +96,10 @@ const FAQ = [
   { q: "How do I earn XP?", a: "Vote (+10 XP), propose (+25 XP), create polls (+25 XP), complete bounties (variable). Every action also triggers a dice roll for bonus XP (up to +100 for a jackpot)." },
   { q: "What are the charter votes?", a: "32 governance decisions that build the DAO from the ground up. Phase 1 (Foundation) sets the rules. Phase 2 (Configuration) sets the details. Phase 3 (Operations) starts the DAO. Each phase unlocks when the previous completes." },
   { q: "What is Consultation v2?", a: "The Radix Foundation's on-chain governance system. We use the same CV2 smart contract for formal, binding votes. Your votes are recorded permanently on the Radix ledger and weighted by XRD holdings." },
-  { q: "Who runs this?", a: "Big Dev built and maintains it. The code is open source (MIT). Admin controls transfer to the elected RAC (Radix Advisory Council) when Charter Step 3 completes. See /transparency for full costs." },
+  { q: "Who runs this?", a: "Big Dev built and maintains it. The code is open source (MIT). Admin controls transfer to the elected RAC (Radix Advisory Council) when Charter Step 3 completes. See Costs & Transparency section below." },
   { q: "How do bounties work?", a: "Anyone with a badge can create a task with an XRD reward. Workers claim it (/bounty claim), submit work (/bounty submit), a verifier checks the acceptance criteria, and XRD releases from escrow. Tasks have categories, difficulty levels, and deadlines." },
   { q: "What are the fees?", a: "2.5% platform fee on task creation. 50% goes to the guild treasury, 50% to operations (hosting, dev). Workers receive 100% of the net reward. Component royalties (0.1-0.5 XRD per on-chain call) go to the treasury. All percentages are charter-voteable." },
-  { q: "How is the guild funded?", a: "Platform fees + on-chain component royalties + SaaS hosting fees. No donations, no token. Revenue from usage funds more development, which produces more royalty-earning code. See /transparency for full breakdown." },
+  { q: "How is the guild funded?", a: "Platform fees + on-chain component royalties + SaaS hosting fees. No donations, no token. Revenue from usage funds more development, which produces more royalty-earning code. See Costs & Transparency section below." },
 ];
 
 const GUIDES = [
@@ -288,7 +288,7 @@ function DocsContent() {
               { label: "Dashboard", url: "https://radixguild.com" },
               { label: "GitHub (open source)", url: "https://github.com/bigdevxrd/radix-community-projects" },
               { label: "DAO Charter", url: "https://radix.wiki/ideas/radix-network-dao-charter" },
-              { label: "Transparency (costs & revenue)", url: "/transparency" },
+              { label: "Costs & Transparency", url: "#transparency" },
               { label: "API Reference", url: "https://github.com/bigdevxrd/radix-community-projects/blob/main/docs/API-REFERENCE.md" },
               { label: "System Health", url: "https://radixguild.com/api/health" },
             ].map(r => (
@@ -300,6 +300,85 @@ function DocsContent() {
           </div>
         </CardContent>
       </Card>
+      {/* Costs & Transparency */}
+      <div id="transparency">
+        <h2 className="text-lg font-bold mb-4">Costs & Transparency</h2>
+
+        <Card className="mb-4">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm uppercase tracking-wide text-muted-foreground">Actual Costs (Verified)</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              {[
+                { item: "Domain (radixguild.com, 3yr)", cost: "$40", note: "Hostinger, paid Apr 2026" },
+                { item: "AI/Dev tools (Claude Code)", cost: "~$600", note: "Development to date" },
+                { item: "VPS hosting", cost: "$7/mo", note: "Hostinger VPS, ongoing" },
+                { item: "TLS, database, Gateway API", cost: "Free", note: "Caddy, SQLite, Radix public endpoint" },
+              ].map(c => (
+                <div key={c.item} className="flex items-center justify-between py-1.5 border-b last:border-0">
+                  <div>
+                    <div className="text-sm font-medium">{c.item}</div>
+                    <div className="text-[11px] text-muted-foreground">{c.note}</div>
+                  </div>
+                  <span className="text-sm font-mono text-primary">{c.cost}</span>
+                </div>
+              ))}
+              <div className="flex items-center justify-between pt-2 font-semibold">
+                <span className="text-sm">Total invested</span>
+                <span className="text-sm font-mono text-primary">~$680</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm">Revenue to date</span>
+                <span className="text-sm font-mono text-muted-foreground">$0</span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="mb-4">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm uppercase tracking-wide text-muted-foreground">Revenue Model (Planned)</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2 text-sm">
+            <p><strong>Task marketplace fee:</strong> 2.5% on funded tasks. Charged at creation. Not yet active — no funded tasks exist.</p>
+            <p><strong>Component royalties:</strong> Badge Manager calls earn 0.1-1 XRD on-chain. Accruing but unclaimed.</p>
+            <p><strong>SaaS hosting:</strong> Other communities deploy their own instance. Planned for June+.</p>
+            <p className="text-xs text-muted-foreground mt-2">All fee percentages are charter-voteable. The community controls the economics.</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm uppercase tracking-wide text-muted-foreground">The Deal</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2 text-sm">
+            <p><strong>Who pays?</strong> Big Dev self-funds until the DAO treasury is formed (Charter Step 3).</p>
+            <p><strong>Who controls?</strong> Big Dev holds the admin badge. It transfers to the elected RAC when Charter Step 3 completes.</p>
+            <p><strong>What if Big Dev disappears?</strong> Everything is open source (MIT). Fork the code, deploy your own. On-chain badges persist on the ledger.</p>
+          </CardContent>
+        </Card>
+
+        <Card className="mt-4">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm uppercase tracking-wide text-muted-foreground">On-Chain Verification</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2 text-sm">
+            <div className="flex items-center justify-between py-1.5 border-b">
+              <span className="text-muted-foreground">Badge Manager</span>
+              <a href={`https://dashboard.radixdlt.com/component/${MANAGER}`} target="_blank" className="font-mono text-xs text-primary hover:underline">{MANAGER.slice(0, 20)}...</a>
+            </div>
+            <div className="flex items-center justify-between py-1.5 border-b">
+              <span className="text-muted-foreground">Badge NFT</span>
+              <a href={`https://dashboard.radixdlt.com/resource/${BADGE_NFT}`} target="_blank" className="font-mono text-xs text-primary hover:underline">{BADGE_NFT.slice(0, 20)}...</a>
+            </div>
+            <div className="flex items-center justify-between py-1.5">
+              <span className="text-muted-foreground">Source Code</span>
+              <a href="https://github.com/bigdevxrd/radix-community-projects" target="_blank" className="font-mono text-xs text-primary hover:underline">MIT Licensed</a>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }

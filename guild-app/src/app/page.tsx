@@ -328,7 +328,7 @@ function Dashboard() {
               <CardTitle className="text-sm uppercase tracking-wide text-muted-foreground">Dice Game</CardTitle>
               <div className="flex gap-1">
                 <Link href="/game"><Button variant="ghost" size="sm">How It Works</Button></Link>
-                <Link href="/leaderboard"><Button variant="ghost" size="sm">Leaderboard</Button></Link>
+                <Link href="/game#leaderboard"><Button variant="ghost" size="sm">Leaderboard</Button></Link>
               </div>
             </div>
           </CardHeader>

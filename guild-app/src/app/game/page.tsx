@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useWallet } from "@/hooks/useWallet";
 import { API_URL } from "@/lib/constants";
-import Link from "next/link";
+
 
 interface Cell { state: "empty" | "progress" | "completed"; type: string; }
 interface Board {
@@ -29,6 +29,61 @@ interface AchievementSummary {
 interface GameState {
   total_rolls: number; total_bonus_xp: number; streak_days: number;
   last_roll_value: number; jackpots: number; available_rolls: number;
+}
+
+interface LeaderboardEntry {
+  radix_address: string; total_rolls: number; total_bonus_xp: number;
+  streak_days: number; jackpots: number;
+}
+
+function LeaderboardSection({ account }: { account: string | null }) {
+  const [entries, setEntries] = useState<LeaderboardEntry[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch(API_URL + "/leaderboard").then(r => r.json())
+      .then(d => { setEntries(d.data || []); setLoading(false); })
+      .catch(() => setLoading(false));
+  }, []);
+
+  return (
+    <Card id="leaderboard">
+      <CardHeader className="pb-3">
+        <CardTitle className="text-sm uppercase tracking-wide text-muted-foreground">Leaderboard</CardTitle>
+      </CardHeader>
+      <CardContent>
+        {loading ? (
+          <div className="space-y-3">{[1, 2, 3].map(i => <Skeleton key={i} className="h-12 w-full" />)}</div>
+        ) : entries.length === 0 ? (
+          <p className="text-muted-foreground text-sm py-4 text-center">No game data yet. Vote or propose to earn rolls!</p>
+        ) : (
+          <div className="space-y-0">
+            {entries.map((e, i) => {
+              const isYou = account && e.radix_address === account;
+              return (
+                <div key={e.radix_address} className={`flex items-center justify-between py-3 border-b last:border-0 ${isYou ? "bg-primary/5 -mx-3 px-3 rounded-md" : ""}`}>
+                  <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+                    <span className={`text-lg font-bold font-mono w-7 shrink-0 ${i < 3 ? "text-primary" : "text-muted-foreground"}`}>{i + 1}</span>
+                    <div className="min-w-0">
+                      <div className="text-sm font-mono truncate">
+                        {e.radix_address.slice(0, 14)}...{e.radix_address.slice(-4)}
+                        {isYou && <Badge variant="secondary" className="ml-2 text-[9px]">You</Badge>}
+                      </div>
+                      <div className="text-[11px] text-muted-foreground">{e.total_rolls} rolls · {e.streak_days}d streak · {e.jackpots} jackpots</div>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-sm font-bold font-mono text-primary">+{e.total_bonus_xp}</div>
+                    <div className="text-[10px] text-muted-foreground">bonus XP</div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
 }
 
 const DICE_FACES = ["", "\u2680", "\u2681", "\u2682", "\u2683", "\u2684", "\u2685"];
@@ -286,7 +341,7 @@ function GameContent() {
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
               <CardTitle className="text-sm uppercase tracking-wide text-muted-foreground">Your Stats</CardTitle>
-              <Link href="/leaderboard"><Button variant="ghost" size="sm">Leaderboard</Button></Link>
+              <a href="#leaderboard"><Button variant="ghost" size="sm">Leaderboard</Button></a>
             </div>
           </CardHeader>
           <CardContent>
@@ -356,6 +411,9 @@ function GameContent() {
           <p>6. Complete all 36 cells to win.</p>
         </CardContent>
       </Card>
+
+      {/* Leaderboard */}
+      <LeaderboardSection account={account} />
     </div>
   );
 }

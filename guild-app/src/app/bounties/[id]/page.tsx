@@ -23,6 +23,7 @@ interface BountyDetail {
   created_at: number; assigned_at: number | null;
   submitted_at: number | null; verified_at: number | null;
   paid_at: number | null; cancelled_at: number | null; cancel_reason: string | null;
+  funded: number;
   milestones: { id: number; title: string; percentage: number; amount_xrd: number; status: string }[];
   applications: { id: number; applicant_tg_id: number; applicant_address: string; pitch: string | null; estimated_hours: number | null; status: string; created_at: number }[];
 }
@@ -254,11 +255,21 @@ function BountyDetailContent() {
       </div>
 
       {/* CTA */}
-      {bounty.status === "open" && (
+      {bounty.status === "open" && bounty.funded ? (
         <a href={TG_BOT_URL} target="_blank" className="block">
-          <Button variant="default" className="w-full">Claim in Telegram</Button>
+          <Button variant="default" className="w-full">Claim This Task in Telegram</Button>
         </a>
-      )}
+      ) : bounty.status === "open" && !bounty.funded ? (
+        <Card className="border-dashed">
+          <CardContent className="py-4 text-center">
+            <div className="text-sm font-semibold mb-1">This task needs a sponsor</div>
+            <p className="text-xs text-muted-foreground mb-3">Send {bounty.reward_xrd} XRD to the guild treasury, then run <code className="bg-muted px-1 rounded">/bounty fund {bounty.id} &lt;tx_hash&gt;</code> in Telegram.</p>
+            <a href={TG_BOT_URL} target="_blank">
+              <Button variant="outline" size="sm">Sponsor in Telegram</Button>
+            </a>
+          </CardContent>
+        </Card>
+      ) : null}
     </div>
   );
 }
