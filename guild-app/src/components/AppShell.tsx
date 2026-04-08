@@ -18,6 +18,7 @@ const NAV = [
   { path: "/game", label: "Game" },
   { path: "/docs", label: "Docs" },
   { path: "/feedback", label: "Feedback" },
+  { path: "/about", label: "About" },
   { path: "/admin", label: "Admin" },
 ];
 
@@ -83,12 +84,16 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <main className="max-w-4xl mx-auto px-4 sm:px-6 py-4 sm:py-6">{children}</main>
 
       {/* Footer */}
-      <footer className="max-w-4xl mx-auto mt-8 sm:mt-12 px-4 sm:px-6 py-6 border-t text-center flex justify-center gap-6 text-[13px] text-muted-foreground">
-        <a href="https://github.com/bigdevxrd/radix-community-projects" target="_blank" className="text-primary no-underline hover:underline">
-          GitHub
-        </a>
-        <Separator orientation="vertical" className="h-4" />
-        <span>Built on Radix</span>
+      <footer className="max-w-4xl mx-auto mt-8 sm:mt-12 px-4 sm:px-6 py-6 border-t text-center">
+        <div className="flex justify-center gap-4 sm:gap-6 text-[13px] text-muted-foreground flex-wrap">
+          <a href="https://github.com/bigdevxrd/radix-community-projects" target="_blank" className="text-primary no-underline hover:underline">GitHub</a>
+          <Separator orientation="vertical" className="h-4 hidden sm:block" />
+          <Link href="/about" className="no-underline hover:text-foreground">About</Link>
+          <Link href="/about#terms" className="no-underline hover:text-foreground">Terms</Link>
+          <Link href="/about#privacy" className="no-underline hover:text-foreground">Privacy</Link>
+          <Separator orientation="vertical" className="h-4 hidden sm:block" />
+          <span>Built by <a href="https://github.com/bigdevxrd" target="_blank" className="text-primary no-underline hover:underline">Big Dev</a></span>
+        </div>
       </footer>
     </>
   );
