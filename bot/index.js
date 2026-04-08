@@ -1320,6 +1320,7 @@ const { postToRadixTalk, formatProposalForRT } = require("./services/discourse")
 async function checkExpiredProposals() {
   const now = Math.floor(Date.now() / 1000);
   const expired = db.getActiveProposals().filter(p => now > p.ends_at);
+  if (expired.length > 0) console.log("[AutoClose] Found " + expired.length + " expired proposal(s)");
 
   for (const proposal of expired) {
     const counts = db.getVoteCounts(proposal.id);
@@ -1368,11 +1369,13 @@ async function checkExpiredProposals() {
     notifyDiscord("**Proposal #" + proposal.id + " — " + result.toUpperCase() + "**\n" + proposal.title + "\n" + discordCounts + " (" + total + " votes)\n" + PORTAL + "/proposals/" + proposal.id);
 
     // Post to RadixTalk (if API key configured)
-    const rtTitle = "[Result] Proposal #" + proposal.id + ": " + proposal.title.slice(0, 80);
-    const rtBody = formatProposalForRT(proposal, counts);
-    const rtPost = await postToRadixTalk(rtTitle, rtBody);
-    if (rtPost) {
-      console.log("[AutoClose] Posted to RadixTalk:", rtPost.url);
+    try {
+      const rtTitle = "[Result] Proposal #" + proposal.id + ": " + proposal.title.slice(0, 80);
+      const rtBody = formatProposalForRT(proposal, counts);
+      const rtPost = await postToRadixTalk(rtTitle, rtBody);
+      if (rtPost) console.log("[AutoClose] Posted to RadixTalk:", rtPost.url);
+    } catch (e) {
+      console.error("[AutoClose] RadixTalk post failed:", e.message);
     }
 
     // ── Pipeline auto-advancement ──
