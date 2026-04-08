@@ -85,7 +85,7 @@ function QuickStartStage({ activeStep, onStep }: { activeStep: number; onStep: (
                         : "bg-muted group-hover:bg-accent/20"
                   }`}
                 >
-                  <Icon className={`h-4.5 w-4.5 transition-colors ${isActive ? "text-primary" : isPast ? "text-primary/70" : "text-muted-foreground"}`} />
+                  <Icon className={`h-[18px] w-[18px] transition-colors ${isActive ? "text-primary" : isPast ? "text-primary/70" : "text-muted-foreground"}`} />
                 </div>
                 <span className={`text-[10px] mt-1.5 text-center leading-tight font-medium ${isActive ? "text-primary" : "text-muted-foreground"}`}>
                   {s.label}
@@ -422,8 +422,10 @@ function ArchitectureStage() {
               className="bg-muted rounded-lg p-2.5 text-center hover:ring-1 transition-all journey-fade-in"
               style={{
                 animationDelay: `${i * 80}ms`,
-                ["--tw-ring-color" as string]: `${b.color}40`,
+                boxShadow: `0 0 0 0px ${b.color}40`,
               }}
+              onMouseEnter={(e) => { e.currentTarget.style.boxShadow = `0 0 0 1px ${b.color}40`; }}
+              onMouseLeave={(e) => { e.currentTarget.style.boxShadow = "none"; }}
             >
               <Icon className="h-5 w-5 mx-auto mb-1" style={{ color: b.color }} />
               <div className="text-[11px] font-semibold">{b.label}</div>
