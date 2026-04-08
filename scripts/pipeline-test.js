@@ -598,8 +598,8 @@ async function main() {
     assert(resp.ok, "should be 200");
   });
 
-  await test("All 12 dashboard pages return 200", async () => {
-    const pages = ["", "/proposals", "/admin", "/mint", "/bounties", "/bounties/3", "/docs", "/game", "/profile", "/feedback"];
+  await test("All 13 dashboard pages return 200", async () => {
+    const pages = ["", "/proposals", "/admin", "/mint", "/bounties", "/bounties/3", "/docs", "/game", "/profile", "/feedback", "/about"];
     for (const p of pages) {
       const resp = await fetch(GUILD + p);
       assert(resp.ok, p + " should return 200");
