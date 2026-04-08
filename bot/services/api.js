@@ -348,6 +348,26 @@ function startApi() {
       }
     }
 
+    // ── Working Groups Endpoints ──────────────────────────
+
+    // GET /api/groups — all groups with member counts
+    if (url.pathname === "/api/groups") {
+      res.writeHead(200);
+      return res.end(JSON.stringify({ ok: true, data: db.getGroups() }));
+    }
+
+    // GET /api/groups/:id — group detail with members + linked tasks/proposals
+    const groupMatch = url.pathname.match(/^\/api\/groups\/(\d+)$/);
+    if (groupMatch) {
+      const detail = db.getGroupDetail(parseInt(groupMatch[1]));
+      if (!detail) {
+        res.writeHead(404);
+        return res.end(JSON.stringify({ ok: false, error: "not_found" }));
+      }
+      res.writeHead(200);
+      return res.end(JSON.stringify({ ok: true, data: detail }));
+    }
+
     // ── Feedback Endpoints ────────────────────────────────
 
     // POST /api/feedback — create ticket from dashboard

@@ -14,6 +14,7 @@ const NAV = [
   { path: "/", label: "Dashboard" },
   { path: "/mint", label: "Mint" },
   { path: "/proposals", label: "Proposals" },
+  { path: "/groups", label: "Groups" },
   { path: "/bounties", label: "Bounties" },
   { path: "/game", label: "Game" },
   { path: "/docs", label: "Docs" },

@@ -772,6 +772,69 @@ bot.command("bounty", async (ctx) => {
   );
 });
 
+// ── /groups (Working Groups) ──────────────────────────
+
+bot.command("groups", (ctx) => {
+  const groups = db.getGroups();
+  if (groups.length === 0) return ctx.reply("No working groups yet.");
+  let msg = "Working Groups\n\n";
+  groups.forEach(g => {
+    msg += g.name + " (" + g.member_count + " members)\n";
+    msg += "  " + g.description + "\n\n";
+  });
+  msg += "Join: /group join <name>\nView: " + PORTAL + "/groups";
+  ctx.reply(msg);
+});
+
+bot.command("group", async (ctx) => {
+  const args = ctx.message.text.split(/\s+/).slice(1);
+  const sub = args[0]?.toLowerCase();
+
+  if (sub === "join") {
+    const user = await requireBadge(ctx);
+    if (!user) return;
+    const name = args.slice(1).join(" ");
+    if (!name) return ctx.reply("Usage: /group join <group name>");
+    const group = db.getGroupByName(name);
+    if (!group) return ctx.reply("Group not found. See /groups for available groups.");
+    const result = db.joinGroup(group.id, ctx.from.id, user.radix_address);
+    if (result.error === "already_member") return ctx.reply("You're already in " + group.name + "!");
+    if (!result.ok) return ctx.reply("Error: " + result.error);
+    ctx.reply("Joined " + group.name + "! View: " + PORTAL + "/groups/" + group.id);
+    return;
+  }
+
+  if (sub === "leave") {
+    const name = args.slice(1).join(" ");
+    if (!name) return ctx.reply("Usage: /group leave <group name>");
+    const group = db.getGroupByName(name);
+    if (!group) return ctx.reply("Group not found.");
+    const user = db.getUser(ctx.from.id);
+    if (!user) return ctx.reply("Register first: /register <account_rdx1...>");
+    const result = db.leaveGroup(group.id, user.radix_address);
+    if (!result.ok) return ctx.reply("You're not a member or you're the lead (leads can't leave).");
+    ctx.reply("Left " + group.name + ".");
+    return;
+  }
+
+  // View a specific group
+  const name = args.join(" ");
+  if (!name) return ctx.reply("Usage: /group <name> or /group join <name> or /group leave <name>");
+  const group = db.getGroupByName(name);
+  if (!group) return ctx.reply("Group not found. See /groups for available groups.");
+  const detail = db.getGroupDetail(group.id);
+  let msg = detail.name + "\n" + detail.description + "\n\n";
+  msg += "Members (" + detail.member_count + "):\n";
+  detail.members.forEach(m => {
+    msg += "  " + (m.role === "lead" ? "Lead: " : "") + m.radix_address.slice(0, 16) + "...\n";
+  });
+  if (detail.bounties.length > 0) {
+    msg += "\nLinked Tasks: " + detail.bounties.length + "\n";
+  }
+  msg += "\nView: " + PORTAL + "/groups/" + detail.id;
+  ctx.reply(msg);
+});
+
 // ── /badges ────────────────────────────────────────────
 
 bot.command("badges", async (ctx) => {

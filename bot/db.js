@@ -222,6 +222,55 @@ function init() {
     seedCfg.run("require_application_above_xrd", "100");
   }
 
+  // ── Working Groups ──
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS working_groups (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL UNIQUE,
+      description TEXT,
+      icon TEXT,
+      lead_tg_id INTEGER,
+      lead_address TEXT,
+      status TEXT DEFAULT 'active',
+      created_at INTEGER DEFAULT (strftime('%s','now'))
+    );
+    CREATE TABLE IF NOT EXISTS working_group_members (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      group_id INTEGER NOT NULL,
+      tg_id INTEGER,
+      radix_address TEXT NOT NULL,
+      role TEXT DEFAULT 'member',
+      joined_at INTEGER DEFAULT (strftime('%s','now')),
+      UNIQUE(group_id, radix_address),
+      FOREIGN KEY (group_id) REFERENCES working_groups(id)
+    );
+    CREATE INDEX IF NOT EXISTS idx_wg_members ON working_group_members(group_id);
+  `);
+
+  // Link proposals and bounties to groups
+  try { db.exec("ALTER TABLE proposals ADD COLUMN group_id INTEGER"); } catch(e) {}
+  try { db.exec("ALTER TABLE bounties ADD COLUMN group_id INTEGER"); } catch(e) {}
+
+  // Seed working groups
+  const ADMIN_TG_ID = 6102618406;
+  const ADMIN_ADDRESS = "account_rdx12yh4fwevmvnqgd3ppzau66cm9xu874srmrt9g2cye3fa8j8y78z9sq";
+  const wgCount = db.prepare("SELECT COUNT(*) as c FROM working_groups").get();
+  if (wgCount.c === 0) {
+    const seedWg = db.prepare("INSERT OR IGNORE INTO working_groups (name, description, icon, lead_tg_id, lead_address) VALUES (?, ?, ?, ?, ?)");
+    const seedMember = db.prepare("INSERT OR IGNORE INTO working_group_members (group_id, tg_id, radix_address, role) VALUES (?, ?, ?, 'lead')");
+    const groups = [
+      ["Guild", "Overall governance, coordination, charter progress", "shield"],
+      ["DAO", "Charter votes, proposal management, governance design", "vote"],
+      ["Radix Infrastructure", "VPS, tooling, monitoring, deployments, security", "server"],
+      ["Business Development", "Revenue, partnerships, SaaS sales, pricing", "briefcase"],
+      ["Marketing", "Content, outreach, social media, community growth", "megaphone"],
+    ];
+    groups.forEach(([name, desc, icon]) => {
+      const r = seedWg.run(name, desc, icon, ADMIN_TG_ID, ADMIN_ADDRESS);
+      seedMember.run(r.lastInsertRowid, ADMIN_TG_ID, ADMIN_ADDRESS);
+    });
+  }
+
   // Escrow: per-task funding (funded/unfunded)
   try { db.exec("ALTER TABLE bounties ADD COLUMN funded INTEGER DEFAULT 0"); } catch(e) {}
 
@@ -675,6 +724,54 @@ function checkExpiredBounties() {
   return expired.changes;
 }
 
+// ── Working Groups ──────────────────────────────────────
+
+function getGroups() {
+  return db.prepare(`
+    SELECT wg.*, COUNT(wgm.id) as member_count
+    FROM working_groups wg
+    LEFT JOIN working_group_members wgm ON wg.id = wgm.group_id
+    GROUP BY wg.id
+    ORDER BY wg.id
+  `).all();
+}
+
+function getGroupDetail(id) {
+  const group = db.prepare("SELECT * FROM working_groups WHERE id = ?").get(id);
+  if (!group) return null;
+  const members = db.prepare("SELECT * FROM working_group_members WHERE group_id = ? ORDER BY role DESC, joined_at").all(id);
+  const bounties = db.prepare("SELECT id, title, reward_xrd, status, category FROM bounties WHERE group_id = ? ORDER BY created_at DESC LIMIT 10").all(id);
+  const proposals = db.prepare("SELECT id, title, type, status FROM proposals WHERE group_id = ? ORDER BY created_at DESC LIMIT 10").all(id);
+  return { ...group, members, bounties, proposals, member_count: members.length };
+}
+
+function joinGroup(groupId, tgId, address) {
+  try {
+    db.prepare("INSERT INTO working_group_members (group_id, tg_id, radix_address) VALUES (?, ?, ?)").run(groupId, tgId, address);
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: e.message.includes("UNIQUE") ? "already_member" : e.message };
+  }
+}
+
+function leaveGroup(groupId, address) {
+  const result = db.prepare("DELETE FROM working_group_members WHERE group_id = ? AND radix_address = ? AND role != 'lead'").run(groupId, address);
+  return { ok: result.changes > 0, error: result.changes === 0 ? "not_member_or_lead" : null };
+}
+
+function getGroupsForMember(address) {
+  return db.prepare(`
+    SELECT wg.*, wgm.role
+    FROM working_groups wg
+    JOIN working_group_members wgm ON wg.id = wgm.group_id
+    WHERE wgm.radix_address = ?
+  `).all(address);
+}
+
+function getGroupByName(name) {
+  return db.prepare("SELECT * FROM working_groups WHERE LOWER(name) = LOWER(?)").get(name);
+}
+
 // ── Grid Game ──────────────────────────────────────────
 // Weighted dice: 1=30%, 2=25%, 3=20%, 4=13%, 5=8%, 6=4%
 
@@ -1032,6 +1129,12 @@ function getProposalHistory(limit = 10) {
 
 module.exports.cancelProposal = cancelProposal;
 module.exports.getProposalHistory = getProposalHistory;
+module.exports.getGroups = getGroups;
+module.exports.getGroupDetail = getGroupDetail;
+module.exports.joinGroup = joinGroup;
+module.exports.leaveGroup = leaveGroup;
+module.exports.getGroupsForMember = getGroupsForMember;
+module.exports.getGroupByName = getGroupByName;
 module.exports.fundTask = fundTask;
 module.exports.getCategories = getCategories;
 module.exports.getPlatformConfig = getPlatformConfig;
