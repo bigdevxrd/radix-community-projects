@@ -225,9 +225,16 @@ function BountiesContent() {
           ))}
         </div>
       ) : filtered.length === 0 ? (
-        <p className="text-muted-foreground text-sm py-8 text-center">
-          {filter === "all" ? "No bounties yet." : `No ${filter} bounties.`}
-        </p>
+        <Card className="border-dashed">
+          <CardContent className="py-8 text-center">
+            <p className="text-muted-foreground text-sm mb-2">
+              {filter === "all" ? "No tasks listed yet." : `No ${filter} tasks.`}
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Badge holders can create tasks in <a href={TG_BOT_URL} target="_blank" className="text-primary hover:underline">Telegram</a>. Sponsors fund them. Workers deliver and get paid.
+            </p>
+          </CardContent>
+        </Card>
       ) : (
         <div className="space-y-3">
           {filtered.map(b => (

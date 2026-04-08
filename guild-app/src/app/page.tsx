@@ -160,7 +160,7 @@ function Dashboard() {
                 { label: "Proposals", value: data.stats.total_proposals },
                 { label: "Active Votes", value: data.stats.active_proposals },
                 { label: "Voters", value: data.stats.total_voters },
-                { label: "Pending XP", value: data.stats.pending_xp_rewards },
+                { label: "Open Tasks", value: data.bounties?.stats?.open || 0 },
               ].map(s => (
                 <Card key={s.label}>
                   <CardContent className="px-4 py-3">
@@ -179,8 +179,8 @@ function Dashboard() {
               <div className="text-xs text-muted-foreground">See active votes and charter progress</div>
             </Link>
             <Link href="/bounties" className="block bg-muted rounded-lg p-4 no-underline text-foreground hover:bg-accent/10 transition-colors">
-              <div className="font-semibold text-sm mb-1">Browse Bounties</div>
-              <div className="text-xs text-muted-foreground">Earn XRD by contributing</div>
+              <div className="font-semibold text-sm mb-1">Browse Tasks{data.bounties?.stats?.open ? ` (${data.bounties.stats.open} open)` : ""}</div>
+              <div className="text-xs text-muted-foreground">Earn XRD by completing work</div>
             </Link>
             <Link href="/game" className="block bg-muted rounded-lg p-4 no-underline text-foreground hover:bg-accent/10 transition-colors">
               <div className="font-semibold text-sm mb-1">Dice Game</div>
