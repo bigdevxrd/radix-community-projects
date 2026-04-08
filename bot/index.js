@@ -6,6 +6,7 @@ const { queueXpReward, getXpQueue } = require("./services/xp");
 const { setupWizard, setupSkipDesc, pendingProposals } = require("./wizard");
 const { setupGuidedWizards, wizardStates } = require("./wizards");
 const cv2 = require("./services/consultation");
+const { checkContent } = require("./services/content-filter");
 
 const TOKEN = process.env.TG_BOT_TOKEN;
 if (!TOKEN) { console.error("Set TG_BOT_TOKEN in .env"); process.exit(1); }
@@ -215,6 +216,8 @@ bot.command("propose", async (ctx) => {
   const title = ctx.message.text.replace(/^\/propose\s*/, "").trim();
   if (!title) return ctx.reply("Usage: /propose Your proposal here");
   if (title.length > 500) return ctx.reply("Title too long (max 500 chars, got " + title.length + ")");
+  const filterResult = checkContent(title);
+  if (filterResult.blocked) return ctx.reply("Content not allowed. Please rephrase your proposal.");
 
   const id = db.createProposal(title, ctx.from.id, { type: "yesno", daysActive: 3 });
   const counts = db.getVoteCounts(id);
@@ -254,6 +257,8 @@ bot.command("poll", async (ctx) => {
   }
 
   const question = parts[0];
+  const pollFilter = checkContent(text);
+  if (pollFilter.blocked) return ctx.reply("Content not allowed. Please rephrase your poll.");
   const options = parts.slice(1);
 
   if (options.length > 6) {
@@ -289,6 +294,8 @@ bot.command("temp", async (ctx) => {
   const question = ctx.message.text.replace(/^\/temp\s*/, "").trim();
   if (!question) return ctx.reply("Usage: /temp Your question here");
   if (question.length > 500) return ctx.reply("Question too long (max 500 chars)");
+  const tempFilter = checkContent(question);
+  if (tempFilter.blocked) return ctx.reply("Content not allowed. Please rephrase your question.");
 
   const options = ["Yes!", "Maybe", "No"];
   const id = db.createProposal(question, ctx.from.id, {
@@ -630,6 +637,8 @@ bot.command("bounty", async (ctx) => {
     const title = args.slice(2).join(" ");
     if (!xrd || !title) return ctx.reply("Usage: /bounty create <xrd> <title>");
     if (title.length > 500) return ctx.reply("Title too long (max 500)");
+    const bountyFilter = checkContent(title);
+    if (bountyFilter.blocked) return ctx.reply("Content not allowed. Please rephrase your task title.");
     const id = db.createBounty(title, xrd, ctx.from.id);
     queueXpReward(user.radix_address, "propose");
     ctx.reply("Bounty #" + id + " created: " + xrd + " XRD\n" + title);

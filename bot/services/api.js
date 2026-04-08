@@ -3,6 +3,7 @@ const http = require("http");
 const db = require("../db");
 const { hasBadge, getBadgeData } = require("./gateway");
 const cv2 = require("./consultation");
+const { checkContent } = require("./content-filter");
 
 const API_PORT = parseInt(process.env.API_PORT || "3003");
 const ALLOWED_ORIGINS = (process.env.CORS_ORIGINS || "").split(",").filter(Boolean);
@@ -199,6 +200,11 @@ function startApi() {
         if (!body.title || !body.reward_xrd) {
           res.writeHead(400);
           return res.end(JSON.stringify({ ok: false, error: "title and reward_xrd required" }));
+        }
+        const filterCheck = checkContent(body.title + " " + (body.description || ""));
+        if (filterCheck.blocked) {
+          res.writeHead(400);
+          return res.end(JSON.stringify({ ok: false, error: "content_not_allowed" }));
         }
         const deadlineSec = body.deadline_days ? Math.floor(Date.now() / 1000) + body.deadline_days * 86400 : null;
         // Use admin TG ID for web-created tasks (FK constraint requires valid user)
