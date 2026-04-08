@@ -40,12 +40,18 @@ const VOTING_GUIDE = [
 ];
 
 const BOUNTY_COMMANDS = [
-  { cmd: "/bounty create <title> <reward_xrd>", desc: "Create a new bounty (admin only)" },
-  { cmd: "/bounty list", desc: "List open bounties" },
-  { cmd: "/bounty claim <id>", desc: "Claim a bounty — you're committing to do the work" },
-  { cmd: "/bounty submit <id>", desc: "Submit completed work for review" },
-  { cmd: "/bounty verify <id>", desc: "Verify delivery and release payment (admin)" },
-  { cmd: "/bounty fund <amount>", desc: "Fund the escrow treasury (admin)" },
+  { cmd: "/bounty", desc: "Guided menu with create, claim, view options" },
+  { cmd: "/bounty create <xrd> <title>", desc: "Quick create a task (badge required)" },
+  { cmd: "/bounty list", desc: "List open tasks" },
+  { cmd: "/bounty claim <id>", desc: "Claim a funded task" },
+  { cmd: "/bounty apply <id> [pitch]", desc: "Apply for tasks >100 XRD" },
+  { cmd: "/bounty submit <id> <url>", desc: "Submit completed work" },
+  { cmd: "/bounty cancel <id>", desc: "Cancel your own open task" },
+  { cmd: "/bounty categories", desc: "List 6 task categories" },
+  { cmd: "/bounty fund <id> <tx_hash>", desc: "Fund a specific task (sponsor)" },
+  { cmd: "/bounty verify <id>", desc: "Verify delivery (admin)" },
+  { cmd: "/bounty pay <id> <tx_hash>", desc: "Release payment (admin)" },
+  { cmd: "/bounty approve <app_id>", desc: "Approve an applicant (creator)" },
 ];
 
 const BOT_COMMANDS = [
@@ -65,11 +71,26 @@ const BOT_COMMANDS = [
     { cmd: "/poll <question> | opt1 | opt2", desc: "Create a multi-choice poll (+25 XP)" },
     { cmd: "/temp <question>", desc: "Temperature check — 24h, non-binding (+10 XP)" },
   ]},
+  { section: "Working Groups", cmds: [
+    { cmd: "/groups", desc: "List all working groups with member counts" },
+    { cmd: "/group <name>", desc: "View group detail + members" },
+    { cmd: "/group join <name>", desc: "Join a group (badge required)" },
+    { cmd: "/group leave <name>", desc: "Leave a group (leads can't leave)" },
+  ]},
   { section: "Charter & Game", cmds: [
     { cmd: "/charter", desc: "View charter resolution progress (32 parameters)" },
+    { cmd: "/charter guide", desc: "Interactive guided voting through charter decisions" },
     { cmd: "/game", desc: "Your dice stats + bonus XP" },
     { cmd: "/stats", desc: "Platform-wide statistics" },
     { cmd: "/history", desc: "Recent 10 proposals with outcomes" },
+  ]},
+  { section: "Support & Admin", cmds: [
+    { cmd: "/feedback <message>", desc: "Submit a support ticket" },
+    { cmd: "/mystatus", desc: "Check your open tickets" },
+    { cmd: "/support", desc: "Help links + contact info" },
+    { cmd: "/adminfeedback", desc: "List open tickets (admin)" },
+    { cmd: "/adminfeedback respond <id> <msg>", desc: "Respond to ticket (admin)" },
+    { cmd: "/adminfeedback resolve <id>", desc: "Close ticket (admin)" },
   ]},
 ];
 
@@ -100,6 +121,9 @@ const FAQ = [
   { q: "How do bounties work?", a: "Anyone with a badge can create a task with an XRD reward. Workers claim it (/bounty claim), submit work (/bounty submit), a verifier checks the acceptance criteria, and XRD releases from escrow. Tasks have categories, difficulty levels, and deadlines." },
   { q: "What are the fees?", a: "2.5% platform fee on task creation. 50% goes to the guild treasury, 50% to operations (hosting, dev). Workers receive 100% of the net reward. Component royalties (0.1-0.5 XRD per on-chain call) go to the treasury. All percentages are charter-voteable." },
   { q: "How is the guild funded?", a: "Platform fees + on-chain component royalties + SaaS hosting fees. No donations, no token. Revenue from usage funds more development, which produces more royalty-earning code. See Costs & Transparency section below." },
+  { q: "What are working groups?", a: "Teams that organize the guild's work: Guild, DAO, Radix Infra, Business Development, Marketing. Join one with /group join <name> in Telegram. Groups have leads, members, and linked tasks." },
+  { q: "How do I fund a task?", a: "Send XRD to the guild treasury wallet, then run /bounty fund <task_id> <tx_hash> in Telegram. The task changes from 'Seeking Sponsor' to 'Funded' and workers can claim it." },
+  { q: "Where do I do things — dashboard or Telegram?", a: "Dashboard for reading, browsing, minting, on-chain votes, and the game. Telegram for governance actions: creating proposals, voting, managing tasks, joining groups. See the Dashboard vs Telegram guide above." },
 ];
 
 const GUIDES = [
@@ -216,6 +240,101 @@ function DocsContent() {
           <div className="text-[11px] text-muted-foreground mt-3">
             Pipeline: Create &rarr; Claim &rarr; Submit &rarr; Verify &rarr; Pay. Escrow holds XRD until delivery is verified.
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Working Groups */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-sm uppercase tracking-wide text-muted-foreground">Working Groups</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3 text-sm">
+          <p>Working groups organize WHO does WHAT. Each group has a lead, members, and linked tasks/proposals.</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            {[
+              { name: "Guild", icon: "🛡️", desc: "Overall governance + coordination" },
+              { name: "DAO", icon: "🗳️", desc: "Charter votes + governance design" },
+              { name: "Radix Infrastructure", icon: "🖥️", desc: "VPS, tooling, monitoring" },
+              { name: "Business Development", icon: "💼", desc: "Revenue, partnerships, SaaS" },
+              { name: "Marketing", icon: "📢", desc: "Content, outreach, social" },
+            ].map(g => (
+              <div key={g.name} className="flex items-center gap-2 bg-muted rounded px-3 py-2">
+                <span>{g.icon}</span>
+                <div>
+                  <div className="text-xs font-semibold">{g.name}</div>
+                  <div className="text-[10px] text-muted-foreground">{g.desc}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="text-xs text-muted-foreground">
+            Join: <code className="bg-muted px-1 rounded">/group join Guild</code> in Telegram. Browse: <a href="/groups" className="text-primary hover:underline">/groups</a>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* How Escrow & Funding Works */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-sm uppercase tracking-wide text-muted-foreground">How Task Funding Works</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3 text-sm">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="bg-muted rounded-lg p-3">
+              <div className="font-semibold text-xs mb-1">For Task Creators</div>
+              <ol className="text-[11px] text-muted-foreground space-y-1 list-decimal pl-3">
+                <li>Create task: <code className="bg-background px-1 rounded">/bounty create 50 Title</code></li>
+                <li>Task shows as "Seeking Sponsor" (unfunded)</li>
+                <li>Send XRD to treasury wallet</li>
+                <li>Record: <code className="bg-background px-1 rounded">/bounty fund &lt;id&gt; &lt;tx_hash&gt;</code></li>
+                <li>Task becomes "Funded" — workers can claim</li>
+              </ol>
+            </div>
+            <div className="bg-muted rounded-lg p-3">
+              <div className="font-semibold text-xs mb-1">For Workers</div>
+              <ol className="text-[11px] text-muted-foreground space-y-1 list-decimal pl-3">
+                <li>Browse funded tasks at <a href="/bounties" className="text-primary hover:underline">/bounties</a></li>
+                <li>Claim: <code className="bg-background px-1 rounded">/bounty claim &lt;id&gt;</code></li>
+                <li>Do the work, submit: <code className="bg-background px-1 rounded">/bounty submit &lt;id&gt; &lt;url&gt;</code></li>
+                <li>Admin verifies delivery</li>
+                <li>XRD released to your wallet (2.5% fee to guild)</li>
+              </ol>
+            </div>
+          </div>
+          <p className="text-xs text-muted-foreground">Tasks &gt;100 XRD require applications (<code className="bg-muted px-1 rounded">/bounty apply</code>) instead of instant claims.</p>
+        </CardContent>
+      </Card>
+
+      {/* Where to Do What */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-sm uppercase tracking-wide text-muted-foreground">Dashboard vs Telegram</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-1">
+            {[
+              { action: "Mint badge", where: "Dashboard", how: "/mint page with wallet" },
+              { action: "Vote on proposals", where: "Telegram", how: "/vote or tap inline buttons" },
+              { action: "Create on-chain vote", where: "Dashboard", how: "Proposals page → Create Temperature Check" },
+              { action: "Create/claim/submit tasks", where: "Telegram", how: "/bounty commands" },
+              { action: "Browse tasks & proposals", where: "Both", how: "Dashboard to read, bot to act" },
+              { action: "Join working groups", where: "Telegram", how: "/group join <name>" },
+              { action: "Submit feedback", where: "Both", how: "Dashboard form or /feedback in TG" },
+              { action: "Play grid game", where: "Dashboard", how: "/game page" },
+              { action: "Fund a task", where: "Telegram", how: "/bounty fund <id> <tx_hash>" },
+              { action: "Admin: manage tickets", where: "Telegram", how: "/adminfeedback" },
+            ].map(r => (
+              <div key={r.action} className="flex items-center justify-between py-1.5 border-b last:border-0 text-xs">
+                <span className="font-medium">{r.action}</span>
+                <div className="text-right shrink-0 ml-2">
+                  <Badge variant={r.where === "Both" ? "default" : r.where === "Dashboard" ? "secondary" : "outline"} className="text-[8px]">{r.where}</Badge>
+                </div>
+              </div>
+            ))}
+          </div>
+          <p className="text-[11px] text-muted-foreground mt-3">
+            The dashboard is for reading, browsing, and wallet-connected actions (minting, on-chain votes, game). The Telegram bot is for governance actions (proposals, voting, task management, groups).
+          </p>
         </CardContent>
       </Card>
 
