@@ -1,5 +1,6 @@
 "use client";
 import { AppShell } from "@/components/AppShell";
+import { UserJourneyWidget } from "@/components/UserJourneyWidget";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { TG_BOT_URL, MANAGER, BADGE_NFT } from "@/lib/constants";
@@ -142,6 +143,9 @@ function DocsContent() {
         <h1 className="text-xl font-bold">Getting Started</h1>
         <p className="text-muted-foreground text-sm mt-1">Everything you need to participate in Radix Guild governance.</p>
       </div>
+
+      {/* Interactive Journey Overview */}
+      <UserJourneyWidget />
 
       {/* Quick Start */}
       <Card>
