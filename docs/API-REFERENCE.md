@@ -1,6 +1,6 @@
 # API Reference
 
-REST API for the Radix Guild governance system. Provides read-only access to proposals, badges, bounties, escrow, charter status, gamification, and XP data.
+REST API for the Radix Guild governance system. 32 endpoints covering proposals, badges, bounties, escrow, charter, gamification, working groups, feedback, and CV2 on-chain governance.
 
 ## Base URL
 
@@ -8,7 +8,7 @@ REST API for the Radix Guild governance system. Provides read-only access to pro
 https://radixguild.com/api
 ```
 
-Override via the `API_URL` environment variable. The server binds to the host/port defined by `API_HOST` (default `127.0.0.1`) and `API_PORT` (default `3003`).
+Override via `API_HOST` (default `127.0.0.1`) and `API_PORT` (default `3003`).
 
 ## Conventions
 
@@ -24,409 +24,254 @@ Error responses:
 { "ok": false, "error": "error_code" }
 ```
 
-Only `GET` requests are supported. `OPTIONS` requests return `200` for CORS preflight.
+Supports GET and POST (POST only on specific endpoints — game, feedback, bounties, groups).
 
 ## Rate Limiting
 
-- **60 requests per minute** per IP address (based on `X-Forwarded-For` or socket address).
-- Exceeding the limit returns HTTP `429`:
-
-```json
-{ "ok": false, "error": "rate_limit_exceeded" }
-```
-
-The bucket resets automatically after 60 seconds of inactivity.
+- **60 requests/minute** per IP for GET requests
+- **10 requests/minute** per IP for POST requests (game board)
+- Exceeding returns HTTP `429`: `{ "ok": false, "error": "rate_limit_exceeded" }`
+- Bucket resets after 60 seconds of inactivity
 
 ## CORS
 
-Allowed origins are configured via the `CORS_ORIGINS` environment variable (comma-separated list). When no origins are configured, the API falls back to `Access-Control-Allow-Origin: *` for development.
+Configured via `CORS_ORIGINS` env var (comma-separated). Falls back to `Access-Control-Allow-Origin: *` when unconfigured.
 
 ---
 
-## Endpoints
+## System
+
+### GET /api/health
+
+System health check. Returns uptime, DB status, CV2 sync state, memory, and version.
 
 ### GET /api/stats
 
-Platform-wide summary statistics.
-
-**Parameters:** None
-
-**Response (200):**
-
-```json
-{
-  "ok": true,
-  "data": {
-    "total_proposals": 42,
-    "total_voters": 18,
-    "active_proposals": 3,
-    "pending_xp_rewards": 5,
-    "xp": {
-      "total_awarded": 12400,
-      "unique_earners": 15
-    }
-  }
-}
-```
+Platform-wide summary: total proposals, active proposals, unique voters, pending XP rewards, XP stats.
 
 ---
+
+## Proposals
 
 ### GET /api/proposals
 
-Paginated list of proposals with vote counts.
+Paginated list with vote counts.
 
-**Query Parameters:**
-
-| Parameter | Type   | Default | Description                                      |
-|-----------|--------|---------|--------------------------------------------------|
-| `status`  | string | `all`   | Filter by status. Use `active` for open proposals. Any other value returns full history. |
-| `page`    | int    | `1`     | Page number (minimum 1).                         |
-| `limit`   | int    | `50`    | Results per page (1--100).                       |
-
-**Response (200):**
-
-```json
-{
-  "ok": true,
-  "data": [
-    {
-      "id": 7,
-      "title": "Fund community translation bounty",
-      "description": "Allocate 500 XRD to translate docs into Spanish and French.",
-      "type": "standard",
-      "status": "active",
-      "created_by": "account_rdx1qsp5...a3k9",
-      "created_at": "2026-03-15T10:30:00.000Z",
-      "expires_at": "2026-03-22T10:30:00.000Z",
-      "counts": { "for": 12, "against": 3, "abstain": 1 },
-      "total_votes": 16
-    }
-  ],
-  "page": 1,
-  "limit": 50
-}
-```
-
----
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `status` | string | `all` | `active` for open proposals |
+| `page` | int | `1` | Page number |
+| `limit` | int | `50` | Results per page (1-100) |
 
 ### GET /api/proposals/:id
 
-Full detail for a single proposal, including amendments.
-
-**Path Parameters:**
-
-| Parameter | Type | Description          |
-|-----------|------|----------------------|
-| `id`      | int  | Proposal numeric ID. |
-
-**Response (200):**
-
-```json
-{
-  "ok": true,
-  "data": {
-    "id": 7,
-    "title": "Fund community translation bounty",
-    "description": "Allocate 500 XRD to translate docs into Spanish and French.",
-    "type": "standard",
-    "status": "active",
-    "created_by": "account_rdx1qsp5...a3k9",
-    "created_at": "2026-03-15T10:30:00.000Z",
-    "expires_at": "2026-03-22T10:30:00.000Z",
-    "counts": { "for": 12, "against": 3, "abstain": 1 },
-    "amendments": [
-      {
-        "id": 1,
-        "proposal_id": 7,
-        "text": "Include Portuguese as a third language.",
-        "proposed_by": "account_rdx1qsp8...b2m4",
-        "created_at": "2026-03-16T08:00:00.000Z"
-      }
-    ]
-  }
-}
-```
-
-**Error (404):**
-
-```json
-{ "ok": false, "error": "not_found" }
-```
+Single proposal detail with vote counts and amendments.
 
 ---
+
+## Charter
 
 ### GET /api/charter
 
-Current charter parameter status, including ratification readiness.
-
-**Parameters:** None
-
-**Response (200):**
-
-```json
-{
-  "ok": true,
-  "data": {
-    "status": "draft",
-    "params": {
-      "quorum_percent": 20,
-      "approval_threshold": 60,
-      "voting_period_days": 7,
-      "cooldown_hours": 24
-    },
-    "ready": ["quorum_percent", "approval_threshold"]
-  }
-}
-```
+Charter parameter status: resolved count, voting count, pending count, ready-to-vote parameters.
 
 ---
+
+## Bounties
 
 ### GET /api/bounties
 
-All bounties and aggregate statistics.
+All bounties with aggregate stats (open, assigned, submitted, verified, paid, escrow balance). Supports filters:
 
-**Parameters:** None
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `category` | string | Filter by category |
+| `status` | string | Filter by status |
+| `difficulty` | string | Filter by difficulty |
+| `sort` | string | Sort order |
 
-**Response (200):**
+### POST /api/bounties
 
-```json
-{
-  "ok": true,
-  "data": {
-    "bounties": [
-      {
-        "id": 1,
-        "title": "Build Discord integration",
-        "reward_xrd": 1000,
-        "status": "open",
-        "created_at": "2026-03-01T12:00:00.000Z",
-        "claimed_by": null
-      },
-      {
-        "id": 2,
-        "title": "Write onboarding guide",
-        "reward_xrd": 250,
-        "status": "completed",
-        "created_at": "2026-02-20T09:00:00.000Z",
-        "claimed_by": "account_rdx1qsp8...b2m4"
-      }
-    ],
-    "stats": {
-      "total": 2,
-      "open": 1,
-      "completed": 1,
-      "total_xrd_allocated": 1250
-    }
-  }
-}
-```
+Create a task from the dashboard. Content-filtered.
 
----
+| Body Field | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `title` | string | Yes | Task title (max 500 chars) |
+| `reward_xrd` | number | Yes | XRD reward amount |
+| `description` | string | No | Task description |
+| `category` | string | No | Category (default: general) |
+| `difficulty` | string | No | Difficulty (default: medium) |
+| `deadline_days` | number | No | Days until deadline |
+
+### GET /api/bounties/:id
+
+Single bounty detail with milestones and applications.
+
+### GET /api/bounties/categories
+
+List of 6 task categories with counts.
+
+### GET /api/bounties/config
+
+Platform configuration (fee percentage, escrow settings).
 
 ### GET /api/escrow
 
-Escrow balance and transaction history for bounty payouts.
-
-**Parameters:** None
-
-**Response (200):**
-
-```json
-{
-  "ok": true,
-  "data": {
-    "balance": {
-      "xrd": 3500,
-      "locked": 1000
-    },
-    "transactions": [
-      {
-        "id": 1,
-        "type": "deposit",
-        "amount_xrd": 5000,
-        "timestamp": "2026-02-15T00:00:00.000Z",
-        "note": "Initial escrow funding"
-      },
-      {
-        "id": 2,
-        "type": "payout",
-        "amount_xrd": 250,
-        "bounty_id": 2,
-        "recipient": "account_rdx1qsp8...b2m4",
-        "timestamp": "2026-03-10T14:00:00.000Z"
-      }
-    ]
-  }
-}
-```
+Escrow balance and transaction history.
 
 ---
 
-### GET /api/game/:address
+## Working Groups
 
-Gamification state for a specific wallet address.
+### GET /api/groups
 
-**Path Parameters:**
+All working groups with member counts.
 
-| Parameter  | Type   | Description                                          |
-|------------|--------|------------------------------------------------------|
-| `address`  | string | Radix account address (`account_rdx1` prefix required). |
+### GET /api/groups/:id
 
-**Response (200):**
+Group detail: description, lead, members list, linked bounties, linked proposals.
 
-```json
-{
-  "ok": true,
-  "data": {
-    "address": "account_rdx1qsp5...a3k9",
-    "level": 4,
-    "xp": 820,
-    "xp_to_next": 1000,
-    "streak": 7,
-    "achievements": ["first_vote", "proposal_author", "week_streak"]
-  }
-}
-```
+### POST /api/groups/:id/join
 
-Returns `null` for `data` if the address has no game state.
+Join a group from the dashboard.
+
+| Body Field | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `address` | string | Yes | Radix wallet address |
+
+### POST /api/groups/:id/leave
+
+Leave a group from the dashboard.
+
+| Body Field | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `address` | string | Yes | Radix wallet address |
 
 ---
 
-### GET /api/leaderboard
-
-Top 20 players by gamification score.
-
-**Parameters:** None
-
-**Response (200):**
-
-```json
-{
-  "ok": true,
-  "data": [
-    {
-      "address": "account_rdx1qsp5...a3k9",
-      "level": 4,
-      "xp": 820,
-      "streak": 7
-    },
-    {
-      "address": "account_rdx1qsp8...b2m4",
-      "level": 3,
-      "xp": 540,
-      "streak": 2
-    }
-  ]
-}
-```
-
----
+## Badges
 
 ### GET /api/badge/:address
 
-Full on-ledger badge data for a wallet address. Calls the Radix Gateway API.
+Full on-ledger badge data. Calls the Radix Gateway API. Returns username, tier, XP, level, status.
 
-**Path Parameters:**
-
-| Parameter  | Type   | Description                                          |
-|------------|--------|------------------------------------------------------|
-| `address`  | string | Radix account address (`account_rdx1` prefix required). |
-
-**Response (200):**
-
-```json
-{
-  "ok": true,
-  "data": {
-    "address": "account_rdx1qsp5...a3k9",
-    "badge_id": "#1#",
-    "username": "bigdevxrd",
-    "role": "builder",
-    "xp": 820,
-    "joined_at": "2026-01-10T00:00:00.000Z"
-  }
-}
-```
-
-**Error -- no badge (404):**
-
-```json
-{ "ok": false, "error": "no_badge", "address": "account_rdx1qsp5...a3k9" }
-```
-
-**Error -- gateway failure (500):**
-
-```json
-{ "ok": false, "error": "gateway_error" }
-```
-
----
+**Errors:** `no_badge` (404), `gateway_error` (500)
 
 ### GET /api/badge/:address/verify
 
-Lightweight boolean check for badge ownership. Faster than the full badge endpoint.
-
-**Path Parameters:**
-
-| Parameter  | Type   | Description                                          |
-|------------|--------|------------------------------------------------------|
-| `address`  | string | Radix account address (`account_rdx1` prefix required). |
-
-**Response (200):**
-
-```json
-{ "ok": true, "hasBadge": true, "address": "account_rdx1qsp5...a3k9" }
-```
-
-```json
-{ "ok": true, "hasBadge": false, "address": "account_rdx1qsp9...c7n2" }
-```
-
-**Error -- gateway failure (500):**
-
-```json
-{ "ok": false, "error": "gateway_error" }
-```
+Lightweight boolean badge check. Returns `{ hasBadge: true/false }`.
 
 ---
 
+## Game
+
+### GET /api/game/:address
+
+Game state: total rolls, bonus XP, streak, jackpots, last roll, available rolls.
+
+### GET /api/game/:address/achievements
+
+Achievement summary for an address.
+
+### GET /api/game/:address/board
+
+Current grid board state + available rolls + board stats.
+
+### POST /api/game/:address/board/new
+
+Start a new grid board.
+
+### POST /api/game/:address/board/roll
+
+Spend a roll on the current board.
+
+### POST /api/game/:address/board/wild
+
+Use a wild card on a specific cell.
+
+| Body Field | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `row` | number | Yes | Row index |
+| `col` | number | Yes | Column index |
+
+### GET /api/leaderboard
+
+Top 20 players by bonus XP from dice rolls.
+
+---
+
+## Feedback
+
+### POST /api/feedback
+
+Create a support ticket from the dashboard.
+
+| Body Field | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `message` | string | Yes | Ticket message (max 1000 chars) |
+| `username` | string | No | Username (default: web-user) |
+| `category` | string | No | Category (default: general) |
+| `address` | string | No | Radix wallet address |
+
+### GET /api/feedback
+
+List tickets. Supports filters:
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `status` | string | `open` for open tickets only |
+| `address` | string | Filter by wallet address |
+
+### GET /api/feedback/stats
+
+Ticket counts by status.
+
+---
+
+## CV2 (On-Chain Governance)
+
+### GET /api/cv2/status
+
+CV2 sync health: enabled state, last sync time, error count.
+
+### GET /api/cv2/stats
+
+CV2 summary counts.
+
+### GET /api/cv2/proposals
+
+List all synced on-chain proposals.
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `type` | string | `temperature_check` or `proposal` |
+
+### GET /api/cv2/proposals/:id
+
+Single on-chain proposal detail.
+
+---
+
+## XP
+
 ### GET /api/xp-queue
 
-Pending XP reward queue awaiting on-ledger settlement.
-
-**Parameters:** None
-
-**Response (200):**
-
-```json
-{
-  "ok": true,
-  "data": [
-    {
-      "address": "account_rdx1qsp5...a3k9",
-      "amount": 50,
-      "reason": "proposal_vote",
-      "queued_at": "2026-03-20T11:00:00.000Z"
-    },
-    {
-      "address": "account_rdx1qsp8...b2m4",
-      "amount": 100,
-      "reason": "bounty_completed",
-      "queued_at": "2026-03-20T12:30:00.000Z"
-    }
-  ]
-}
-```
-
-Returns an empty array when no rewards are pending.
+Pending XP rewards awaiting on-ledger settlement.
 
 ---
 
 ## Error Reference
 
-| HTTP Code | `error` value          | Description                              |
-|-----------|------------------------|------------------------------------------|
-| 404       | `not_found`            | Endpoint or resource does not exist.     |
-| 404       | `no_badge`             | Address has no guild badge on-ledger.    |
-| 429       | `rate_limit_exceeded`  | Too many requests. Wait and retry.       |
-| 500       | `gateway_error`        | Radix Gateway API call failed.           |
+| HTTP Code | `error` value | Description |
+|-----------|---------------|-------------|
+| 400 | `title and reward_xrd required` | Missing bounty fields |
+| 400 | `content_not_allowed` | Content filter blocked |
+| 400 | `address_required` | Missing address for group join/leave |
+| 400 | `message_required` | Missing feedback message |
+| 400 | `invalid_body` | Malformed POST body |
+| 404 | `not_found` | Endpoint or resource doesn't exist |
+| 404 | `no_badge` | Address has no guild badge |
+| 405 | `method_not_allowed` | Wrong HTTP method |
+| 414 | `uri_too_long` | URL exceeds 512 characters |
+| 429 | `rate_limit_exceeded` | Too many requests |
+| 500 | `gateway_error` | Radix Gateway API failure |

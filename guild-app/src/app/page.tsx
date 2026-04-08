@@ -23,12 +23,17 @@ interface ActiveProposal {
   charter_param?: string;
 }
 
+interface WorkingGroup {
+  id: number; name: string; icon: string; member_count: number;
+}
+
 interface DashboardData {
   stats: { total_proposals: number; active_proposals: number; total_voters: number; pending_xp_rewards: number } | null;
   charter: { status: { total: number; resolved: number; voting: number; tbd: number }; ready: { param_key: string; title: string }[] } | null;
   bounties: { stats: { open: number; assigned: number; submitted: number; verified: number; paid: number; totalPaid: number; escrow: { funded: number; released: number; available: number } }; bounties: { id: number; title: string; reward_xrd: number; status: string }[] } | null;
   game: GameState | null;
   activeVotes: ActiveProposal[] | null;
+  groups: WorkingGroup[] | null;
 }
 
 function countdown(endsAt: number): string {
@@ -44,7 +49,7 @@ function countdown(endsAt: number): string {
 
 function Dashboard() {
   const { account, connected, badge, badgeLoading } = useWallet();
-  const [data, setData] = useState<DashboardData>({ stats: null, charter: null, bounties: null, game: null, activeVotes: null });
+  const [data, setData] = useState<DashboardData>({ stats: null, charter: null, bounties: null, game: null, activeVotes: null, groups: null });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
 
@@ -55,11 +60,12 @@ function Dashboard() {
       fetch(API_URL + "/charter").then(r => r.json()).catch(() => null),
       fetch(API_URL + "/bounties").then(r => r.json()).catch(() => null),
       fetch(API_URL + "/proposals?status=active").then(r => r.json()).catch(() => null),
-    ]).then(([s, c, b, p]) => {
+      fetch(API_URL + "/groups").then(r => r.json()).catch(() => null),
+    ]).then(([s, c, b, p, g]) => {
       const allNull = !s?.data && !c?.data && !b?.data;
       if (allNull) setError(true);
       const votes = p?.data ? [...p.data].sort((a: ActiveProposal, b: ActiveProposal) => a.ends_at - b.ends_at).slice(0, 3) : null;
-      setData(prev => ({ ...prev, stats: s?.data || null, charter: c?.data || null, bounties: b?.data || null, activeVotes: votes }));
+      setData(prev => ({ ...prev, stats: s?.data || null, charter: c?.data || null, bounties: b?.data || null, activeVotes: votes, groups: g?.data || null }));
       setLoading(false);
     }).catch(() => { setError(true); setLoading(false); });
   };
@@ -304,6 +310,29 @@ function Dashboard() {
                 </div>
               </div>
             )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Working Groups */}
+      {data.groups && data.groups.length > 0 && (
+        <Card>
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-sm uppercase tracking-wide text-muted-foreground">Working Groups</CardTitle>
+              <Link href="/groups"><Button variant="ghost" size="sm">View All</Button></Link>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+              {data.groups.map(g => (
+                <Link key={g.id} href={`/groups/${g.id}`} className="bg-muted rounded-lg px-3 py-2.5 no-underline text-foreground hover:bg-accent/10 transition-colors text-center">
+                  <div className="text-lg">{{ shield: "\u{1F6E1}\uFE0F", vote: "\u{1F5F3}\uFE0F", server: "\u{1F5A5}\uFE0F", briefcase: "\u{1F4BC}", megaphone: "\u{1F4E2}" }[g.icon] || "\u{1F4CB}"}</div>
+                  <div className="text-xs font-semibold truncate">{g.name}</div>
+                  <div className="text-[10px] text-muted-foreground">{g.member_count} member{g.member_count !== 1 ? "s" : ""}</div>
+                </Link>
+              ))}
+            </div>
           </CardContent>
         </Card>
       )}

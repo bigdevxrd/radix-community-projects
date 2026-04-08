@@ -93,7 +93,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <Link href="/about#terms" className="no-underline hover:text-foreground">Terms</Link>
           <Link href="/about#privacy" className="no-underline hover:text-foreground">Privacy</Link>
           <Separator orientation="vertical" className="h-4 hidden sm:block" />
-          <span>Built by <a href="https://github.com/bigdevxrd" target="_blank" className="text-primary no-underline hover:underline">Big Dev</a></span>
+          <span>Built by <a href="https://github.com/bigdevxrd" target="_blank" className="text-primary no-underline hover:underline">bigdev</a></span>
         </div>
       </footer>
     </>

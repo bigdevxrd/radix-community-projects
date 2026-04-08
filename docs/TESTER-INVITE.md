@@ -53,7 +53,7 @@ Dashboard: https://radixguild.com
 GitHub: github.com/bigdevxrd/radix-community-projects
 Issues? `/feedback <message>` in the bot
 
-No XRD needed. Open source. Built by Big Dev.
+No XRD needed. Open source. Built by bigdev.
 
 ---
 
@@ -109,7 +109,7 @@ Everything is free. Open source (MIT).
 - GitHub: github.com/bigdevxrd/radix-community-projects
 - System health: https://radixguild.com/api/health
 
-Built by Big Dev.
+Built by bigdev.
 
 ---
 

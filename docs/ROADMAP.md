@@ -80,7 +80,7 @@ The Badge Manager Scrypto components have royalties configured on mainnet. These
 - [ ] Decision: when to turn off free mint (Charter vote? After 100 badges? After first customer?)
 - [ ] Consider: keep mint free for Radix Guild, charge for SaaS tenants
 - [ ] Each SaaS tenant gets their own BadgeManager with configurable royalties
-- [ ] Royalties flow to tenant's component owner (Big Dev for managed, customer for self-hosted)
+- [ ] Royalties flow to tenant's component owner (bigdev for managed, customer for self-hosted)
 
 **Phase 7 (Scale):**
 - Every SaaS tenant deployment creates a new BadgeManager = new royalty stream
@@ -308,7 +308,7 @@ Both bot and dashboard read from this config. Environment variables override for
 
 **What you're offering:**
 - Free tier: open source, self-hosted, community maintains it
-- Managed tier: Big Dev hosts, maintains, and supports it
+- Managed tier: bigdev hosts, maintains, and supports it
 - The DAO Charter already has their governance framework built in
 
 **The ask:** "Adopt Radix Guild as the community governance platform. We'll run it, maintain it, and train RAC members to use it."
@@ -409,7 +409,7 @@ Plus assist fees: 0.5 XRD per governance assist across all tenants.
 - MIT license
 
 ### Managed Hosting (Paid)
-- Big Dev hosts and maintains
+- bigdev hosts and maintains
 - Custom domain, branding, badge schema
 - Dedicated TG bot instance
 - Priority support (TG DM / email)

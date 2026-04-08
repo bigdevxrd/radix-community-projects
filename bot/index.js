@@ -651,7 +651,7 @@ bot.command("bounty", async (ctx) => {
     const id = parseInt(args[1]);
     if (!id) return ctx.reply("Usage: /bounty claim <id>");
     const result = db.assignBounty(id, ctx.from.id, user.radix_address);
-    if (result.error === "not_funded") return ctx.reply("Task #" + id + " isn't funded yet. A sponsor needs to fund it first.\nSponsors: /bounty fund " + id + " <tx_hash>");
+    if (result.error === "not_funded") return ctx.reply("Task #" + id + " isn't funded yet. On-chain escrow vault coming soon — tasks will be fundable directly into a smart contract.");
     if (result.error === "not_found") return ctx.reply("Task #" + id + " not found.");
     if (result.error === "not_open") return ctx.reply("Task #" + id + " is not open for claiming.");
     if (result.changes === 0) return ctx.reply("Could not claim task #" + id + ".");
@@ -743,15 +743,11 @@ bot.command("bounty", async (ctx) => {
   }
 
   if (sub === "fund") {
-    const id = parseInt(args[1]);
-    const txHash = args[2];
-    if (!id || !txHash) return ctx.reply("Usage: /bounty fund <task_id> <tx_hash>\n\nFunds a specific task. Send the XRD, then record the tx hash here.");
-    const result = db.fundTask(id, txHash);
-    if (!result.ok) return ctx.reply("Error: " + result.error);
-    const bounty = db.getBounty(id);
-    ctx.reply("Task #" + id + " FUNDED! " + result.amount + " XRD\n" + bounty.title + "\n\nWorkers can now claim this task.\nTX: " + txHash.slice(0, 30) + "...");
-    notifyDiscord("**Task #" + id + " funded** — " + result.amount + " XRD\n" + bounty.title + "\nWorkers can now claim: " + PORTAL + "/bounties/" + id);
-    return;
+    return ctx.reply(
+      "Task funding is temporarily disabled.\n\n" +
+      "We're building an on-chain escrow vault (Scrypto smart contract) so XRD is locked in a smart contract — not held in any admin wallet.\n\n" +
+      "This will be live soon. Tasks are currently listed as community proposals without funding."
+    );
   }
 
   ctx.reply(
@@ -768,7 +764,7 @@ bot.command("bounty", async (ctx) => {
     "/bounty verify <id> — verify delivery (admin)\n" +
     "/bounty pay <id> <tx_hash> — release payment (admin)\n" +
     "/bounty approve <app_id> — approve applicant (creator)\n" +
-    "/bounty fund <xrd> <tx_hash> — fund escrow (admin)"
+    "/bounty fund — (coming soon: on-chain escrow)"
   );
 });
 
@@ -1136,7 +1132,7 @@ bot.command("readme", (ctx) => ctx.reply(
   "GitHub: " + GITHUB + "\n" +
   "Dashboard: " + PORTAL + "\n" +
   "Charter: radix.wiki/ideas/radix-network-dao-charter\n\n" +
-  "MIT licensed. Open source. Built by Big Dev."
+  "MIT licensed. Open source. Built by bigdev."
 ));
 
 bot.command("support", (ctx) => ctx.reply(
@@ -1146,7 +1142,7 @@ bot.command("support", (ctx) => ctx.reply(
   "• /feedback <message> — report an issue or share feedback\n" +
   "• /mystatus — check your open tickets\n\n" +
   "GitHub: " + GITHUB + "/issues\n" +
-  "Contact: @bigdevxrd (Telegram DM)\n\n" +
+  "Contact: @bigdev_xrd (Telegram DM)\n\n" +
   "This is a beta — feedback welcome!"
 ));
 
@@ -1217,7 +1213,7 @@ bot.command("mystatus", (ctx) => {
 
 bot.command("adminfeedback", async (ctx) => {
   // Simple admin check — only creator can manage feedback
-  const ADMIN_IDS = [6102618406]; // Big Dev's TG ID
+  const ADMIN_IDS = [6102618406]; // bigdev's TG ID
   if (!ADMIN_IDS.includes(ctx.from.id)) return ctx.reply("Admin only.");
 
   const args = ctx.message.text.split(/\s+/).slice(1);

@@ -37,7 +37,7 @@ const jsonLd = {
   applicationCategory: "GovernanceApplication",
   operatingSystem: "Web",
   offers: { "@type": "Offer", price: "0", priceCurrency: "USD", description: "Free to join. Badge minting is free. Voting is free." },
-  author: { "@type": "Person", name: "Big Dev", url: "https://github.com/bigdevxrd" },
+  author: { "@type": "Person", name: "bigdev", url: "https://github.com/bigdevxrd" },
   sourceOrganization: { "@type": "Organization", name: "Radix Guild", url: "https://radixguild.com" },
   license: "https://opensource.org/licenses/MIT",
 };

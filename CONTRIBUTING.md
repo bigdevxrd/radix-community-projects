@@ -60,7 +60,7 @@ Requires: Rust, [Scrypto toolchain](https://docs.radixdlt.com/docs/getting-rust-
 node scripts/pipeline-test.js
 ```
 
-Runs 19 tests against the live API, dashboard, Gateway, and data integrity. No local services needed.
+Runs 70 tests against the live API, dashboard, Gateway, data integrity, charter, bounties, game, CV2, and feedback. No local services needed.
 
 ## How to Contribute
 
@@ -79,8 +79,7 @@ git checkout -b feature/your-feature
 
 ### 3. Make Your Changes
 
-- Follow existing code patterns (inline styles in dashboard, CSS variables for theming)
-- No Tailwind — use CSS custom properties
+- Follow existing code patterns (shadcn/ui components, Tailwind CSS for styling)
 - Keep it minimal — don't add features beyond the issue scope
 - Run `node scripts/pipeline-test.js` before submitting
 
@@ -93,7 +92,7 @@ git checkout -b feature/your-feature
 ## Code Style
 
 - **Bot**: CommonJS (`require`), async/await, SQLite parameterized queries
-- **Dashboard**: TypeScript, React hooks, inline styles with CSS variables
+- **Dashboard**: TypeScript, React hooks, shadcn/ui + Tailwind CSS, dark/light mode
 - **Scrypto**: Standard Rust, primitives-only function params across blueprint boundaries
 
 ## Proposing Features

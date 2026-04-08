@@ -2,7 +2,7 @@
 
 ## Context
 
-The Radix Guild bounty system is MVP-grade (SQLite escrow tracking, admin-managed payments, no fees, no disputes, no categories). The goal is to evolve it into a world-class Web3 task marketplace — the primary income engine for Big Dev's business.
+The Radix Guild bounty system is MVP-grade (SQLite escrow tracking, admin-managed payments, no fees, no disputes, no categories). The goal is to evolve it into a world-class Web3 task marketplace — the primary income engine for bigdev's business.
 
 **The pitch:** Connect wallet. Post task. Fund escrow. Worker delivers. Payment releases atomically. No disputes. No middleman. 2.5% fee.
 

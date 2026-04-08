@@ -37,7 +37,7 @@ Assigned by admin. Operational access. Not earned via XP.
 
 | Role | Who Gets It | What It Enables |
 |------|------------|----------------|
-| Host | Infrastructure operators (Big Dev for 12 months) | Deploy code, manage VPS/nodes, mint role badges, emergency access |
+| Host | Infrastructure operators (bigdev for 12 months) | Deploy code, manage VPS/nodes, mint role badges, emergency access |
 | Moderator | Community-elected via proposal vote | Moderate TG group, review proposals, verify bounty completion |
 | Contributor | Active developers, content creators | Recognized builder status, access to working group tasks |
 
@@ -45,7 +45,7 @@ Assigned by admin. Operational access. Not earned via XP.
 
 **How to get one:** Admin mints it to your wallet via `/dao/admin` page.
 **Transferable:** Yes (roles can be passed to successors).
-**Who assigns initially:** Big Dev (custodian) until RAC takes over.
+**Who assigns initially:** bigdev (custodian) until RAC takes over.
 
 ---
 
@@ -87,9 +87,9 @@ ROLE: MODERATOR (community-elected)
 
 ---
 
-## Big Dev's Role: Infrastructure Host
+## bigdev's Role: Infrastructure Host
 
-Big Dev is **back of house** — keeps the lights on, not the face of the Guild.
+bigdev is **back of house** — keeps the lights on, not the face of the Guild.
 
 **Commits to:**
 - 12 months hosting (VPS, nodes, bot, dashboard)
@@ -106,15 +106,15 @@ Big Dev is **back of house** — keeps the lights on, not the face of the Guild.
 
 ## Handover Plan
 
-### Phase 1: Now (Big Dev hosts)
-- Big Dev holds Admin role badge (infrastructure access only)
-- Big Dev manages VPS, bot, deployments
+### Phase 1: Now (bigdev hosts)
+- bigdev holds Admin role badge (infrastructure access only)
+- bigdev manages VPS, bot, deployments
 - Community members get Member badges
 - Community appoints Moderators via proposal vote
 
 ### Phase 2: Community Leads Formed
 - Community-elected leads receive Moderator role badges
-- Big Dev retains Admin for infrastructure only
+- bigdev retains Admin for infrastructure only
 - Leads manage proposals, bounties, community engagement
 - RAC approves new Moderators
 - Community votes on operational decisions
@@ -122,7 +122,7 @@ Big Dev is **back of house** — keeps the lights on, not the face of the Guild.
 ### Phase 3: Full Handover
 - VPS access transferred to DAO entity
 - Admin badges transferred to DAO multi-sig (if available)
-- Big Dev becomes regular Member/Elder
+- bigdev becomes regular Member/Elder
 - All operations community-run
 
 ---

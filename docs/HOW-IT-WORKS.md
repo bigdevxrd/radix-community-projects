@@ -269,7 +269,7 @@ XP is tracked in the bot database and written to your on-chain badge every 6 hou
 Only if an admin revokes it (e.g., for abuse). You control it in your wallet.
 
 **Who runs this?**
-Big Dev (bigdevxrd) built and hosts it. The plan is to transfer control to an elected Representative Advisory Council (RAC) once the charter is ratified. Everything is open source and MIT licensed.
+bigdev (@bigdev_xrd) built and hosts it. The plan is to transfer control to an elected Representative Advisory Council (RAC) once the charter is ratified. Everything is open source and MIT licensed.
 
 **What if nobody votes?**
 Nothing happens. The system is ready and waiting. It only works if the community uses it.

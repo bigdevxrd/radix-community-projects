@@ -19,9 +19,9 @@ Idea --> Vote --> Decision --> Fund --> Build --> Verify --> Reward
 | **Charter Tracking** | 32 governance decisions with dependency tree | Live |
 | **Bounties + Escrow** | Create, claim, submit, verify, pay pipeline | Live |
 | **Dice Game** | Every governance action = dice roll = bonus XP | Live |
-| **Dashboard** | 13 pages: proposals, bounties, game, docs, feedback, costs | Live |
+| **Dashboard** | 14 pages: proposals, bounties, groups, game, docs, feedback, about | Live |
 | **Support System** | /feedback tickets, FAQ matching, admin management | Live |
-| **REST API** | 20+ endpoints including /api/health system monitor | Live |
+| **REST API** | 32 endpoints including /api/health system monitor | Live |
 | **Pipeline Tests** | 70 automated tests (API, dashboard, gateway, CV2, feedback) | Passing |
 
 ## Quick Start (5 minutes)
@@ -44,7 +44,7 @@ No XRD required for off-chain governance. On-chain CV2 votes require a small tx 
 | Dashboard | [radixguild.com](https://radixguild.com) |
 | Telegram Bot | [@rad_gov](https://t.me/rad_gov) |
 | Docs & Guides | [radixguild.com/docs](https://radixguild.com/docs) |
-| Transparency | [radixguild.com/transparency](https://radixguild.com/transparency) |
+| Costs & Transparency | [radixguild.com/docs#transparency](https://radixguild.com/docs#transparency) |
 | System Health | [radixguild.com/api/health](https://radixguild.com/api/health) |
 | CV2 Fork | [github.com/bigdevxrd/consultation_v2](https://github.com/bigdevxrd/consultation_v2) |
 | DAO Charter | [radix.wiki](https://radix.wiki/ideas/radix-network-dao-charter) |
@@ -82,13 +82,15 @@ Proposals are classified visually:
 | `/mint` | Free badge minting with username |
 | `/proposals` | Vote Now hero + proposal classification + decision tree + CV2 |
 | `/proposals/:id` | Proposal detail with classification, countdown, results |
-| `/bounties` | Bounty board with pipeline visualization, filters, escrow |
-| `/game` | Dice mechanics, XP rewards, leaderboard preview |
-| `/leaderboard` | Top players by bonus XP |
+| `/groups` | Working groups list with member counts |
+| `/groups/:id` | Group detail: members, linked tasks/proposals, join/leave |
+| `/bounties` | Bounty board with categories, filters, funded/unfunded, escrow |
+| `/bounties/:id` | Task detail with acceptance criteria, milestones, claiming |
+| `/game` | Dice mechanics, XP rewards, leaderboard |
 | `/profile` | Badges, game stats, quick actions |
-| `/docs` | Complete guide: quick start, voting, XP, commands, FAQ |
-| `/transparency` | Costs, revenue model, on-chain proof, "the deal" |
-| `/feedback` | Support tickets with status filters (admin view) |
+| `/docs` | Guides, voting, XP, commands, FAQ, costs & transparency |
+| `/feedback` | Support tickets with status filters |
+| `/about` | Mission, operator, services, legal, on-chain verification |
 | `/admin` | Badge lookup + admin actions |
 
 ## Architecture
@@ -105,11 +107,11 @@ radixguild.com (Caddy, auto-TLS)
   |     +-- SQLite (proposals, votes, XP, bounties, game, charter, feedback)
   |     +-- consultation.js (CV2 sync)
   |     +-- faq-matcher.js (zero-cost support)
-  |     +-- REST API (20+ endpoints)
+  |     +-- REST API (32 endpoints)
   |
   +-- guild-app (Next.js 16, port 3002)
   |     +-- shadcn/ui + Radix dApp Toolkit
-  |     +-- 13 pages, dark/light mode
+  |     +-- 14 pages, dark/light mode
   |
   +-- Caddy (reverse proxy, auto-TLS)
         /api/* --> bot (3003)
@@ -124,7 +126,7 @@ radixguild.com (Caddy, auto-TLS)
 - Run: `node scripts/pipeline-test.js`
 
 ### API
-See [docs/API-REFERENCE.md](./docs/API-REFERENCE.md) for all 20+ endpoints.
+See [docs/API-REFERENCE.md](./docs/API-REFERENCE.md) for all 32 endpoints.
 
 ### Bot Commands
 See [docs/BOT-COMMANDS.md](./docs/BOT-COMMANDS.md) for all commands.
@@ -137,11 +139,11 @@ See [CONTRIBUTING.md](./CONTRIBUTING.md) for how to earn XP.
 
 ## Transparency
 
-- **Funding:** Self-funded by Big Dev. ~$8/month (VPS + domain).
+- **Funding:** Self-funded by bigdev. ~$680 invested ($40 domain, ~$600 AI/dev, $7/mo VPS). Revenue: $0.
 - **Code:** MIT licensed. Everything is public.
-- **Control:** Big Dev holds the admin badge. Transfers to elected RAC when Step 3 completes.
-- **Hosting:** Big Dev hosts until the DAO forms and votes to transfer.
-- **Full details:** [radixguild.com/transparency](https://radixguild.com/transparency)
+- **Control:** bigdev holds the admin badge. Transfers to elected RAC when Step 3 completes.
+- **Hosting:** bigdev hosts until the DAO forms and votes to transfer.
+- **Full details:** [radixguild.com/docs#transparency](https://radixguild.com/docs#transparency)
 
 ## License
 

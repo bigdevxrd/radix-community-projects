@@ -262,11 +262,8 @@ function BountyDetailContent() {
       ) : bounty.status === "open" && !bounty.funded ? (
         <Card className="border-dashed">
           <CardContent className="py-4 text-center">
-            <div className="text-sm font-semibold mb-1">This task needs a sponsor</div>
-            <p className="text-xs text-muted-foreground mb-3">Send {bounty.reward_xrd} XRD to the guild treasury, then run <code className="bg-muted px-1 rounded">/bounty fund {bounty.id} &lt;tx_hash&gt;</code> in Telegram.</p>
-            <a href={TG_BOT_URL} target="_blank">
-              <Button variant="outline" size="sm">Sponsor in Telegram</Button>
-            </a>
+            <div className="text-sm font-semibold mb-1">This task needs funding</div>
+            <p className="text-xs text-muted-foreground">On-chain escrow vault coming soon. Tasks will be funded directly into a Scrypto smart contract — no admin wallet custody.</p>
           </CardContent>
         </Card>
       ) : null}

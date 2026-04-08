@@ -16,13 +16,15 @@ This document covers every command, wizard flow, and callback interaction suppor
 5. [Quick Proposal Commands](#quick-proposal-commands)
 6. [Viewing and Managing Proposals](#viewing-and-managing-proposals)
 7. [Bounty System](#bounty-system)
-8. [Game and Leaderboard](#game-and-leaderboard)
-9. [Charter](#charter)
-10. [Help and Resources](#help-and-resources)
-11. [Admin Commands](#admin-commands)
-12. [Callback Queries and Inline Buttons](#callback-queries-and-inline-buttons)
-13. [Welcome Message](#welcome-message)
-14. [Background Processes](#background-processes)
+8. [Working Groups](#working-groups)
+9. [Feedback and Support](#feedback-and-support)
+10. [Game and Leaderboard](#game-and-leaderboard)
+11. [Charter](#charter)
+12. [Help and Resources](#help-and-resources)
+13. [Admin Commands](#admin-commands)
+14. [Callback Queries and Inline Buttons](#callback-queries-and-inline-buttons)
+15. [Welcome Message](#welcome-message)
+16. [Background Processes](#background-processes)
 
 ---
 
@@ -331,7 +333,7 @@ Proposal #42
 
 Fund a community meetup in Berlin
 
-By: @bigdevxrd
+By: @bigdev_xrd
 Ends: 2026-04-09 12:00 UTC (72h)
 Type: Yes/No/Amend
 
@@ -357,7 +359,7 @@ Poll #43
 
 Best meeting day
 
-By: @bigdevxrd
+By: @bigdev_xrd
 Ends: 2026-04-09 12:00 UTC (72h)
 Type: Multi-choice (pick one)
 
@@ -381,7 +383,7 @@ Temperature Check #44
 
 Should we create a grants committee?
 
-By: @bigdevxrd
+By: @bigdev_xrd
 Ends: 2026-04-07 12:00 UTC (24h)
 Non-binding -- just gauging interest
 
@@ -407,7 +409,7 @@ Proposal #45
 Fund a community meetup with a 500 XRD budget
 
 Original: Fund a community meetup in Berlin
-By: @bigdevxrd
+By: @bigdev_xrd
 Ends: 2026-04-09 12:00 UTC (72h)
 
 [ For (0) ] [ Against (0) ]
@@ -636,6 +638,91 @@ Submits your completed bounty work for review. The bounty moves to "submitted" s
 
 ---
 
+## Working Groups
+
+### `/groups`
+
+**Who can use it:** Everyone
+**Syntax:** `/groups`
+
+Lists all working groups with member counts.
+
+---
+
+### `/group <name>`
+
+**Who can use it:** Everyone
+**Syntax:** `/group Guild`
+
+View group detail including description, lead, and member list.
+
+---
+
+### `/group join <name>`
+
+**Who can use it:** Badge holders
+**Syntax:** `/group join Guild`
+
+Join a working group. You must have a badge. Current groups: Guild, DAO, Radix Infrastructure, Business Development, Marketing.
+
+---
+
+### `/group leave <name>`
+
+**Who can use it:** Group members
+**Syntax:** `/group leave Marketing`
+
+Leave a working group. Group leads cannot leave (transfer lead role first).
+
+---
+
+## Feedback and Support
+
+### `/feedback <message>`
+
+**Who can use it:** Everyone
+**Syntax:** `/feedback The mint page doesn't load on mobile`
+
+Submit a support ticket. Tracked with status (open/in-progress/resolved). Before creating a ticket, the bot checks if your question matches an existing FAQ entry and suggests the answer.
+
+---
+
+### `/mystatus`
+
+**Who can use it:** Everyone
+**Syntax:** `/mystatus`
+
+Check your open support tickets and their current status.
+
+---
+
+### `/adminfeedback`
+
+**Who can use it:** Admins
+**Syntax:** `/adminfeedback`
+
+List all open support tickets with IDs and status.
+
+---
+
+### `/adminfeedback respond <id> <message>`
+
+**Who can use it:** Admins
+**Syntax:** `/adminfeedback respond 5 Fixed in the latest deploy`
+
+Respond to a support ticket. The user is notified.
+
+---
+
+### `/adminfeedback resolve <id>`
+
+**Who can use it:** Admins
+**Syntax:** `/adminfeedback resolve 5`
+
+Close a support ticket.
+
+---
+
 ## Game and Leaderboard
 
 ### `/game`
@@ -715,6 +802,15 @@ Full charter: radix.wiki/ideas/radix-network-dao-charter
 
 ---
 
+### `/charter guide`
+
+**Who can use it:** Badge holders
+**Syntax:** `/charter guide`
+
+Launches the interactive charter voting wizard. Walks you through unresolved charter parameters one at a time with inline buttons to create proposals for each.
+
+---
+
 ## Help and Resources
 
 ### `/help`
@@ -749,7 +845,7 @@ Shows a project overview with links to the GitHub repo, dashboard, and charter.
 **Who can use it:** Everyone
 **Syntax:** `/support`
 
-Shows how to get help: links to `/faq`, `/help`, `/readme`, the GitHub issues page, and the developer contact (@bigdevxrd).
+Shows how to get help: links to `/faq`, `/help`, `/readme`, the GitHub issues page, and the developer contact (@bigdev_xrd).
 
 ---
 
@@ -827,12 +923,57 @@ Source: https://github.com/bigdevxrd/radix-community-projects
 
 ---
 
+### `/bounty apply <id> [pitch]`
+
+**Who can use it:** Badge holders
+**Syntax:** `/bounty apply 7 I have experience with React and can deliver in 3 days`
+
+Applies for a task worth >100 XRD. Creator reviews applications and approves one.
+
+---
+
+### `/bounty approve <app_id>`
+
+**Who can use it:** Task creator
+**Syntax:** `/bounty approve 3`
+
+Approves an applicant for a high-value task.
+
+---
+
+### `/bounty cancel <id>`
+
+**Who can use it:** Task creator
+**Syntax:** `/bounty cancel 7`
+
+Cancels your own open task (must be unfunded and unclaimed).
+
+---
+
+### `/bounty categories`
+
+**Who can use it:** Everyone
+**Syntax:** `/bounty categories`
+
+Lists the 6 task categories: Development, Design, Documentation, Community, Research, Infrastructure.
+
+---
+
+### `/bounty fund <id> <tx_hash>`
+
+**Who can use it:** Currently disabled
+**Syntax:** `/bounty fund 7 txid_rdx1abc123...`
+
+**Note:** This command is disabled until the on-chain escrow vault (Scrypto smart contract) is deployed. Task funding will deposit XRD directly into a smart contract — no admin wallet custody. See roadmap for timeline.
+
+---
+
 ### `/bounty verify <id>`
 
-**Who can use it:** Badge holders (intended for admins)
+**Who can use it:** Admins
 **Syntax:** `/bounty verify 7`
 
-Marks a submitted bounty as verified. This confirms the work is complete and the bounty is ready for payment.
+Marks a submitted bounty as verified. Confirms work is complete and ready for payment.
 
 ---
 
@@ -842,15 +983,6 @@ Marks a submitted bounty as verified. This confirms the work is complete and the
 **Syntax:** `/bounty pay 7 txid_rdx1abc123...`
 
 Records a bounty payment. Logs the transaction hash, marks the bounty as paid, and awards XP to the assignee.
-
----
-
-### `/bounty fund <xrd_amount> <tx_hash>`
-
-**Who can use it:** Admins
-**Syntax:** `/bounty fund 1000 txid_rdx1abc123...`
-
-Records an escrow funding deposit. Updates the available escrow balance.
 
 ---
 

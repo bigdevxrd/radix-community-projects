@@ -117,12 +117,12 @@ const FAQ = [
   { q: "How do I earn XP?", a: "Vote (+10 XP), propose (+25 XP), create polls (+25 XP), complete bounties (variable). Every action also triggers a dice roll for bonus XP (up to +100 for a jackpot)." },
   { q: "What are the charter votes?", a: "32 governance decisions that build the DAO from the ground up. Phase 1 (Foundation) sets the rules. Phase 2 (Configuration) sets the details. Phase 3 (Operations) starts the DAO. Each phase unlocks when the previous completes." },
   { q: "What is Consultation v2?", a: "The Radix Foundation's on-chain governance system. We use the same CV2 smart contract for formal, binding votes. Your votes are recorded permanently on the Radix ledger and weighted by XRD holdings." },
-  { q: "Who runs this?", a: "Big Dev built and maintains it. The code is open source (MIT). Admin controls transfer to the elected RAC (Radix Advisory Council) when Charter Step 3 completes. See Costs & Transparency section below." },
+  { q: "Who runs this?", a: "bigdev built and maintains it. The code is open source (MIT). Admin controls transfer to the elected RAC (Radix Advisory Council) when Charter Step 3 completes. See Costs & Transparency section below." },
   { q: "How do bounties work?", a: "Anyone with a badge can create a task with an XRD reward. Workers claim it (/bounty claim), submit work (/bounty submit), a verifier checks the acceptance criteria, and XRD releases from escrow. Tasks have categories, difficulty levels, and deadlines." },
   { q: "What are the fees?", a: "2.5% platform fee on task creation. 50% goes to the guild treasury, 50% to operations (hosting, dev). Workers receive 100% of the net reward. Component royalties (0.1-0.5 XRD per on-chain call) go to the treasury. All percentages are charter-voteable." },
   { q: "How is the guild funded?", a: "Platform fees + on-chain component royalties + SaaS hosting fees. No donations, no token. Revenue from usage funds more development, which produces more royalty-earning code. See Costs & Transparency section below." },
   { q: "What are working groups?", a: "Teams that organize the guild's work: Guild, DAO, Radix Infra, Business Development, Marketing. Join one with /group join <name> in Telegram. Groups have leads, members, and linked tasks." },
-  { q: "How do I fund a task?", a: "Send XRD to the guild treasury wallet, then run /bounty fund <task_id> <tx_hash> in Telegram. The task changes from 'Seeking Sponsor' to 'Funded' and workers can claim it." },
+  { q: "How will task funding work?", a: "On-chain escrow vault (Scrypto smart contract) is being built. XRD will be deposited directly into the contract — no admin wallet custody. The contract releases funds automatically when work is verified. Until then, tasks are listed as community proposals." },
   { q: "Where do I do things — dashboard or Telegram?", a: "Dashboard for reading, browsing, minting, on-chain votes, and the game. Telegram for governance actions: creating proposals, voting, managing tasks, joining groups. See the Dashboard vs Telegram guide above." },
 ];
 
@@ -281,23 +281,21 @@ function DocsContent() {
         <CardContent className="space-y-3 text-sm">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="bg-muted rounded-lg p-3">
-              <div className="font-semibold text-xs mb-1">For Task Creators</div>
+              <div className="font-semibold text-xs mb-1">Current (Beta)</div>
               <ol className="text-[11px] text-muted-foreground space-y-1 list-decimal pl-3">
                 <li>Create task: <code className="bg-background px-1 rounded">/bounty create 50 Title</code></li>
-                <li>Task shows as "Seeking Sponsor" (unfunded)</li>
-                <li>Send XRD to treasury wallet</li>
-                <li>Record: <code className="bg-background px-1 rounded">/bounty fund &lt;id&gt; &lt;tx_hash&gt;</code></li>
-                <li>Task becomes "Funded" — workers can claim</li>
+                <li>Tasks are listed as community proposals</li>
+                <li>Workers claim, submit, get verified</li>
+                <li>No funds are held by any wallet</li>
               </ol>
             </div>
             <div className="bg-muted rounded-lg p-3">
-              <div className="font-semibold text-xs mb-1">For Workers</div>
+              <div className="font-semibold text-xs mb-1">Coming: On-Chain Escrow</div>
               <ol className="text-[11px] text-muted-foreground space-y-1 list-decimal pl-3">
-                <li>Browse funded tasks at <a href="/bounties" className="text-primary hover:underline">/bounties</a></li>
-                <li>Claim: <code className="bg-background px-1 rounded">/bounty claim &lt;id&gt;</code></li>
-                <li>Do the work, submit: <code className="bg-background px-1 rounded">/bounty submit &lt;id&gt; &lt;url&gt;</code></li>
-                <li>Admin verifies delivery</li>
-                <li>XRD released to your wallet (2.5% fee to guild)</li>
+                <li>Creator deposits XRD into a Scrypto smart contract vault</li>
+                <li>XRD locked on-chain — no admin custody</li>
+                <li>Worker delivers, verifier confirms</li>
+                <li>Contract releases XRD automatically (2.5% fee to guild)</li>
               </ol>
             </div>
           </div>
@@ -318,7 +316,7 @@ function DocsContent() {
               { action: "Create on-chain vote", where: "Dashboard", how: "Proposals page → Create Temperature Check" },
               { action: "Create/claim/submit tasks", where: "Telegram", how: "/bounty commands" },
               { action: "Browse tasks & proposals", where: "Both", how: "Dashboard to read, bot to act" },
-              { action: "Join working groups", where: "Telegram", how: "/group join <name>" },
+              { action: "Join working groups", where: "Both", how: "Dashboard button or /group join <name>" },
               { action: "Submit feedback", where: "Both", how: "Dashboard form or /feedback in TG" },
               { action: "Play grid game", where: "Dashboard", how: "/game page" },
               { action: "Fund a task", where: "Telegram", how: "/bounty fund <id> <tx_hash>" },
@@ -472,9 +470,9 @@ function DocsContent() {
             <CardTitle className="text-sm uppercase tracking-wide text-muted-foreground">The Deal</CardTitle>
           </CardHeader>
           <CardContent className="space-y-2 text-sm">
-            <p><strong>Who pays?</strong> Big Dev self-funds until the DAO treasury is formed (Charter Step 3).</p>
-            <p><strong>Who controls?</strong> Big Dev holds the admin badge. It transfers to the elected RAC when Charter Step 3 completes.</p>
-            <p><strong>What if Big Dev disappears?</strong> Everything is open source (MIT). Fork the code, deploy your own. On-chain badges persist on the ledger.</p>
+            <p><strong>Who pays?</strong> bigdev self-funds until the DAO treasury is formed (Charter Step 3).</p>
+            <p><strong>Who controls?</strong> bigdev holds the admin badge. It transfers to the elected RAC when Charter Step 3 completes.</p>
+            <p><strong>What if bigdev disappears?</strong> Everything is open source (MIT). Fork the code, deploy your own. On-chain badges persist on the ledger.</p>
           </CardContent>
         </Card>
 

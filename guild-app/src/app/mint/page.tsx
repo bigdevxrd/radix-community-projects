@@ -111,7 +111,7 @@ function MintContent() {
             <Input
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              placeholder="e.g. bigdevxrd"
+              placeholder="e.g. your_username"
               maxLength={64}
               className="font-mono"
             />

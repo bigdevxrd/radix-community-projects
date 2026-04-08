@@ -33,9 +33,9 @@ const FAQ_ENTRIES = [
     a: "The Radix Foundation's on-chain governance system. We use the same CV2 smart contract. Votes are permanent and XRD-weighted.",
   },
   {
-    keywords: ["who", "run", "admin", "control", "big dev", "owner"],
+    keywords: ["who", "run", "admin", "control", "bigdev", "owner"],
     q: "Who runs this?",
-    a: "Big Dev built and maintains it. Open source (MIT). Admin transfers to elected RAC when Charter Step 3 completes. See /transparency.",
+    a: "bigdev built and maintains it. Open source (MIT). Admin transfers to elected RAC when Charter Step 3 completes. See /docs on the dashboard.",
   },
   {
     keywords: ["bounty", "task", "work", "claim", "submit", "escrow"],

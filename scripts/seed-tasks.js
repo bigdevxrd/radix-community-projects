@@ -12,7 +12,7 @@ const botDir = path.join(__dirname, "..", "bot");
 const Database = require(path.join(botDir, "node_modules", "better-sqlite3"));
 
 const DB_PATH = process.env.BOT_DB_PATH || path.join(botDir, "guild.db");
-const ADMIN_TG_ID = 6102618406; // Big Dev
+const ADMIN_TG_ID = 6102618406; // bigdev
 
 const TASKS = [
   // Content & Marketing
