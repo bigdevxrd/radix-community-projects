@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { API_URL, TG_BOT_URL } from "@/lib/constants";
+import { useWallet } from "@/hooks/useWallet";
 
 interface GroupMember { id: number; radix_address: string; role: string; joined_at: number; }
 interface GroupBounty { id: number; title: string; reward_xrd: number; status: string; category: string; }
@@ -25,9 +26,11 @@ const ICONS: Record<string, string> = {
 function GroupDetailContent() {
   const params = useParams();
   const id = params?.id;
+  const { account, connected } = useWallet();
   const [group, setGroup] = useState<GroupDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const [joining, setJoining] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -83,9 +86,36 @@ function GroupDetailContent() {
               ))}
             </div>
           )}
-          <a href={TG_BOT_URL} target="_blank" className="block mt-3">
-            <Button variant="outline" size="sm" className="w-full">Join via Telegram</Button>
-          </a>
+          {connected && account && group && (() => {
+            const isMember = group.members.some(m => m.radix_address === account);
+            const isLead = group.members.some(m => m.radix_address === account && m.role === "lead");
+            async function handleJoinLeave() {
+              if (!account || !group) return;
+              setJoining(true);
+              const action = isMember ? "leave" : "join";
+              try {
+                const resp = await fetch(API_URL + "/groups/" + group.id + "/" + action, {
+                  method: "POST", headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ address: account }),
+                });
+                if (resp.ok) {
+                  // Refresh
+                  const d = await fetch(API_URL + "/groups/" + id).then(r => r.json());
+                  setGroup(d.data);
+                }
+              } catch (e) {}
+              setJoining(false);
+            }
+            return (
+              <Button variant={isMember ? "ghost" : "default"} size="sm" className="w-full mt-3"
+                onClick={handleJoinLeave} disabled={joining || isLead}>
+                {joining ? "..." : isMember ? (isLead ? "Lead (can't leave)" : "Leave Group") : "Join Group"}
+              </Button>
+            );
+          })()}
+          {!connected && (
+            <p className="text-[11px] text-muted-foreground mt-3 text-center">Connect wallet to join, or use <a href={TG_BOT_URL} target="_blank" className="text-primary hover:underline">/group join</a> in Telegram.</p>
+          )}
         </CardContent>
       </Card>
 

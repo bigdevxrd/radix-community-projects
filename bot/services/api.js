@@ -57,7 +57,8 @@ function startApi() {
     const isGamePost = req.method === "POST" && url.pathname.includes("/board/");
     const isFeedbackPost = req.method === "POST" && url.pathname === "/api/feedback";
     const isBountyPost = req.method === "POST" && url.pathname === "/api/bounties";
-    if (req.method !== "GET" && !isGamePost && !isFeedbackPost && !isBountyPost) {
+    const isGroupPost = req.method === "POST" && url.pathname.match(/^\/api\/groups\/\d+\/(join|leave)$/);
+    if (req.method !== "GET" && !isGamePost && !isFeedbackPost && !isBountyPost && !isGroupPost) {
       res.writeHead(405);
       return res.end(JSON.stringify({ ok: false, error: "method_not_allowed" }));
     }
@@ -366,6 +367,42 @@ function startApi() {
       }
       res.writeHead(200);
       return res.end(JSON.stringify({ ok: true, data: detail }));
+    }
+
+    // POST /api/groups/:id/join — join a group from dashboard
+    const groupJoinMatch = url.pathname.match(/^\/api\/groups\/(\d+)\/join$/);
+    if (groupJoinMatch && req.method === "POST") {
+      try {
+        const body = await readBody(req);
+        if (!body.address) {
+          res.writeHead(400);
+          return res.end(JSON.stringify({ ok: false, error: "address_required" }));
+        }
+        const result = db.joinGroup(parseInt(groupJoinMatch[1]), 0, body.address);
+        res.writeHead(result.ok ? 200 : 400);
+        return res.end(JSON.stringify(result));
+      } catch (e) {
+        res.writeHead(400);
+        return res.end(JSON.stringify({ ok: false, error: e.message }));
+      }
+    }
+
+    // POST /api/groups/:id/leave — leave a group from dashboard
+    const groupLeaveMatch = url.pathname.match(/^\/api\/groups\/(\d+)\/leave$/);
+    if (groupLeaveMatch && req.method === "POST") {
+      try {
+        const body = await readBody(req);
+        if (!body.address) {
+          res.writeHead(400);
+          return res.end(JSON.stringify({ ok: false, error: "address_required" }));
+        }
+        const result = db.leaveGroup(parseInt(groupLeaveMatch[1]), body.address);
+        res.writeHead(result.ok ? 200 : 400);
+        return res.end(JSON.stringify(result));
+      } catch (e) {
+        res.writeHead(400);
+        return res.end(JSON.stringify({ ok: false, error: e.message }));
+      }
     }
 
     // ── Feedback Endpoints ────────────────────────────────
