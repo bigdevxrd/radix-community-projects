@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { AppShell } from "@/components/AppShell";
 import { BadgeCard } from "@/components/BadgeCard";
 import { TierProgression } from "@/components/TierProgression";
+import { UserJourneyWidget } from "@/components/UserJourneyWidget";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -105,12 +106,8 @@ function Dashboard() {
             </CardContent>
           </Card>
 
-          {/* User Journey Infographic */}
-          <Card>
-            <CardContent className="pt-4 pb-4">
-              <img src="/infographics/07-complete-user-journey.png" alt="Radix Guild: The Complete User Journey" className="w-full rounded-lg" />
-            </CardContent>
-          </Card>
+          {/* Interactive User Journey */}
+          <UserJourneyWidget />
 
           {/* CTAs */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
