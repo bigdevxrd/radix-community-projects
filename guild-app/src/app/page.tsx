@@ -79,28 +79,58 @@ function Dashboard() {
       {/* Badge Section */}
       {!connected ? (
         <>
+          {/* Value Proposition */}
           <Card className="bg-gradient-to-br from-card to-muted">
-            <CardContent className="px-6 py-10 text-center">
-              <h1 className="text-2xl font-bold mb-2">Radix Governance</h1>
-              <p className="text-muted-foreground text-sm mb-6 max-w-md mx-auto">
-                Community-built governance tools for Radix. Mint a free badge, vote on proposals, earn XP, shape the DAO.
+            <CardContent className="px-6 py-8 text-center">
+              <h1 className="text-2xl font-bold mb-2">Radix Guild</h1>
+              <p className="text-base text-muted-foreground mb-4 max-w-lg mx-auto">
+                Community governance + task marketplace for Radix.<br />
+                Free badges. Paid tasks. On-chain identity.
               </p>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 max-w-xl mx-auto mb-6">
-                {[
-                  { label: "1. Connect", desc: "Link your Radix Wallet" },
-                  { label: "2. Mint", desc: "Free on-chain badge" },
-                  { label: "3. Vote", desc: "In Telegram or here" },
-                  { label: "4. Earn", desc: "XP + dice roll bonus" },
-                ].map((s, i) => (
-                  <div key={s.label} className="bg-background/50 rounded-lg px-3 py-3 text-center">
-                    <div className="text-primary font-bold text-sm">{s.label}</div>
-                    <div className="text-[11px] text-muted-foreground mt-0.5">{s.desc}</div>
-                  </div>
-                ))}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 max-w-xl mx-auto mb-4">
+                <div className="bg-background/50 rounded-lg p-3">
+                  <div className="text-primary font-bold text-sm">Governance</div>
+                  <div className="text-[11px] text-muted-foreground">Vote on proposals. Shape the DAO charter. Free.</div>
+                </div>
+                <div className="bg-background/50 rounded-lg p-3">
+                  <div className="text-primary font-bold text-sm">Tasks</div>
+                  <div className="text-[11px] text-muted-foreground">Browse bounties. Deliver work. Get paid in XRD.</div>
+                </div>
+                <div className="bg-background/50 rounded-lg p-3">
+                  <div className="text-primary font-bold text-sm">Identity</div>
+                  <div className="text-[11px] text-muted-foreground">Free on-chain badge. Earn XP. Level up tiers.</div>
+                </div>
               </div>
               <p className="text-xs text-muted-foreground">Connect your wallet above to get started. No XRD required.</p>
             </CardContent>
           </Card>
+
+          {/* User Journey Infographic */}
+          <Card>
+            <CardContent className="pt-4 pb-4">
+              <img src="/infographics/07-complete-user-journey.png" alt="Radix Guild: The Complete User Journey" className="w-full rounded-lg" />
+            </CardContent>
+          </Card>
+
+          {/* CTAs */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <Link href="/bounties" className="block bg-muted rounded-lg p-3 no-underline text-foreground hover:bg-accent/10 transition-colors text-center">
+              <div className="font-semibold text-sm">Browse Tasks</div>
+              <div className="text-[11px] text-muted-foreground">Earn XRD</div>
+            </Link>
+            <Link href="/proposals" className="block bg-muted rounded-lg p-3 no-underline text-foreground hover:bg-accent/10 transition-colors text-center">
+              <div className="font-semibold text-sm">Vote</div>
+              <div className="text-[11px] text-muted-foreground">Shape the DAO</div>
+            </Link>
+            <Link href="/docs" className="block bg-muted rounded-lg p-3 no-underline text-foreground hover:bg-accent/10 transition-colors text-center">
+              <div className="font-semibold text-sm">Docs</div>
+              <div className="text-[11px] text-muted-foreground">Getting started</div>
+            </Link>
+            <Link href="/about" className="block bg-muted rounded-lg p-3 no-underline text-foreground hover:bg-accent/10 transition-colors text-center">
+              <div className="font-semibold text-sm">About</div>
+              <div className="text-[11px] text-muted-foreground">Mission & team</div>
+            </Link>
+          </div>
 
           {/* New to Radix? */}
           <Card className="border-dashed">
@@ -109,16 +139,16 @@ function Dashboard() {
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <a href="https://wallet.radixdlt.com" target="_blank" className="block bg-muted rounded-lg p-3 no-underline text-foreground hover:bg-accent/10 transition-colors">
                   <div className="font-semibold text-sm mb-0.5">Get a Wallet</div>
-                  <div className="text-[11px] text-muted-foreground">Download the official Radix Wallet (mobile + browser)</div>
+                  <div className="text-[11px] text-muted-foreground">Download the official Radix Wallet</div>
                 </a>
                 <a href="https://radquest.io" target="_blank" className="block bg-muted rounded-lg p-3 no-underline text-foreground hover:bg-accent/10 transition-colors">
                   <div className="font-semibold text-sm mb-0.5">Try RadQuest</div>
-                  <div className="text-[11px] text-muted-foreground">Learn Radix basics, earn rewards, set up your first account</div>
+                  <div className="text-[11px] text-muted-foreground">Learn basics, earn rewards</div>
                 </a>
-                <Link href="/docs" className="block bg-muted rounded-lg p-3 no-underline text-foreground hover:bg-accent/10 transition-colors">
-                  <div className="font-semibold text-sm mb-0.5">Read the Guide</div>
-                  <div className="text-[11px] text-muted-foreground">How voting, badges, XP, and bounties work</div>
-                </Link>
+                <a href={TG_BOT_URL} target="_blank" className="block bg-muted rounded-lg p-3 no-underline text-foreground hover:bg-accent/10 transition-colors">
+                  <div className="font-semibold text-sm mb-0.5">Join Telegram</div>
+                  <div className="text-[11px] text-muted-foreground">@rad_gov — governance bot</div>
+                </a>
               </div>
             </CardContent>
           </Card>
