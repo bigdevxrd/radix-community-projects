@@ -1,0 +1,28 @@
+# Create a funded task. User sends XRD, gets back a receipt NFT.
+# Replace: {account}, {escrow_component}, {xrd_amount}
+
+CALL_METHOD
+    Address("{account}")
+    "withdraw"
+    Address("resource_rdx1tknxxxxxxxxxradaborxxxxxxxxx009923554798xxxxxxxxxradabor")
+    Decimal("{xrd_amount}")
+;
+
+TAKE_ALL_FROM_WORKTOP
+    Address("resource_rdx1tknxxxxxxxxxradaborxxxxxxxxx009923554798xxxxxxxxxradabor")
+    Bucket("xrd_bucket")
+;
+
+CALL_METHOD
+    Address("{escrow_component}")
+    "create_task"
+    Bucket("xrd_bucket")
+    Address("{account}")
+    None
+;
+
+CALL_METHOD
+    Address("{account}")
+    "deposit_batch"
+    Expression("ENTIRE_WORKTOP")
+;

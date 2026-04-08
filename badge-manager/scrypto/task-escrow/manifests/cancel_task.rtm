@@ -1,0 +1,28 @@
+# Cancel an open task and get refund. Must present receipt NFT.
+# Replace: {account}, {escrow_component}, {receipt_resource}, {task_id}
+
+CALL_METHOD
+    Address("{account}")
+    "create_proof_of_non_fungibles"
+    Address("{receipt_resource}")
+    Array<NonFungibleLocalId>(NonFungibleLocalId("#{task_id}#"))
+;
+
+CREATE_PROOF_FROM_AUTH_ZONE_OF_NON_FUNGIBLES
+    Address("{receipt_resource}")
+    Array<NonFungibleLocalId>(NonFungibleLocalId("#{task_id}#"))
+    Proof("receipt_proof")
+;
+
+CALL_METHOD
+    Address("{escrow_component}")
+    "cancel_task"
+    {task_id}u64
+    Proof("receipt_proof")
+;
+
+CALL_METHOD
+    Address("{account}")
+    "deposit_batch"
+    Expression("ENTIRE_WORKTOP")
+;
