@@ -189,11 +189,11 @@ bot.command("badge", async (ctx) => {
     "If you just minted, wait ~30 seconds for the blockchain to confirm, then try /badge again.\n\n" +
     "Haven't minted yet? Go to:\n" + PORTAL + "/mint"
   );
-  const tierWeights = { member: "1x", contributor: "2x", builder: "3x", steward: "5x", elder: "10x" };
+  const tierLevels = { member: "Lv.1", contributor: "Lv.2", builder: "Lv.3", steward: "Lv.4", elder: "Lv.5" };
   ctx.reply(
     "Your Guild Badge\n\n" +
     "Name: " + badge.issued_to + "\n" +
-    "Tier: " + badge.tier + " (vote weight: " + (tierWeights[badge.tier] || "1x") + ")\n" +
+    "Tier: " + badge.tier + " (" + (tierLevels[badge.tier] || "Lv.1") + ")\n" +
     "XP: " + badge.xp + " / Level: " + badge.level + "\n" +
     "Status: " + badge.status + "\n" +
     "ID: " + badge.id + "\n\n" +
@@ -843,8 +843,8 @@ bot.command("badges", async (ctx) => {
   let msg = "Your Badge Profile\n\n";
 
   if (badge) {
-    const tierWeights = { member: "1x", contributor: "2x", builder: "3x", steward: "5x", elder: "10x" };
-    msg += "Guild Member: " + badge.tier + " (" + (tierWeights[badge.tier] || "1x") + " vote)\n";
+    const tierLevels = { member: "Lv.1", contributor: "Lv.2", builder: "Lv.3", steward: "Lv.4", elder: "Lv.5" };
+    msg += "Guild Member: " + badge.tier + " (" + (tierLevels[badge.tier] || "Lv.1") + ")\n";
     msg += "XP: " + badge.xp + " | Level: " + badge.level + "\n";
     msg += "ID: " + badge.id + "\n\n";
   } else {
@@ -1060,8 +1060,8 @@ bot.command("faq", (ctx) => ctx.reply(
   "Vote (+10 XP), propose (+25 XP), create a poll (+25 XP), temperature check (+10 XP), amend (+15 XP). XP is written on-chain periodically.\n\n" +
 
   "What do tiers do?\n" +
-  "Higher tier = more voting weight.\n" +
-  "Member (1x) / Contributor (2x) / Builder (3x) / Steward (5x) / Elder (10x)\n\n" +
+  "Tiers reflect game progression: Member / Contributor / Builder / Steward / Elder.\n" +
+  "Voting weights are TBD — decided by the guild through charter votes.\n\n" +
 
   "Can I transfer my badge?\n" +
   "The NFT is transferable, but XP won't follow — it resets on the new wallet.\n\n" +
@@ -1080,14 +1080,14 @@ bot.command("wallet", async (ctx) => {
   const user = db.getUser(ctx.from.id);
   if (!user) return ctx.reply("Register first: /register <account_rdx1...>");
   const badge = await getBadgeData(user.radix_address);
-  const tierWeights = { member: "1x", contributor: "2x", builder: "3x", steward: "5x", elder: "10x" };
+  const tierLevels = { member: "Lv.1", contributor: "Lv.2", builder: "Lv.3", steward: "Lv.4", elder: "Lv.5" };
 
   let msg = "Wallet: " + user.radix_address.slice(0, 25) + "...\n\n";
 
   if (badge) {
     msg += "Badge: " + badge.id + "\n" +
       "Name: " + badge.issued_to + "\n" +
-      "Tier: " + badge.tier + " (" + (tierWeights[badge.tier] || "1x") + " vote weight)\n" +
+      "Tier: " + badge.tier + " (" + (tierLevels[badge.tier] || "Lv.1") + ")\n" +
       "XP: " + badge.xp + " | Level: " + badge.level + "\n" +
       "Status: " + badge.status + "\n\n";
   } else {

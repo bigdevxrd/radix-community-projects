@@ -44,7 +44,7 @@ function AboutContent() {
             </div>
             <div className="bg-muted rounded-lg p-3">
               <div className="font-semibold text-sm mb-1">On-Chain Identity</div>
-              <div className="text-xs text-muted-foreground">Free badge NFT (Scrypto v4). Earn XP by participating. 5 tiers with increasing voting weight. Non-transferable reputation.</div>
+              <div className="text-xs text-muted-foreground">Free badge NFT (Scrypto v4). Earn XP by participating. 5 tiers for game progression. Voting weights decided by charter vote. Non-transferable reputation.</div>
             </div>
           </div>
         </CardContent>

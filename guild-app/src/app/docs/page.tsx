@@ -96,11 +96,11 @@ const BOT_COMMANDS = [
 ];
 
 const TIER_INFO = [
-  { tier: "Member", xp: "0", weight: "1x", color: "var(--guild-tier-member)" },
-  { tier: "Contributor", xp: "100", weight: "2x", color: "var(--guild-tier-contributor)" },
-  { tier: "Builder", xp: "500", weight: "3x", color: "var(--guild-tier-builder)" },
-  { tier: "Steward", xp: "2,000", weight: "5x", color: "var(--guild-tier-steward)" },
-  { tier: "Elder", xp: "10,000", weight: "10x", color: "var(--guild-tier-elder)" },
+  { tier: "Member", xp: "0", level: "Lv.1", color: "var(--guild-tier-member)" },
+  { tier: "Contributor", xp: "100", level: "Lv.2", color: "var(--guild-tier-contributor)" },
+  { tier: "Builder", xp: "500", level: "Lv.3", color: "var(--guild-tier-builder)" },
+  { tier: "Steward", xp: "2,000", level: "Lv.4", color: "var(--guild-tier-steward)" },
+  { tier: "Elder", xp: "10,000", level: "Lv.5", color: "var(--guild-tier-elder)" },
 ];
 
 const XP_ACTIONS = [
@@ -131,7 +131,7 @@ const GUIDES = [
   { title: "What is Radix Governance?", desc: "Community-built tools for making decisions together.", image: "/infographics/01-what-is-radix-guild.svg" },
   { title: "How Governance Works", desc: "Two tiers: free Telegram votes + formal on-chain CV2 votes.", image: "/infographics/02-how-governance-works.svg" },
   { title: "Bounty Pipeline", desc: "Create, claim, submit, verify, pay — earn XRD for contributing.", image: "/infographics/03-bounty-pipeline.svg" },
-  { title: "Badge and XP System", desc: "Free badge, earn XP, level up tiers, unlock higher voting weight.", image: "/infographics/04-badge-xp-system.svg" },
+  { title: "Badge and XP System", desc: "Free badge, earn XP, level up tiers. Voting weights decided by charter vote.", image: "/infographics/04-badge-xp-system.svg" },
   { title: "Charter Decision Map", desc: "32 decisions across 3 phases. Each phase unlocks the next.", image: "/infographics/05-charter-decision-map.svg" },
   { title: "Architecture", desc: "TG bot + Next.js dashboard + Scrypto contracts + CV2 governance.", image: "/infographics/06-architecture-at-a-glance.svg" },
 ];
@@ -211,11 +211,11 @@ function DocsContent() {
               <div key={t.tier} className="text-center">
                 <div className="text-xs font-semibold" style={{ borderBottom: `2px solid ${t.color}`, paddingBottom: 2 }}>{t.tier}</div>
                 <div className="text-[10px] text-muted-foreground mt-1">{t.xp} XP</div>
-                <div className="text-[10px] font-mono text-primary">{t.weight}</div>
+                <div className="text-[10px] font-mono text-primary">{t.level}</div>
               </div>
             ))}
           </div>
-          <div className="text-xs text-muted-foreground">Higher tiers earn more voting weight in tier-weighted votes.</div>
+          <div className="text-xs text-muted-foreground">Tiers reflect game progression. Voting weights are decided by charter vote (TBD).</div>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
             {XP_ACTIONS.map(a => (
               <div key={a.action} className="flex items-center justify-between bg-muted rounded px-2 py-1.5">

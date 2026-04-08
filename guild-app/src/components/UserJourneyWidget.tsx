@@ -45,7 +45,7 @@ const STAGE_META: StageConfig[] = [
   { id: 1, title: "Quick Start", subtitle: "Connect \u2192 Mint \u2192 Register \u2192 Vote \u2192 Earn XP", color: "#2dd4bf" },
   { id: 2, title: "Governance", subtitle: "Off-chain (Telegram) vs On-chain (CV2)", color: "#4ea8de" },
   { id: 3, title: "Bounty Pipeline", subtitle: "Create \u2192 Claim \u2192 Submit \u2192 Verify \u2192 Pay", color: "#a78bfa" },
-  { id: 4, title: "Badge & XP", subtitle: "5 tiers \u00b7 XP thresholds \u00b7 voting weights", color: "#f59e0b" },
+  { id: 4, title: "Badge & XP", subtitle: "5 tiers \u00b7 XP thresholds \u00b7 game progression", color: "#f59e0b" },
   { id: 5, title: "Charter Map", subtitle: "3 phases with dependency unlocking", color: "#f472b6" },
   { id: 6, title: "Architecture", subtitle: "TG Bot \u2194 Dashboard \u2194 Scrypto \u2194 CV2", color: "#00e49f" },
 ];
@@ -120,7 +120,7 @@ function GovernanceStage() {
           </div>
           <ul className="space-y-1.5 text-[11px] text-muted-foreground">
             <li className="flex items-start gap-1.5"><Zap className="h-3 w-3 text-[#4ea8de] mt-0.5 shrink-0" /><span>Free \u2014 no transaction fees</span></li>
-            <li className="flex items-start gap-1.5"><Shield className="h-3 w-3 text-[#4ea8de] mt-0.5 shrink-0" /><span>1 badge = 1 vote (merit-weighted)</span></li>
+            <li className="flex items-start gap-1.5"><Shield className="h-3 w-3 text-[#4ea8de] mt-0.5 shrink-0" /><span>1 badge = 1 vote</span></li>
             <li className="flex items-start gap-1.5"><Clock className="h-3 w-3 text-[#4ea8de] mt-0.5 shrink-0" /><span>Quick polls, charter params, temp checks</span></li>
             <li className="flex items-start gap-1.5"><Star className="h-3 w-3 text-[#4ea8de] mt-0.5 shrink-0" /><span>+10 XP per vote + dice roll</span></li>
           </ul>
@@ -213,12 +213,13 @@ function BountyStage({ activeStep, onStep }: { activeStep: number; onStep: (i: n
 
 /* ── Stage 4: Badge & XP System ── */
 
-const VOTING_WEIGHTS: Record<string, number> = {
-  member: 1,
-  contributor: 2,
-  builder: 3,
-  steward: 5,
-  elder: 10,
+// Voting weights are TBD — decided by charter vote. Tiers are for game progression.
+const TIER_LEVEL: Record<string, string> = {
+  member: "Lv.1",
+  contributor: "Lv.2",
+  builder: "Lv.3",
+  steward: "Lv.4",
+  elder: "Lv.5",
 };
 
 const EARN_ACTIONS = [
@@ -237,7 +238,7 @@ function BadgeXPStage() {
       <div className="space-y-1.5">
         {tiers.map(([tier, xp], i) => {
           const color = TIER_COLORS[tier] || "var(--muted)";
-          const weight = VOTING_WEIGHTS[tier] || 1;
+          const level = TIER_LEVEL[tier] || "Lv.1";
           const widthPct = Math.max(8, (xp / maxXP) * 100);
           return (
             <div key={tier} className="flex items-center gap-2 group">
@@ -246,7 +247,7 @@ function BadgeXPStage() {
                 <div className="flex items-center gap-2 mb-0.5">
                   <span className="text-[11px] font-semibold capitalize" style={{ color }}>{tier}</span>
                   <span className="text-[9px] text-muted-foreground font-mono">{xp.toLocaleString()} XP</span>
-                  <Badge variant="secondary" className="text-[8px] font-mono ml-auto">{weight}x vote</Badge>
+                  <Badge variant="secondary" className="text-[8px] font-mono ml-auto">{level}</Badge>
                 </div>
                 <div className="h-1 bg-background rounded-full overflow-hidden">
                   <div

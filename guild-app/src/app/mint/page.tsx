@@ -141,7 +141,7 @@ function MintContent() {
           <div className="space-y-2 text-sm text-muted-foreground">
             <p>Your badge is an on-chain NFT that lives in your Radix Wallet.</p>
             <p>Badge holders can propose ideas and vote in the Telegram governance group.</p>
-            <p>Participating earns XP. XP determines your tier and voting weight.</p>
+            <p>Participating earns XP. XP determines your tier. Voting weights are decided by charter vote.</p>
           </div>
           <TierProgression />
         </CardContent>
