@@ -350,7 +350,7 @@ function CharterStage() {
 const ARCH_BLOCKS = [
   { icon: MessageSquare, label: "Telegram Bot", desc: "Grammy \u00b7 36 commands", color: "#4ea8de" },
   { icon: LayoutDashboard, label: "Dashboard", desc: "Next.js 16 \u00b7 14 pages", color: "#2dd4bf" },
-  { icon: Server, label: "API / SQLite", desc: "32 endpoints \u00b7 70 tests", color: "#f59e0b" },
+  { icon: Server, label: "API / SQLite", desc: "34 endpoints \u00b7 75 tests", color: "#f59e0b" },
   { icon: Box, label: "Scrypto", desc: "Badges \u00b7 Escrow", color: "#a78bfa" },
   { icon: Layers, label: "CV2", desc: "On-chain governance", color: "#f472b6" },
   { icon: Users, label: "Gateway API", desc: "Radix mainnet", color: "#00e49f" },

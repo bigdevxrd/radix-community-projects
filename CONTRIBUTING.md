@@ -60,7 +60,7 @@ Requires: Rust, [Scrypto toolchain](https://docs.radixdlt.com/docs/getting-rust-
 node scripts/pipeline-test.js
 ```
 
-Runs 70 tests against the live API, dashboard, Gateway, data integrity, charter, bounties, game, CV2, and feedback. No local services needed.
+Runs 75 tests against the live API, dashboard, Gateway, escrow on-chain, data integrity, charter, bounties, game, CV2, and feedback. No local services needed.
 
 ## How to Contribute
 

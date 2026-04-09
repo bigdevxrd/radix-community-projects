@@ -38,7 +38,7 @@ You ──> Mint Badge ──> Vote ──> Earn XP ──> Level Up ──> Tra
 │                    DAILY GOVERNANCE                      │
 │                                                         │
 │  Vote on proposals ──> Earn 10 XP + dice roll           │
-│  Create proposals  ──> Earn 20 XP + dice roll           │
+│  Create proposals  ──> Earn 25 XP + dice roll           │
 │  Complete bounties ──> Earn XRD + XP + dice roll        │
 │                                                         │
 │  Dice: 🎲 1=Miss  2=+5  3=+10  4=+25  5=+50  6=+100   │
