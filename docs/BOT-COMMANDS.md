@@ -1135,12 +1135,26 @@ Each action also triggers a dice roll for bonus XP:
 | 5 | +50 |
 | 6 (JACKPOT) | +100 |
 
-### Tier Vote Weights
+### Tier Progression
 
-| Tier | Vote Weight |
+| Tier | XP Threshold |
 |---|---|
-| Member | 1x |
-| Contributor | 2x |
-| Builder | 3x |
-| Steward | 5x |
-| Elder | 10x |
+| Member | 0 |
+| Contributor | 100 |
+| Builder | 500 |
+| Steward | 2,000 |
+| Elder | 10,000 |
+
+Tiers reflect game progression. Voting weights are decided by charter vote (TBD).
+
+### Gateway Event Watcher
+
+The bot polls the Radix Gateway API every 60 seconds for new transactions on the TaskEscrow component. When a deposit, claim, release, or cancellation event is detected, the bot auto-creates/updates the SQLite record and logs it to the audit trail. This means tasks funded from the dashboard are detected automatically — no `/bounty fund` command needed.
+
+### PR Merge Watcher
+
+Every 5 minutes, the bot checks submitted bounties with `approval_type = 'pr_merged'`. For each, it calls the GitHub API to check if the linked PR is merged. On merge detection, the bot auto-verifies the task and logs the event. The escrow release is then queued for the verifier.
+
+### Trust Score Recalculation
+
+Trust scores are calculated on-demand from: account age, votes cast, proposals created, tasks completed, groups joined, feedback submitted. Tiers: Bronze (0+), Silver (50+), Gold (200+). Check with `/trust`.

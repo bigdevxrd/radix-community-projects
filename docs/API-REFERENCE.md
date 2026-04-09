@@ -1,6 +1,6 @@
 # API Reference
 
-REST API for the Radix Guild governance system. 32 endpoints covering proposals, badges, bounties, escrow, charter, gamification, working groups, feedback, and CV2 on-chain governance.
+REST API for the Radix Guild governance system. 34 endpoints covering proposals, badges, bounties, escrow, charter, gamification, trust scores, working groups, feedback, and CV2 on-chain governance.
 
 ## Base URL
 
@@ -249,6 +249,14 @@ List all synced on-chain proposals.
 ### GET /api/cv2/proposals/:id
 
 Single on-chain proposal detail.
+
+---
+
+## Trust
+
+### GET /api/trust/:tg_id
+
+Trust score and tier for a user. Returns score, tier (bronze/silver/gold), and full breakdown of contributing factors.
 
 ---
 
