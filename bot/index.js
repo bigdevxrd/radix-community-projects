@@ -213,14 +213,17 @@ bot.command("badge", async (ctx) => {
     "Haven't minted yet? Go to:\n" + PORTAL + "/mint"
   );
   const tierLevels = { member: "Lv.1", contributor: "Lv.2", builder: "Lv.3", steward: "Lv.4", elder: "Lv.5" };
+  const trust = db.getTrustScore(ctx.from.id);
+  const trustLine = trust ? "\nTrust: " + trust.score + " (" + trust.tier.toUpperCase() + ")" : "";
   ctx.reply(
     "Your Guild Badge\n\n" +
     "Name: " + badge.issued_to + "\n" +
     "Tier: " + badge.tier + " (" + (tierLevels[badge.tier] || "Lv.1") + ")\n" +
     "XP: " + badge.xp + " / Level: " + badge.level + "\n" +
-    "Status: " + badge.status + "\n" +
+    "Status: " + badge.status + trustLine + "\n" +
     "ID: " + badge.id + "\n\n" +
-    "Earn XP: vote (+10), propose (+25), poll (+25), temp check (+10)"
+    "Earn XP: vote (+10), propose (+25), poll (+25), temp check (+10)\n" +
+    "/trust for full breakdown"
   );
 });
 
@@ -392,6 +395,7 @@ bot.command("amend", async (ctx) => {
 // ── Inline Vote Handler ─────────────────────────────────
 
 bot.on("callback_query:data", async (ctx) => {
+  try {
   const data = ctx.callbackQuery.data;
   if (!data.startsWith("vote_")) return;
 
@@ -414,7 +418,11 @@ bot.on("callback_query:data", async (ctx) => {
     return ctx.answerCallbackQuery({ text: "Voting has ended.", show_alert: true });
   }
 
-  const has = await hasBadge(user.radix_address);
+  let has = false;
+  try { has = await hasBadge(user.radix_address); } catch (e) {
+    console.error("[Vote] hasBadge error:", e.message);
+    return ctx.answerCallbackQuery({ text: "Could not verify badge. Try again in a moment.", show_alert: true });
+  }
   if (!has) {
     return ctx.answerCallbackQuery({ text: "You need a Guild badge to vote. Mint: " + PORTAL, show_alert: true });
   }
@@ -447,6 +455,10 @@ bot.on("callback_query:data", async (ctx) => {
     : "";
 
   ctx.answerCallbackQuery({ text: "Vote: " + voteChoice + " (+10 XP)" + rollMsg });
+  } catch (e) {
+    console.error("[Vote] Callback error:", e.message);
+    try { ctx.answerCallbackQuery({ text: "Error processing vote. Try again.", show_alert: true }); } catch (_) {}
+  }
 });
 
 // ── /proposals ──────────────────────────────────────────
@@ -919,8 +931,10 @@ bot.command("badges", async (ctx) => {
 
   if (badge) {
     const tierLevels = { member: "Lv.1", contributor: "Lv.2", builder: "Lv.3", steward: "Lv.4", elder: "Lv.5" };
+    const trust = db.getTrustScore(ctx.from.id);
     msg += "Guild Member: " + badge.tier + " (" + (tierLevels[badge.tier] || "Lv.1") + ")\n";
     msg += "XP: " + badge.xp + " | Level: " + badge.level + "\n";
+    if (trust) msg += "Trust: " + trust.score + " (" + trust.tier.toUpperCase() + ")\n";
     msg += "ID: " + badge.id + "\n\n";
   } else {
     msg += "Guild Member: not minted\nMint free: " + PORTAL + "/mint\n\n";
@@ -1083,29 +1097,33 @@ bot.command("charter", async (ctx) => {
 
 // Charter guide callback: vote on specific proposal
 bot.callbackQuery(/^charter_vote_(\d+)$/, async (ctx) => {
-  const id = parseInt(ctx.match[1]);
-  const proposal = db.getProposal(id);
-  if (!proposal || proposal.status !== "active") {
-    return ctx.answerCallbackQuery({ text: "This vote has ended.", show_alert: true });
+  try {
+    const id = parseInt(ctx.match[1]);
+    const proposal = db.getProposal(id);
+    if (!proposal || proposal.status !== "active") {
+      return ctx.answerCallbackQuery({ text: "This vote has ended.", show_alert: true });
+    }
+    const counts = db.getVoteCounts(id);
+    let kb;
+    if (proposal.type === "yesno") {
+      kb = buildYesNoKeyboard(id, counts);
+    } else {
+      const opts = proposal.options ? JSON.parse(proposal.options) : [];
+      kb = buildPollKeyboard(id, opts, counts);
+    }
+    const total = Object.values(counts).reduce((a, b) => a + b, 0);
+    await ctx.reply(
+      "Charter Vote #" + id + "\n\n" +
+      proposal.title + "\n\n" +
+      "Votes: " + total + "/" + proposal.min_votes + "\n" +
+      "Charter param: " + (proposal.charter_param || "none"),
+      { reply_markup: kb }
+    );
+    await ctx.answerCallbackQuery();
+  } catch (e) {
+    console.error("[Charter] Vote callback error:", e.message);
+    try { ctx.answerCallbackQuery({ text: "Error. Try again.", show_alert: true }); } catch (_) {}
   }
-  const counts = db.getVoteCounts(id);
-  // Re-post the proposal with vote buttons
-  let kb;
-  if (proposal.type === "yesno") {
-    kb = buildYesNoKeyboard(id, counts);
-  } else {
-    const opts = proposal.options ? JSON.parse(proposal.options) : [];
-    kb = buildPollKeyboard(id, opts, counts);
-  }
-  const total = Object.values(counts).reduce((a, b) => a + b, 0);
-  await ctx.reply(
-    "Charter Vote #" + id + "\n\n" +
-    proposal.title + "\n\n" +
-    "Votes: " + total + "/" + proposal.min_votes + "\n" +
-    "Charter param: " + (proposal.charter_param || "none"),
-    { reply_markup: kb }
-  );
-  await ctx.answerCallbackQuery();
 });
 
 bot.callbackQuery("charter_view_all", async (ctx) => {
@@ -1160,10 +1178,12 @@ bot.command("wallet", async (ctx) => {
   let msg = "Wallet: " + user.radix_address.slice(0, 25) + "...\n\n";
 
   if (badge) {
+    const trust = db.getTrustScore(ctx.from.id);
     msg += "Badge: " + badge.id + "\n" +
       "Name: " + badge.issued_to + "\n" +
       "Tier: " + badge.tier + " (" + (tierLevels[badge.tier] || "Lv.1") + ")\n" +
       "XP: " + badge.xp + " | Level: " + badge.level + "\n" +
+      (trust ? "Trust: " + trust.score + " (" + trust.tier.toUpperCase() + ")\n" : "") +
       "Status: " + badge.status + "\n\n";
   } else {
     msg += "No badge found. Mint one (free): " + PORTAL + "/mint\n\n";
@@ -1273,19 +1293,23 @@ bot.command("feedback", async (ctx) => {
 
 // FAQ callback: resolved (no ticket needed)
 bot.callbackQuery(/^faq_resolved_/, (ctx) => {
-  ctx.answerCallbackQuery("Glad that helped!");
-  ctx.editMessageText(ctx.callbackQuery.message.text + "\n\n✓ Resolved by FAQ");
+  try {
+    ctx.answerCallbackQuery("Glad that helped!");
+    ctx.editMessageText(ctx.callbackQuery.message.text + "\n\n✓ Resolved by FAQ").catch(() => {});
+  } catch (e) { console.error("[FAQ] resolved callback error:", e.message); }
 });
 
 // FAQ callback: submit anyway (create ticket despite FAQ match)
 bot.callbackQuery(/^faq_submit_/, (ctx) => {
-  const parts = ctx.callbackQuery.data.split("_");
-  const tgId = parseInt(parts[2]);
-  const message = decodeURIComponent(parts.slice(3).join("_"));
-  const username = ctx.from.username || ctx.from.first_name || "anon";
-  const id = db.createFeedback(tgId, username, message || "Feedback submitted after FAQ");
-  ctx.answerCallbackQuery("Ticket #" + id + " created");
-  ctx.editMessageText(ctx.callbackQuery.message.text + "\n\nTicket #" + id + " created. Check status: /mystatus");
+  try {
+    const parts = ctx.callbackQuery.data.split("_");
+    const tgId = parseInt(parts[2]);
+    const message = decodeURIComponent(parts.slice(3).join("_"));
+    const username = ctx.from.username || ctx.from.first_name || "anon";
+    const id = db.createFeedback(tgId, username, message || "Feedback submitted after FAQ");
+    ctx.answerCallbackQuery("Ticket #" + id + " created");
+    ctx.editMessageText(ctx.callbackQuery.message.text + "\n\nTicket #" + id + " created. Check status: /mystatus").catch(() => {});
+  } catch (e) { console.error("[FAQ] submit callback error:", e.message); }
 });
 
 bot.command("mystatus", (ctx) => {
@@ -1443,15 +1467,17 @@ bot.on("message:new_chat_members", async (ctx) => {
   for (const member of ctx.message.new_chat_members) {
     if (member.is_bot) continue;
     const name = member.first_name || member.username || "there";
-    await ctx.reply(
-      "Welcome " + name + "!\n\n" +
-      "Radix Governance — propose ideas, vote, earn XP.\n\n" +
-      "Get started:\n" +
-      "1. /register <your_account_rdx1...>\n" +
-      "2. Mint free badge: " + PORTAL + "/mint\n" +
-      "3. /proposals to vote\n\n" +
-      "/help for commands | /faq for questions"
-    );
+    try {
+      await ctx.reply(
+        "Welcome " + name + "!\n\n" +
+        "Radix Governance — propose ideas, vote, earn XP.\n\n" +
+        "Get started:\n" +
+        "1. /register <your_account_rdx1...>\n" +
+        "2. Mint free badge: " + PORTAL + "/mint\n" +
+        "3. /proposals to vote\n\n" +
+        "/help for commands | /faq for questions"
+      );
+    } catch (e) { console.error("[Welcome] Failed to greet " + name + ":", e.message); }
   }
 });
 
