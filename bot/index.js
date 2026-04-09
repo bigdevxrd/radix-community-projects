@@ -1457,6 +1457,7 @@ async function checkExpiredProposals() {
   if (expired.length > 0) console.log("[AutoClose] Found " + expired.length + " expired proposal(s)");
 
   for (const proposal of expired) {
+    try {
     const counts = db.getVoteCounts(proposal.id);
     const total = Object.values(counts).reduce((a, b) => a + b, 0);
 
@@ -1517,8 +1518,10 @@ async function checkExpiredProposals() {
       // Resolve charter param if linked
       if (proposal.charter_param) {
         const value = extractWinningValue(proposal, counts, total);
+        try {
         db.resolveCharterParam(proposal.charter_param, value, proposal.id);
-        const paramTitle = db.getCharterParam(proposal.charter_param)?.title || proposal.charter_param;
+        } catch (e) { console.error("[Charter] resolve failed for " + proposal.charter_param + ":", e.message); }
+        const paramTitle = (function() { try { return db.getCharterParam(proposal.charter_param)?.title || proposal.charter_param; } catch(e) { return proposal.charter_param; } })();
         if (proposal.tg_chat_id) {
           try {
             await bot.api.sendMessage(proposal.tg_chat_id,
@@ -1533,6 +1536,9 @@ async function checkExpiredProposals() {
     }
 
     console.log("[AutoClose] Proposal #" + proposal.id + " → " + result);
+    } catch (e) {
+      console.error("[AutoClose] Error processing proposal #" + proposal.id + ":", e.message);
+    }
   }
 }
 
