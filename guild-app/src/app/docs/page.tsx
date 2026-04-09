@@ -42,16 +42,16 @@ const VOTING_GUIDE = [
 
 const BOUNTY_COMMANDS = [
   { cmd: "/bounty", desc: "Guided menu with create, claim, view options" },
-  { cmd: "/bounty create <xrd> <title>", desc: "Quick create a task (badge required)" },
+  { cmd: "/bounty create <xrd> <title>", desc: "Create a task (badge required). Add --approval pr_merged --repo owner/repo for auto-verify" },
   { cmd: "/bounty list", desc: "List open tasks" },
   { cmd: "/bounty claim <id>", desc: "Claim a funded task" },
   { cmd: "/bounty apply <id> [pitch]", desc: "Apply for tasks >100 XRD" },
-  { cmd: "/bounty submit <id> <url>", desc: "Submit completed work" },
+  { cmd: "/bounty submit <id> <pr_url>", desc: "Submit work with GitHub PR link (validated)" },
   { cmd: "/bounty cancel <id>", desc: "Cancel your own open task" },
   { cmd: "/bounty categories", desc: "List 6 task categories" },
-  { cmd: "/bounty fund <id> <tx_hash>", desc: "Fund a specific task (sponsor)" },
+  { cmd: "/bounty fund <id> <tx_hash>", desc: "Verify on-chain escrow deposit (or use dashboard fund button)" },
   { cmd: "/bounty verify <id>", desc: "Verify delivery (admin)" },
-  { cmd: "/bounty pay <id> <tx_hash>", desc: "Release payment (admin)" },
+  { cmd: "/bounty pay <id> <tx_hash>", desc: "Release escrow payment (admin)" },
   { cmd: "/bounty approve <app_id>", desc: "Approve an applicant (creator)" },
 ];
 
@@ -121,12 +121,14 @@ const FAQ = [
   { q: "What is Consultation v2?", a: "The Radix Foundation's on-chain governance system. We use the same CV2 smart contract for formal, binding votes. Your votes are recorded permanently on the Radix ledger and weighted by XRD holdings." },
   { q: "Who runs this?", a: "bigdev built and maintains it. The code is open source (MIT). Admin controls transfer to the elected RAC (Radix Advisory Council) when Charter Step 3 completes. See Costs & Transparency section below." },
   { q: "How do bounties work?", a: "Anyone with a badge can create a task with an XRD reward. Workers claim it (/bounty claim), submit work (/bounty submit), a verifier checks the acceptance criteria, and XRD releases from escrow. Tasks have categories, difficulty levels, and deadlines." },
-  { q: "What are the fees?", a: "2.5% platform fee on task creation. 50% goes to the guild treasury, 50% to operations (hosting, dev). Workers receive 100% of the net reward. Component royalties (0.1-0.5 XRD per on-chain call) go to the treasury. All percentages are charter-voteable." },
+  { q: "What are the fees?", a: "2.5% platform fee on escrow release (not deposit — cancel = full refund). Workers receive 100% of the net reward. Component royalties (0.1-0.5 XRD per on-chain call) go to the guild. All percentages are charter-voteable." },
   { q: "How is the guild funded?", a: "Platform fees + on-chain component royalties + SaaS hosting fees. No donations, no token. Revenue from usage funds more development, which produces more royalty-earning code. See Costs & Transparency section below." },
   { q: "What are working groups?", a: "Teams that organize the guild's work: Guild, DAO, Radix Infra, Business Development, Marketing. Join one with /group join <name> in Telegram. Groups have leads, members, and linked tasks." },
   { q: "How does task funding work?", a: "XRD is deposited into an on-chain escrow vault (Scrypto smart contract on Radix mainnet). No admin wallet holds funds. The contract releases XRD to the worker when delivery is verified. Fund a task by sending XRD to the escrow component via your Radix Wallet, then verify with /bounty fund <id> <tx_hash> in Telegram." },
   { q: "Where do I do things — dashboard or Telegram?", a: "Dashboard for reading, browsing, minting, on-chain votes, and the game. Telegram for governance actions: creating proposals, voting, managing tasks, joining groups. See the Dashboard vs Telegram guide above." },
   { q: "What is the trust score?", a: "A score calculated from your on-chain activity: account age, votes cast, proposals created, tasks completed, groups joined. Tiers: Bronze (0+), Silver (50+), Gold (200+). Higher trust unlocks more capabilities. All voluntary — badge is the minimum to participate. Check yours with /trust in Telegram." },
+  { q: "How does auto-verification work?", a: "When creating a task, add --approval pr_merged --repo owner/repo. Workers submit a GitHub PR link. The bot checks every 5 minutes — when the PR is merged, the task is auto-verified. No manual admin step needed for code tasks. The escrow release is then queued for the verifier." },
+  { q: "Can I fund tasks from the dashboard?", a: "Yes. On any unfunded task page, click the 'Fund' button. Your Radix Wallet opens with the TX manifest pre-built. One click to deposit XRD into the on-chain escrow vault. The gateway watcher auto-detects your deposit within 60 seconds." },
 ];
 
 const GUIDES = [
@@ -325,7 +327,7 @@ function DocsContent() {
               { action: "Join working groups", where: "Both", how: "Dashboard button or /group join <name>" },
               { action: "Submit feedback", where: "Both", how: "Dashboard form or /feedback in TG" },
               { action: "Play grid game", where: "Dashboard", how: "/game page" },
-              { action: "Fund a task", where: "Telegram", how: "/bounty fund <id> <tx_hash>" },
+              { action: "Fund a task", where: "Both", how: "Dashboard fund button or /bounty fund <id> <tx_hash>" },
               { action: "Admin: manage tickets", where: "Telegram", how: "/adminfeedback" },
             ].map(r => (
               <div key={r.action} className="flex items-center justify-between py-1.5 border-b last:border-0 text-xs">

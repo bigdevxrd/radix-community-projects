@@ -14,15 +14,18 @@ Idea --> Vote --> Decision --> Fund --> Build --> Verify --> Reward
 | System | What It Does | Status |
 |--------|-------------|--------|
 | **On-chain Badges** | NFT identity (Scrypto v4, free mint) | Mainnet |
+| **On-chain Escrow** | TaskEscrow vault — XRD locked in Scrypto, no admin custody | Mainnet |
 | **Off-chain Voting** | Propose + vote in Telegram (free, badge-gated) | Live |
 | **On-chain Governance** | CV2 temperature checks + proposals (XRD-weighted) | Mainnet |
+| **Trust Scores** | Bronze/Silver/Gold tiers from on-chain activity (no KYC) | Live |
+| **PR Auto-Verify** | GitHub PR merged = task auto-verified, escrow release queued | Live |
 | **Charter Tracking** | 32 governance decisions with dependency tree | Live |
-| **Bounties + Escrow** | Create, claim, submit, verify, pay pipeline | Live |
+| **Task Marketplace** | Create, fund (on-chain), claim, submit, verify, pay | Live |
+| **Dashboard** | 14 pages with fund button (wallet TX), trust scores, groups | Live |
+| **Gateway Watcher** | Auto-detects escrow events on-chain every 60s | Live |
 | **Dice Game** | Every governance action = dice roll = bonus XP | Live |
-| **Dashboard** | 14 pages: proposals, bounties, groups, game, docs, feedback, about | Live |
-| **Support System** | /feedback tickets, FAQ matching, admin management | Live |
-| **REST API** | 32 endpoints including /api/health system monitor | Live |
-| **Pipeline Tests** | 70 automated tests (API, dashboard, gateway, CV2, feedback) | Passing |
+| **REST API** | 33 endpoints including /api/health + /api/trust + /api/escrow | Live |
+| **Pipeline Tests** | 75 automated tests (API, dashboard, gateway, escrow, CV2) | Passing |
 
 ## Quick Start (5 minutes)
 
@@ -101,20 +104,23 @@ Proposals are classified visually:
 ```
 Radix Ledger
   +-- BadgeManager (Scrypto v4) -- NFT identity + royalties
+  +-- TaskEscrow (Scrypto v2) -- on-chain vault, no admin custody
   +-- CV2 Governance (Scrypto) -- on-chain proposals + votes
   |
-  | Gateway API
+  | Gateway API (polled every 60s by escrow watcher)
   v
 radixguild.com (Caddy, auto-TLS)
-  +-- guild-bot (Grammy TG bot, port 3003)
-  |     +-- SQLite (proposals, votes, XP, bounties, game, charter, feedback)
+  +-- guild-bot v5 (Grammy TG bot, port 3003)
+  |     +-- SQLite (proposals, votes, XP, bounties, game, charter, trust)
+  |     +-- escrow-watcher.js (auto-detect on-chain events)
+  |     +-- github.js (PR merge detection for auto-verify)
   |     +-- consultation.js (CV2 sync)
-  |     +-- faq-matcher.js (zero-cost support)
-  |     +-- REST API (32 endpoints)
+  |     +-- gateway.js (badge + escrow reads)
+  |     +-- REST API (33 endpoints)
   |
   +-- guild-app (Next.js 16, port 3002)
-  |     +-- shadcn/ui + Radix dApp Toolkit
-  |     +-- 14 pages, dark/light mode
+  |     +-- shadcn/ui + Radix dApp Toolkit 2.2.1
+  |     +-- 14 pages, fund button (wallet TX), trust scores
   |
   +-- Caddy (reverse proxy, auto-TLS)
         /api/* --> bot (3003)
@@ -124,8 +130,9 @@ radixguild.com (Caddy, auto-TLS)
 ## For Developers
 
 ### Test Coverage
-- 70 pipeline tests (API, dashboard, Gateway, data integrity, charter, bounties, game, CV2, feedback, error handling)
-- 11 Scrypto tests (factory, manager, mint, validation, duplicates)
+- 75 pipeline tests (API, dashboard, Gateway, escrow on-chain, data integrity, charter, bounties, game, CV2, feedback, error handling)
+- 8 Scrypto escrow tests (create, cancel, lifecycle, fees, rejection)
+- 11 Scrypto badge tests (factory, manager, mint, validation, duplicates)
 - Run: `node scripts/pipeline-test.js`
 
 ### API
