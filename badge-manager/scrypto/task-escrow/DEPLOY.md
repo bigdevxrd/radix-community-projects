@@ -74,8 +74,8 @@ Fund a small task (1-5 XRD) to verify the full cycle:
 
 | Component | Address |
 |-----------|---------|
-| TaskEscrow Package | TBD — deploy first |
-| TaskEscrow Component | TBD — deploy first |
-| Receipt NFT Resource | TBD — deploy first |
+| TaskEscrow Package | `package_rdx1p5m3z284wgnck2cwqs3nayh74c4qkghjrra76mq0azphxmsnhhcvtl` |
+| TaskEscrow Component | `component_rdx1cp8mwwe2pkrrtm05p7txgygf9y9uuwx6p87djkda8stk8nuwpyg56r` |
+| Receipt NFT Resource | `resource_rdx1thyxus6dhqnd0zs0rvswlxrde3j9rcj8f79f0qsw9vcwf2zxgv6j2r` |
 | Admin Badge | resource_rdx1tkkzwrttvsqrsylyf4nqt2fxq6h27eva4lr4ffwad63x3f2cl43xwe |
 | Guild Badge NFT | resource_rdx1n22rq94kh6ugwnrvc65m2pwhle3s6ez6j7702vkn2ctkaxemz4ppwl |

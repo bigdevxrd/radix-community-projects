@@ -29,6 +29,19 @@ export const CV2_COMPONENT =
   process.env.NEXT_PUBLIC_CV2_COMPONENT ||
   "component_rdx1cqj99hx2rdx04mrdvd3am7wcenh6c26m2w5uzv8vkv9pudveqzy7d2";
 
+// TaskEscrow (on-chain) — XRD locked in Scrypto vaults, no admin custody
+export const ESCROW_COMPONENT =
+  process.env.NEXT_PUBLIC_ESCROW_COMPONENT ||
+  "component_rdx1cp8mwwe2pkrrtm05p7txgygf9y9uuwx6p87djkda8stk8nuwpyg56r";
+
+export const ESCROW_RECEIPT =
+  process.env.NEXT_PUBLIC_ESCROW_RECEIPT ||
+  "resource_rdx1thyxus6dhqnd0zs0rvswlxrde3j9rcj8f79f0qsw9vcwf2zxgv6j2r";
+
+export const ESCROW_PACKAGE =
+  process.env.NEXT_PUBLIC_ESCROW_PACKAGE ||
+  "package_rdx1p5m3z284wgnck2cwqs3nayh74c4qkghjrra76mq0azphxmsnhhcvtl";
+
 // ── Schemas ──
 
 export interface SchemaConfig {

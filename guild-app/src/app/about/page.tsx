@@ -2,7 +2,7 @@
 import { AppShell } from "@/components/AppShell";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { MANAGER, BADGE_NFT, CV2_COMPONENT, TG_BOT_URL } from "@/lib/constants";
+import { MANAGER, BADGE_NFT, CV2_COMPONENT, ESCROW_COMPONENT, TG_BOT_URL } from "@/lib/constants";
 
 function AboutContent() {
   return (
@@ -124,6 +124,7 @@ function AboutContent() {
           {[
             { label: "Badge Manager", addr: MANAGER, type: "component" },
             { label: "Badge NFT Resource", addr: BADGE_NFT, type: "resource" },
+            { label: "Task Escrow", addr: ESCROW_COMPONENT, type: "component" },
             { label: "CV2 Governance", addr: CV2_COMPONENT, type: "component" },
           ].map(a => (
             <div key={a.label} className="flex items-center justify-between py-1.5 border-b last:border-0">
