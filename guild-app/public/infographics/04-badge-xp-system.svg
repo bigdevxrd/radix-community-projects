@@ -39,7 +39,7 @@
     <text x="90" y="12" class="b4" font-size="15">Maximum governance influence • Community leadership</text>
     <text x="90" y="32" class="b4" font-size="13">Can mentor new members and guide strategic decisions</text>
     <rect x="520" y="-30" width="120" height="30" rx="8" fill="#00e49f" fill-opacity="0.15"/>
-    <text x="580" y="-9" text-anchor="middle" class="mono" font-size="16" fill="#00e49f">10× vote</text>
+    <text x="580" y="-9" text-anchor="middle" class="mono" font-size="16" fill="#00e49f">Lv.5</text>
     <rect x="660" y="-30" width="100" height="30" rx="8" fill="#0f172a" stroke="#00e49f" stroke-width="1"/>
     <text x="710" y="-9" text-anchor="middle" class="mono" font-size="14" fill="#00e49f">10,000 XP</text>
   </g>
@@ -53,7 +53,7 @@
     <text x="90" y="12" class="b4" font-size="15">High governance weight • Trusted community member</text>
     <text x="90" y="32" class="b4" font-size="13">Can verify bounties and moderate proposals</text>
     <rect x="520" y="-30" width="120" height="30" rx="8" fill="#f59e0b" fill-opacity="0.15"/>
-    <text x="580" y="-9" text-anchor="middle" class="mono" font-size="16" fill="#f59e0b">5× vote</text>
+    <text x="580" y="-9" text-anchor="middle" class="mono" font-size="16" fill="#f59e0b">Lv.4</text>
     <rect x="660" y="-30" width="100" height="30" rx="8" fill="#0f172a" stroke="#f59e0b" stroke-width="1"/>
     <text x="710" y="-9" text-anchor="middle" class="mono" font-size="14" fill="#f59e0b">2,000 XP</text>
   </g>
@@ -67,7 +67,7 @@
     <text x="90" y="12" class="b4" font-size="15">Active contributor • Enhanced voting power</text>
     <text x="90" y="32" class="b4" font-size="13">Can claim high-value bounties and create proposals</text>
     <rect x="520" y="-30" width="120" height="30" rx="8" fill="#a78bfa" fill-opacity="0.15"/>
-    <text x="580" y="-9" text-anchor="middle" class="mono" font-size="16" fill="#a78bfa">3× vote</text>
+    <text x="580" y="-9" text-anchor="middle" class="mono" font-size="16" fill="#a78bfa">Lv.3</text>
     <rect x="660" y="-30" width="100" height="30" rx="8" fill="#0f172a" stroke="#a78bfa" stroke-width="1"/>
     <text x="710" y="-9" text-anchor="middle" class="mono" font-size="14" fill="#a78bfa">500 XP</text>
   </g>
@@ -78,10 +78,10 @@
     <text x="0" y="7" text-anchor="middle" font-size="24">⚡</text>
     <rect x="60" y="-45" width="720" height="90" rx="16" fill="#1e293b" stroke="#4ea8de" stroke-width="2"/>
     <text x="90" y="-15" class="h4" font-size="24" fill="#4ea8de">Contributor</text>
-    <text x="90" y="12" class="b4" font-size="15">Engaged member • Boosted vote weight</text>
+    <text x="90" y="12" class="b4" font-size="15">Engaged member • Active contributor</text>
     <text x="90" y="32" class="b4" font-size="13">Can participate in bounties and earn XRD</text>
     <rect x="520" y="-30" width="120" height="30" rx="8" fill="#4ea8de" fill-opacity="0.15"/>
-    <text x="580" y="-9" text-anchor="middle" class="mono" font-size="16" fill="#4ea8de">2× vote</text>
+    <text x="580" y="-9" text-anchor="middle" class="mono" font-size="16" fill="#4ea8de">Lv.2</text>
     <rect x="660" y="-30" width="100" height="30" rx="8" fill="#0f172a" stroke="#4ea8de" stroke-width="1"/>
     <text x="710" y="-9" text-anchor="middle" class="mono" font-size="14" fill="#4ea8de">100 XP</text>
   </g>
@@ -95,7 +95,7 @@
     <text x="90" y="12" class="b4" font-size="15">Starting tier • Base voting rights</text>
     <text x="90" y="32" class="b4" font-size="13">Mint your free badge to begin your journey</text>
     <rect x="520" y="-30" width="120" height="30" rx="8" fill="#8888a0" fill-opacity="0.15"/>
-    <text x="580" y="-9" text-anchor="middle" class="mono" font-size="16" fill="#8888a0">1× vote</text>
+    <text x="580" y="-9" text-anchor="middle" class="mono" font-size="16" fill="#8888a0">Lv.1</text>
     <rect x="660" y="-30" width="100" height="30" rx="8" fill="#0f172a" stroke="#8888a0" stroke-width="1"/>
     <text x="710" y="-9" text-anchor="middle" class="mono" font-size="14" fill="#8888a0">0 XP</text>
   </g>
@@ -111,7 +111,7 @@
 
   <rect x="720" y="940" width="280" height="55" rx="10" fill="#1e293b" stroke="#00e49f" stroke-width="1"/>
   <text x="860" y="965" text-anchor="middle" class="c4" font-size="14">📈 XP = Influence</text>
-  <text x="860" y="982" text-anchor="middle" class="b4" font-size="12">More XP → stronger votes</text>
+  <text x="860" y="982" text-anchor="middle" class="b4" font-size="12">More XP → higher tier</text>
 
   <!-- Footer -->
   <text x="540" y="1040" text-anchor="middle" class="s4" font-size="16">radix-guild.org — Earn Your Reputation</text>
