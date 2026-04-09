@@ -160,6 +160,8 @@ function init() {
   try { db.exec("ALTER TABLE bounties ADD COLUMN approval_repo TEXT"); } catch(e) {}
   try { db.exec("ALTER TABLE bounties ADD COLUMN approval_pr TEXT"); } catch(e) {}
   try { db.exec("ALTER TABLE bounties ADD COLUMN approval_criteria TEXT"); } catch(e) {}
+  try { db.exec("ALTER TABLE bounties ADD COLUMN approval_branch TEXT DEFAULT 'main'"); } catch(e) {}
+  try { db.exec("ALTER TABLE bounties ADD COLUMN auto_released_at INTEGER"); } catch(e) {}
 
   // Bounty milestones (partial delivery)
   db.exec(`

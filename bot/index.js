@@ -670,13 +670,25 @@ bot.command("bounty", async (ctx) => {
   if (sub === "create") {
     const user = await requireBadge(ctx);
     if (!user) return;
+    // Parse flags: --approval pr_merged --repo owner/repo
+    const fullText = args.slice(1).join(" ");
+    const approvalMatch = fullText.match(/--approval\s+(\S+)/);
+    const repoMatch = fullText.match(/--repo\s+(\S+)/);
+    // Remove flags from title
+    const cleanTitle = fullText.replace(/--approval\s+\S+/g, "").replace(/--repo\s+\S+/g, "").trim();
     const xrd = parseInt(args[1]);
-    const title = args.slice(2).join(" ");
-    if (!xrd || !title) return ctx.reply("Usage: /bounty create <xrd> <title>");
+    const title = cleanTitle.replace(/^\d+\s*/, ""); // remove leading number (the xrd amount)
+    if (!xrd || !title) return ctx.reply("Usage: /bounty create <xrd> <title> [--approval pr_merged --repo owner/repo]");
     if (title.length > 500) return ctx.reply("Title too long (max 500)");
     const bountyFilter = checkContent(title);
     if (bountyFilter.blocked) return ctx.reply("Content not allowed. Please rephrase your task title.");
     const id = db.createBounty(title, xrd, ctx.from.id);
+    // Set approval type if specified
+    const approvalType = approvalMatch ? approvalMatch[1] : "admin_approved";
+    const approvalRepo = repoMatch ? repoMatch[1] : null;
+    if (approvalType !== "admin_approved") {
+      try { db.prepare("UPDATE bounties SET approval_type = ?, approval_repo = ? WHERE id = ?").run(approvalType, approvalRepo, id); } catch(e) {}
+    }
     queueXpReward(user.radix_address, "propose");
     ctx.reply(
       "Task #" + id + " created: " + xrd + " XRD\n" +
@@ -712,9 +724,25 @@ bot.command("bounty", async (ctx) => {
     const id = parseInt(args[1]);
     const pr = args[2];
     if (!id || !pr) return ctx.reply("Usage: /bounty submit <id> <github_pr_url>");
+    // Validate PR URL
+    const { parsePRUrl } = require("./services/github");
+    const parsed = parsePRUrl(pr);
+    if (!parsed) return ctx.reply("Invalid PR URL. Expected: https://github.com/owner/repo/pull/123");
     const result = db.submitBounty(id, pr);
     if (result.changes === 0) return ctx.reply("Bounty not found or not assigned to you.");
-    ctx.reply("Bounty #" + id + " submitted for review.\nPR: " + pr + "\nAwaiting admin verification.");
+    // Check if this bounty has pr_merged approval
+    const bounty = db.getBounty(id);
+    const approvalType = bounty?.approval_type || "admin_approved";
+    if (approvalType === "pr_merged") {
+      ctx.reply(
+        "Task #" + id + " submitted for auto-verification.\n" +
+        "PR: " + pr + "\n\n" +
+        "When this PR is merged, escrow releases automatically.\n" +
+        "The bot checks every 5 minutes."
+      );
+    } else {
+      ctx.reply("Task #" + id + " submitted for review.\nPR: " + pr + "\nAwaiting verification.");
+    }
     return;
   }
 
@@ -1631,6 +1659,82 @@ setInterval(() => {
     console.error("[Tasks] Deadline check failed:", e.message);
   }
 }, 60 * 60 * 1000);
+
+// ── PR Merge Watcher (auto-verify tasks) ─────────────────
+
+const { parsePRUrl: parsePR, checkPRStatus } = require("./services/github");
+
+async function checkPRMerges() {
+  // Find all submitted bounties with PR URLs and pr_merged approval
+  let bounties;
+  try {
+    bounties = db.prepare(
+      "SELECT * FROM bounties WHERE status = 'submitted' AND github_pr IS NOT NULL AND approval_type = 'pr_merged'"
+    ).all();
+  } catch (e) {
+    // If approval_type column doesn't exist yet, fall back
+    bounties = [];
+  }
+
+  if (bounties.length === 0) return;
+
+  let checked = 0;
+  for (const bounty of bounties) {
+    if (checked >= 10) break; // max 10 per cycle (rate limit safety)
+
+    const parsed = parsePR(bounty.github_pr);
+    if (!parsed) continue;
+
+    // If repo is specified, validate
+    if (bounty.approval_repo && (parsed.owner + "/" + parsed.repo) !== bounty.approval_repo) {
+      console.log("[PRWatcher] PR repo mismatch for bounty #" + bounty.id + ": expected " + bounty.approval_repo + ", got " + parsed.owner + "/" + parsed.repo);
+      continue;
+    }
+
+    const status = await checkPRStatus(parsed.owner, parsed.repo, parsed.number);
+    checked++;
+
+    if (!status || status.error) continue;
+
+    if (status.merged) {
+      console.log("[PRWatcher] PR MERGED for bounty #" + bounty.id + ": " + bounty.github_pr);
+
+      // Auto-verify the bounty
+      try {
+        db.verifyBounty(bounty.id);
+        db.prepare("UPDATE bounties SET auto_released_at = ? WHERE id = ?").run(Math.floor(Date.now() / 1000), bounty.id);
+
+        // Log audit trail
+        db.prepare(
+          "INSERT INTO bounty_transactions (bounty_id, tx_type, amount_xrd, description, verified_onchain) VALUES (?, 'auto_verify', ?, ?, 0)"
+        ).run(bounty.id, bounty.reward_xrd, "PR merged: " + bounty.github_pr + " | Merged at: " + status.merged_at);
+
+        console.log("[PRWatcher] Bounty #" + bounty.id + " auto-verified via PR merge");
+        notifyDiscord("**Task #" + bounty.id + " auto-verified** — PR merged\n" + bounty.title + "\n" + bounty.github_pr + "\nAwaiting escrow release.");
+
+        // Note: actual escrow release requires a TX signed by the verifier badge holder.
+        // For now, auto-verify marks it as verified. Release is still manual (admin /bounty pay)
+        // until the bot signer (tx-signer.js) is wired up in Phase 3.
+
+      } catch (e) {
+        console.error("[PRWatcher] Failed to auto-verify bounty #" + bounty.id + ":", e.message);
+      }
+    } else if (status.state === "closed" && !status.merged) {
+      console.log("[PRWatcher] PR closed without merge for bounty #" + bounty.id);
+    }
+  }
+
+  if (checked > 0) console.log("[PRWatcher] Checked " + checked + " PR(s)");
+}
+
+// Check PR merges every 5 minutes
+setInterval(async () => {
+  try {
+    await checkPRMerges();
+  } catch (e) {
+    console.error("[PRWatcher] Background task failed:", e.message);
+  }
+}, 5 * 60 * 1000);
 
 // ── Start ───────────────────────────────────────────────
 
