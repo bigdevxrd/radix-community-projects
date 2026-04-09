@@ -140,7 +140,8 @@ bot.command("help", (ctx) => {
     "/register <address> — Link your Radix Wallet\n" +
     "/mint — Get a free badge (on-chain NFT)\n" +
     "/badge — Check your badge, tier, and XP\n" +
-    "/wallet — Badge + wallet info\n\n" +
+    "/wallet — Badge + wallet info\n" +
+    "/trust — Your trust score (Bronze/Silver/Gold)\n\n" +
 
     "Governance (badge required):\n" +
     "/new — Guided proposal wizard\n" +

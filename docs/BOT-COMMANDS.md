@@ -201,6 +201,31 @@ Your badge is an on-chain NFT in your Radix Wallet.
 
 ---
 
+### `/trust`
+
+**Who can use it:** Registered users
+**Syntax:** `/trust`
+
+Shows your trust score and tier (Bronze/Silver/Gold). Score is calculated from on-chain activity: account age, votes cast, proposals created, tasks completed, groups joined, feedback submitted.
+
+**Response:**
+
+```
+Trust Score: 50 (SILVER)
+
+Account age: 3 days (+1)
+Votes cast: 7 (+14)
+Proposals created: 1 (+10)
+Tasks completed: 0 (+0)
+Groups joined: 5 (+25)
+Feedback submitted: 0 (+0)
+
+Tiers: Bronze (0+) → Silver (50+) → Gold (200+)
+Higher tiers unlock more actions. Earn trust through participation.
+```
+
+---
+
 ### `/mint`
 
 **Who can use it:** Everyone
@@ -961,10 +986,12 @@ Lists the 6 task categories: Development, Design, Documentation, Community, Rese
 
 ### `/bounty fund <id> <tx_hash>`
 
-**Who can use it:** Currently disabled
+**Who can use it:** Badge holders
 **Syntax:** `/bounty fund 7 txid_rdx1abc123...`
 
-**Note:** This command is disabled until the on-chain escrow vault (Scrypto smart contract) is deployed. Task funding will deposit XRD directly into a smart contract — no admin wallet custody. See roadmap for timeline.
+Verifies that a transaction deposited XRD into the on-chain TaskEscrow component. The bot checks the TX against the Radix Gateway — confirms the escrow component was involved and a TaskCreatedEvent was emitted. Only then is the task marked as funded.
+
+You can also fund directly from the dashboard at radixguild.com/bounties — the "Fund" button builds the TX manifest and opens your Radix Wallet.
 
 ---
 

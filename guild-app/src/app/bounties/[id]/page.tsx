@@ -8,7 +8,9 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
-import { API_URL, TG_BOT_URL } from "@/lib/constants";
+import { API_URL, TG_BOT_URL, ESCROW_COMPONENT, BADGE_NFT } from "@/lib/constants";
+import { useWallet } from "@/hooks/useWallet";
+import { createEscrowTaskManifest } from "@/lib/manifests";
 
 interface BountyDetail {
   id: number; title: string; description: string | null; description_long: string | null;
@@ -46,6 +48,44 @@ function BountyDetailContent() {
   const [bounty, setBounty] = useState<BountyDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const { account, rdt, badge, connected } = useWallet();
+  const [funding, setFunding] = useState(false);
+  const [fundStatus, setFundStatus] = useState("");
+  const [fundError, setFundError] = useState("");
+
+  async function handleFund() {
+    if (!rdt || !account || !bounty) return;
+    setFunding(true); setFundStatus(""); setFundError("");
+    try {
+      const manifest = createEscrowTaskManifest(
+        ESCROW_COMPONENT, BADGE_NFT, account,
+        String(bounty.reward_xrd), null
+      );
+      const result = await rdt.walletApi.sendTransaction({ transactionManifest: manifest, version: 1 });
+      if (result.isOk()) {
+        const txHash = result.value.transactionIntentHash;
+        setFundStatus("Funded! Verifying on-chain...");
+        // Notify backend
+        try {
+          await fetch(API_URL + "/bounties", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ title: bounty.title, reward_xrd: bounty.reward_xrd, description: bounty.description }),
+          });
+        } catch (_) { /* backend sync is best-effort, gateway watcher catches it */ }
+        // Refresh bounty data after a short delay
+        setTimeout(() => {
+          fetch(API_URL + "/bounties/" + bounty.id).then(r => r.json()).then(d => { if (d.data) setBounty(d.data); });
+        }, 5000);
+        setFundStatus("Funded on-chain! TX: " + txHash.slice(0, 30) + "...");
+      } else {
+        setFundError("Transaction rejected or failed.");
+      }
+    } catch (e: unknown) {
+      setFundError(e instanceof Error ? e.message : "Transaction failed");
+    }
+    setFunding(false);
+  }
 
   const fetchData = () => {
     if (!id) return;
@@ -261,9 +301,30 @@ function BountyDetailContent() {
         </a>
       ) : bounty.status === "open" && !bounty.funded ? (
         <Card className="border-dashed">
-          <CardContent className="py-4 text-center">
-            <div className="text-sm font-semibold mb-1">This task needs funding</div>
-            <p className="text-xs text-muted-foreground">Fund this task by depositing XRD into the on-chain escrow vault via the Radix Wallet, then verify with <code className="bg-muted px-1 rounded">/bounty fund {bounty.id} &lt;tx_hash&gt;</code> in Telegram.</p>
+          <CardContent className="py-4 text-center space-y-3">
+            <div className="text-sm font-semibold">This task needs funding</div>
+            <p className="text-xs text-muted-foreground">{bounty.reward_xrd} XRD deposited into an on-chain escrow vault. No admin holds funds.</p>
+            {connected && badge ? (
+              <>
+                <Button
+                  variant="default"
+                  className="w-full"
+                  onClick={handleFund}
+                  disabled={funding}
+                >
+                  {funding ? "Waiting for wallet..." : `Fund ${bounty.reward_xrd} XRD`}
+                </Button>
+                {fundStatus && <p className="text-xs text-primary">{fundStatus}</p>}
+                {fundError && <p className="text-xs text-red-400">{fundError}</p>}
+                <p className="text-[10px] text-muted-foreground">Your Radix Wallet will open. XRD goes into a Scrypto smart contract vault.</p>
+              </>
+            ) : connected && !badge ? (
+              <div className="text-xs text-muted-foreground">
+                <a href="/mint" className="text-primary hover:underline">Mint a badge</a> to fund tasks.
+              </div>
+            ) : (
+              <p className="text-xs text-muted-foreground">Connect your wallet to fund this task.</p>
+            )}
           </CardContent>
         </Card>
       ) : null}
