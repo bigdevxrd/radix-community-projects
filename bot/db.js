@@ -1166,3 +1166,102 @@ module.exports.respondToFeedback = respondToFeedback;
 module.exports.resolveFeedback = resolveFeedback;
 module.exports.getFeedbackStats = getFeedbackStats;
 module.exports.getFeedbackById = getFeedbackById;
+
+// ── Trust Score System (Phase 1 Identity) ────────────────
+
+/**
+ * Calculate trust score for a user. Purely activity-based, no KYC.
+ * Score components:
+ *   - Account age (days since registration)
+ *   - Vote count (governance participation)
+ *   - Proposal count (creating governance items)
+ *   - Task completions (bounties delivered)
+ *   - Group memberships (community involvement)
+ *
+ * Tier thresholds:
+ *   - Bronze: 0+ (default, anyone with a badge)
+ *   - Silver: 50+ (active participant)
+ *   - Gold:   200+ (trusted contributor)
+ */
+function getTrustScore(tgId) {
+  const user = db.prepare("SELECT * FROM users WHERE tg_id = ?").get(tgId);
+  if (!user) return null;
+
+  const now = Math.floor(Date.now() / 1000);
+  const ageDays = Math.floor((now - (user.registered_at || now)) / 86400);
+
+  // Vote count
+  const votes = db.prepare("SELECT COUNT(*) as c FROM votes WHERE tg_id = ?").get(tgId)?.c || 0;
+
+  // Proposals created
+  const proposals = db.prepare("SELECT COUNT(*) as c FROM proposals WHERE creator_tg_id = ?").get(tgId)?.c || 0;
+
+  // Tasks completed (paid bounties where this user was assignee)
+  const tasksCompleted = db.prepare("SELECT COUNT(*) as c FROM bounties WHERE assignee_tg_id = ? AND status = 'paid'").get(tgId)?.c || 0;
+
+  // Group memberships
+  const groups = db.prepare("SELECT COUNT(*) as c FROM working_group_members WHERE tg_id = ?").get(tgId)?.c || 0;
+
+  // Feedback submitted (community engagement)
+  const feedback = db.prepare("SELECT COUNT(*) as c FROM feedback WHERE tg_id = ?").get(tgId)?.c || 0;
+
+  // Composite score
+  const score =
+    Math.min(ageDays, 365) * 0.2 +    // max 73 points from age (1 year cap)
+    votes * 2 +                          // 2 points per vote
+    proposals * 10 +                     // 10 points per proposal
+    tasksCompleted * 25 +                // 25 points per completed task
+    groups * 5 +                         // 5 points per group
+    feedback * 1;                        // 1 point per feedback
+
+  const roundedScore = Math.round(score);
+
+  // Tier determination
+  let tier = "bronze";
+  if (roundedScore >= 200) tier = "gold";
+  else if (roundedScore >= 50) tier = "silver";
+
+  return {
+    tg_id: tgId,
+    radix_address: user.radix_address,
+    score: roundedScore,
+    tier,
+    breakdown: {
+      age_days: ageDays,
+      age_points: Math.round(Math.min(ageDays, 365) * 0.2),
+      votes,
+      vote_points: votes * 2,
+      proposals,
+      proposal_points: proposals * 10,
+      tasks_completed: tasksCompleted,
+      task_points: tasksCompleted * 25,
+      groups,
+      group_points: groups * 5,
+      feedback,
+      feedback_points: feedback,
+    },
+  };
+}
+
+/**
+ * Get trust tier for a user (bronze/silver/gold).
+ * Returns null if user not registered.
+ */
+function getTrustTier(tgId) {
+  const score = getTrustScore(tgId);
+  return score ? score.tier : null;
+}
+
+/**
+ * Check if user meets minimum trust tier.
+ */
+function meetsTrustTier(tgId, requiredTier) {
+  const tierOrder = { bronze: 0, silver: 1, gold: 2 };
+  const score = getTrustScore(tgId);
+  if (!score) return false;
+  return (tierOrder[score.tier] || 0) >= (tierOrder[requiredTier] || 0);
+}
+
+module.exports.getTrustScore = getTrustScore;
+module.exports.getTrustTier = getTrustTier;
+module.exports.meetsTrustTier = meetsTrustTier;

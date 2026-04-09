@@ -461,6 +461,18 @@ function startApi() {
       return res.end(JSON.stringify({ ok: true, data: tickets }));
     }
 
+    // GET /api/trust/:tg_id — trust score for a user
+    const trustMatch = url.pathname.match(/^\/api\/trust\/(\d+)$/);
+    if (trustMatch) {
+      const score = db.getTrustScore(parseInt(trustMatch[1]));
+      if (!score) {
+        res.writeHead(404);
+        return res.end(JSON.stringify({ ok: false, error: "user_not_found" }));
+      }
+      res.writeHead(200);
+      return res.end(JSON.stringify({ ok: true, data: score }));
+    }
+
     // GET /api/feedback/stats — ticket counts
     if (url.pathname === "/api/feedback/stats") {
       res.writeHead(200);

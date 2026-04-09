@@ -1186,6 +1186,25 @@ bot.command("mint", (ctx) => ctx.reply(
   "After minting, wait ~30 seconds then /badge to verify.\n" +
   "Then /proposals to see what to vote on."
 ));
+// ── /trust — Trust Score ──────────────────────────────────
+
+bot.command("trust", async (ctx) => {
+  const score = db.getTrustScore(ctx.from.id);
+  if (!score) return ctx.reply("Register first: /register <account_rdx1...>");
+
+  const b = score.breakdown;
+  let msg = "Trust Score: " + score.score + " (" + score.tier.toUpperCase() + ")\n\n";
+  msg += "Account age: " + b.age_days + " days (+" + b.age_points + ")\n";
+  msg += "Votes cast: " + b.votes + " (+" + b.vote_points + ")\n";
+  msg += "Proposals created: " + b.proposals + " (+" + b.proposal_points + ")\n";
+  msg += "Tasks completed: " + b.tasks_completed + " (+" + b.task_points + ")\n";
+  msg += "Groups joined: " + b.groups + " (+" + b.group_points + ")\n";
+  msg += "Feedback submitted: " + b.feedback + " (+" + b.feedback_points + ")\n\n";
+  msg += "Tiers: Bronze (0+) → Silver (50+) → Gold (200+)\n";
+  msg += "Higher tiers unlock more actions. Earn trust through participation.";
+  ctx.reply(msg);
+});
+
 bot.command("dao", (ctx) => ctx.reply("Guild DAO:\n" + DAO_URL));
 bot.command("source", (ctx) => ctx.reply("Source:\n" + GITHUB));
 // charter command defined above with /charter guide support
