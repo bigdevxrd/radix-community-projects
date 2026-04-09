@@ -50,7 +50,7 @@ No XRD required for off-chain governance. On-chain CV2 votes require a small tx 
 | DAO Charter | [radix.wiki](https://radix.wiki/ideas/radix-network-dao-charter) |
 | API Reference | [docs/API-REFERENCE.md](./docs/API-REFERENCE.md) |
 | Bot Commands | [docs/BOT-COMMANDS.md](./docs/BOT-COMMANDS.md) |
-| Roadmap | [docs/ROADMAP.md](./docs/ROADMAP.md) |
+| Identity Design | [docs/IDENTITY-DESIGN.md](./docs/IDENTITY-DESIGN.md) |
 
 ## Two-Tier Governance
 
@@ -129,13 +129,13 @@ radixguild.com (Caddy, auto-TLS)
 - Run: `node scripts/pipeline-test.js`
 
 ### API
-See [docs/API-REFERENCE.md](./docs/API-REFERENCE.md) for all 32 endpoints.
+See [docs/API-REFERENCE.md](./docs/API-REFERENCE.md) for all 33 endpoints.
 
 ### Bot Commands
 See [docs/BOT-COMMANDS.md](./docs/BOT-COMMANDS.md) for all commands.
 
 ### Deploy Your Own
-See [docs/INCEPTION.md](./docs/INCEPTION.md) for setup from zero.
+See [CONTRIBUTING.md](./CONTRIBUTING.md) for how to get started.
 
 ### Contributing
 See [CONTRIBUTING.md](./CONTRIBUTING.md) for how to earn XP.

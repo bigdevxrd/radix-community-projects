@@ -32,7 +32,7 @@ const FILES = [
   "scripts/pipeline-test.js",
   "scripts/xp-batch-signer.js",
   "README.md",
-  "docs/INFRASTRUCTURE.md",
+  "docs/archive/INFRASTRUCTURE.md",
 ];
 
 function parseArgs() {
