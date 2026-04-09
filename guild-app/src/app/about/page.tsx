@@ -62,7 +62,7 @@ function AboutContent() {
               <div className="font-bold text-base">bigdev</div>
               <div className="text-xs text-muted-foreground">@bigdev_xrd</div>
               <div className="text-sm text-muted-foreground mt-1">
-                Full-stack Web3 developer. Built the entire Radix Guild platform — Scrypto smart contracts, Telegram bot (36 commands), Next.js dashboard (14 pages), REST API (32 endpoints), 70 automated tests. Open source contributor to the Radix ecosystem.
+                Full-stack Web3 developer. Built the entire Radix Guild platform — Scrypto smart contracts (badges + escrow), Telegram bot (37 commands), Next.js dashboard (14 pages), REST API (33 endpoints), 75 automated tests. Open source contributor to the Radix ecosystem.
               </div>
             </div>
           </div>
@@ -71,8 +71,8 @@ function AboutContent() {
             {[
               { label: "Commits", value: "200+" },
               { label: "Dashboard", value: "14 pages" },
-              { label: "Tests", value: "70" },
-              { label: "Bot Commands", value: "36" },
+              { label: "Tests", value: "75" },
+              { label: "Bot Commands", value: "37" },
             ].map(s => (
               <div key={s.label} className="bg-muted rounded px-3 py-2 text-center">
                 <div className="text-lg font-bold font-mono text-primary">{s.value}</div>

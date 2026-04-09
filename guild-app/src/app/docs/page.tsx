@@ -60,7 +60,8 @@ const BOT_COMMANDS = [
     { cmd: "/start", desc: "Welcome message + setup guide" },
     { cmd: "/register <account_rdx1...>", desc: "Link your Radix wallet" },
     { cmd: "/badge", desc: "Check your badge status, tier, XP" },
-    { cmd: "/wallet", desc: "Show wallet address + voting weight" },
+    { cmd: "/wallet", desc: "Show wallet address + badge info" },
+    { cmd: "/trust", desc: "Your trust score + tier (Bronze/Silver/Gold)" },
     { cmd: "/help", desc: "Full command list" },
     { cmd: "/faq", desc: "Frequently asked questions" },
   ]},
@@ -123,8 +124,9 @@ const FAQ = [
   { q: "What are the fees?", a: "2.5% platform fee on task creation. 50% goes to the guild treasury, 50% to operations (hosting, dev). Workers receive 100% of the net reward. Component royalties (0.1-0.5 XRD per on-chain call) go to the treasury. All percentages are charter-voteable." },
   { q: "How is the guild funded?", a: "Platform fees + on-chain component royalties + SaaS hosting fees. No donations, no token. Revenue from usage funds more development, which produces more royalty-earning code. See Costs & Transparency section below." },
   { q: "What are working groups?", a: "Teams that organize the guild's work: Guild, DAO, Radix Infra, Business Development, Marketing. Join one with /group join <name> in Telegram. Groups have leads, members, and linked tasks." },
-  { q: "How will task funding work?", a: "On-chain escrow vault (Scrypto smart contract) is being built. XRD will be deposited directly into the contract — no admin wallet custody. The contract releases funds automatically when work is verified. Until then, tasks are listed as community proposals." },
+  { q: "How does task funding work?", a: "XRD is deposited into an on-chain escrow vault (Scrypto smart contract on Radix mainnet). No admin wallet holds funds. The contract releases XRD to the worker when delivery is verified. Fund a task by sending XRD to the escrow component via your Radix Wallet, then verify with /bounty fund <id> <tx_hash> in Telegram." },
   { q: "Where do I do things — dashboard or Telegram?", a: "Dashboard for reading, browsing, minting, on-chain votes, and the game. Telegram for governance actions: creating proposals, voting, managing tasks, joining groups. See the Dashboard vs Telegram guide above." },
+  { q: "What is the trust score?", a: "A score calculated from your on-chain activity: account age, votes cast, proposals created, tasks completed, groups joined. Tiers: Bronze (0+), Silver (50+), Gold (200+). Higher trust unlocks more capabilities. All voluntary — badge is the minimum to participate. Check yours with /trust in Telegram." },
 ];
 
 const GUIDES = [
@@ -462,7 +464,7 @@ function DocsContent() {
             <CardTitle className="text-sm uppercase tracking-wide text-muted-foreground">Revenue Model (Planned)</CardTitle>
           </CardHeader>
           <CardContent className="space-y-2 text-sm">
-            <p><strong>Task marketplace fee:</strong> 2.5% on funded tasks. Charged at creation. Not yet active — no funded tasks exist.</p>
+            <p><strong>Task marketplace fee:</strong> 2.5% on funded tasks. Charged on release (not deposit — cancel = full refund). Escrow is live on mainnet.</p>
             <p><strong>Component royalties:</strong> Badge Manager calls earn 0.1-1 XRD on-chain. Accruing but unclaimed.</p>
             <p><strong>SaaS hosting:</strong> Other communities deploy their own instance. Planned for June+.</p>
             <p className="text-xs text-muted-foreground mt-2">All fee percentages are charter-voteable. The community controls the economics.</p>

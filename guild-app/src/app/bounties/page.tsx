@@ -97,7 +97,7 @@ function BountiesContent() {
           <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">How It Works</div>
           <div className="flex items-center gap-1 flex-wrap">
             {[
-              { label: "Create", desc: "Admin posts a task + reward" },
+              { label: "Create", desc: "Badge holder posts a task + fund escrow" },
               { label: "Claim", desc: "/bounty claim <id>" },
               { label: "Submit", desc: "/bounty submit <id>" },
               { label: "Verify", desc: "Admin reviews delivery" },

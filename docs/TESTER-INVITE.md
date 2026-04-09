@@ -73,13 +73,14 @@ Idea -> Vote -> Decision -> Fund -> Build -> Verify -> Reward
 
 **What's live at radixguild.com:**
 - Free on-chain badge (Scrypto v4, username-based NFT IDs)
-- Telegram bot with 22+ commands (propose, vote, bounty, game)
-- 21 governance proposals — 6 foundation votes live NOW
+- Telegram bot with 37 commands (propose, vote, bounty, trust, game)
+- On-chain escrow (TaskEscrow Scrypto component on mainnet — no admin wallet custody)
+- Trust scores (Bronze/Silver/Gold — earned through participation)
 - Decision tree showing the full DAO setup path (32 parameters)
-- Bounty + escrow system (create, claim, submit, verify, pay)
+- Task marketplace: create, fund, claim, submit, verify, pay — all on-chain verified
 - Dice game on every governance action (bonus XP + leaderboard)
-- 13-page dashboard with docs, transparency, feedback system
-- 70 automated pipeline tests
+- 14-page dashboard with docs, transparency, feedback system
+- 75 automated pipeline tests
 
 **Two types of voting:**
 - Off-chain (Telegram): Free, instant, badge-gated. For day-to-day decisions.
@@ -119,7 +120,7 @@ Built by bigdev.
 
 **Radix Guild** — open source community governance tooling
 
-Scrypto v4 badge manager + TG bot (22+ commands) + shadcn/ui dashboard (13 pages) + bounty escrow + dice game + support system.
+Scrypto v4 badge manager + TaskEscrow vault + TG bot (37 commands) + shadcn/ui dashboard (14 pages) + trust scores + dice game + support system.
 
 21 governance proposals live. Decision tree with 32 charter parameters and dependency tracking. Proposal classification: Charter Vote (binding) / Community Vote / Temp Check. Live countdown timers.
 

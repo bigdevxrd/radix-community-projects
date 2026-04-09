@@ -27,7 +27,7 @@ Radix Guild is a governance + task marketplace for the Radix community. Free on-
 - 70 automated tests
 - Badge Manager v4 on mainnet (Scrypto)
 - CV2 governance integration (Foundation's own system)
-- Task marketplace with escrow tracking
+- Task marketplace with on-chain escrow (Scrypto vault, no admin custody)
 - 5 working groups
 - Support system with FAQ matching
 - All MIT licensed, all public
@@ -135,9 +135,9 @@ One developer built this in a week with AI tools. $680 invested. Zero revenue. T
 | Apr 26-28 | All channels | "State of the Guild" update — real metrics, real feedback | Transparency, credibility |
 | Apr 29-30 | Assessment | Compile metrics, plan Phase 4 (SaaS layer) | Decision: scale or pivot |
 
-### Priority: On-Chain Escrow (Apr 9-16)
+### COMPLETED: On-Chain Escrow (Deployed Apr 10)
 
-**Why this is blocking:** We cannot ask community members to fund tasks until XRD goes into a smart contract vault. No admin wallet custody. Period.
+TaskEscrow v2 is live on Radix mainnet. Component: `component_rdx1cp8mwwe2pkrrtm05p7txgygf9y9uuwx6p87djkda8stk8nuwpyg56r`
 
 **What to build:**
 1. `TaskEscrow` Scrypto component — `create_task(xrd_bucket)`, `release(task_id)`, `cancel(task_id)`
@@ -177,7 +177,7 @@ Position the guild as **infrastructure that's ready when Xi'an ships**:
 
 ## What NOT to Say
 
-- Don't claim the escrow is on-chain (it's SQLite-tracked, admin-managed)
+- The escrow IS on-chain (Scrypto vault on mainnet) — highlight this as a key differentiator
 - Don't promise revenue or returns
 - Don't overstate the team size (it's one developer + AI tools)
 - Don't compare to established DAOs (we're week 1 beta)
