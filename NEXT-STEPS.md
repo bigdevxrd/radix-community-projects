@@ -1,172 +1,134 @@
-# Guild — Next Steps & Hardening Plan
-> Updated: 2026-04-10 | Phase 3: Beta + Community
+# Next Steps — 4 Major Builds
 
-## Status: Fully Operational
-14 pages, 70 tests, 32 API endpoints, 36 bot commands, on-chain badges, CV2 voting, task marketplace, TaskEscrow Scrypto component (v2, not yet deployed). Deployed at radixguild.com.
-
----
-
-## Priority 1: Critical Fixes (Do First)
-
-### 1.1 Guild Bot API + Dashboard down on Kuma
-- Guild Kuma showing red for Bot API (3003) and Dashboard (3002)
-- Check: `ssh guild-vps` → `pm2 status` → `pm2 restart all`
-- Root cause: may need `npm run build` before restart for dashboard
-
-### 1.2 P1-P6 Charter Votes Expired
-- 6 charter votes expired ~Apr 8 with low participation
-- Decision needed: re-propose with lower thresholds, or archive and move on
-- Check: `GET /api/charter` for current state
-
-### 1.3 Escrow Deployment
-- TaskEscrow v2 Scrypto component written (badge-manager/scrypto/task-escrow/)
-- NOT yet deployed to mainnet — needs `scrypto build` on VPS (Linux required)
-- `/bounty fund` command disabled until escrow is on-chain
-- 20 bounties exist but none funded — funding goes through smart contract, not wallet
-- Deploy steps: build on VPS → deploy to mainnet → wire bot + dashboard
-- **RULE: NO admin wallet custody. XRD goes into Scrypto vault only.**
+> Updated: 2026-04-10 | Post-escrow deployment
+> Priority order: ROLA → Escrow V3 → Dashboard Writes → Conviction Voting
 
 ---
 
-## Priority 2: Hardening (Stability + Trust)
+## 1. ROLA Integration (Cryptographic Wallet Auth)
 
-### 2.1 Error Monitoring
-- Add error logging to bot — currently errors are silent in TG
-- Add `/health` endpoint to bot API with: uptime, DB status, CV2 sync status, last error
-- Wire Kuma alerts to Telegram (notifications in Kuma settings)
+**What:** Replace "connect and trust" with cryptographic proof of wallet ownership on the dashboard. Backend verifies signed challenges against on-chain owner_keys.
 
-### 2.2 Database Backup
-- Daily backup cron exists in setup-vps.sh (3am, 7-day retention)
-- Verify: `ssh guild-vps` → `ls -la /opt/rad-dao/backups/`
-- If no backups: `crontab -e` and add the backup job
+**Why:** Currently the dashboard trusts whatever wallet address RDT returns. ROLA adds real authentication — the user proves they control the wallet. Foundation for all identity tiers.
 
-### 2.3 Rate Limiting Hardening
-- Bot: 60 req/min default, 10/min for POST — check if sufficient
-- API: rate limiter is in place — verify it's not being bypassed
-- Add: IP-based blocking for repeated violations
+**Build:**
+- [ ] Install `@radixdlt/rola` on bot backend
+- [ ] `GET /api/challenge` — generate 32-byte challenge, store with 5-min TTL
+- [ ] `POST /api/verify` — verify signed challenge, issue JWT session
+- [ ] Update `useWallet.tsx` — add `DataRequestBuilder.persona().withProof()` + challenge flow
+- [ ] Session management — JWT in httpOnly cookie, trust tier embedded
+- [ ] Trust score auto-loaded on authenticated sessions
 
-### 2.4 Content Moderation
-- Word filter exists but no admin review queue
-- Add: `/adminfeedback` shows flagged content for review
-- Add: auto-ban after 3 moderation flags
+**Files to change:**
+- `bot/services/api.js` — 2 new endpoints
+- `guild-app/src/hooks/useWallet.tsx` — ROLA challenge flow
+- `guild-app/src/lib/auth.ts` — new session management utility
+- `package.json` — add `@radixdlt/rola` dependency
 
-### 2.5 CV2 Sync Resilience
-- 5-minute poll to Radix Gateway — what happens if Gateway is down?
-- Add: retry with exponential backoff
-- Add: alert if sync fails 3 times in a row
+**Effort:** 1-2 sessions | **Impact:** High — enables real auth for all future features
 
 ---
 
-## Priority 3: Community Launch (Get Users)
+## 2. Escrow V3 (Multi-Token Support)
 
-### 3.1 Outreach (Manual — bigdev does this)
-- [ ] Post TESTER-INVITE.md to Radix Telegram groups
-- [ ] Post on RadixTalk forum (forum.radixdlt.com)
-- [ ] Post in Discord #developers channel
-- [ ] DM 10-20 Radix OGs personally
-- [ ] Share radixguild.com link in project showcase threads
+**What:** Deploy a new TaskEscrow that accepts XRD, fUSD, hUSDC, wUSDC. Per-token minimum deposits. $5 stablecoin minimum stays stable regardless of XRD price.
 
-### 3.2 Onboarding Flow
-- UserJourneyWidget exists (6-stage walkthrough)
-- Test: first-time visitor flow — is it clear what to do?
-- Add: "Getting Started" prominent CTA on homepage
-- Add: video walkthrough (#36 — demo video)
+**Why:** V2 is XRD-only. Task creators want to fund in stablecoins so the reward value doesn't fluctuate. This also makes the guild accessible to projects that hold stablecoins.
 
-### 3.3 First Real Task
-- Create 1 funded bounty (50 XRD) as proof of concept
-- Something achievable: "Write a guide for new members" or "Design a banner"
-- This proves the escrow → claim → verify → payout cycle works
+**Build:**
+- [ ] Modify Scrypto: `accepted_tokens: KeyValueStore<ResourceAddress, bool>`
+- [ ] Per-token minimums: `min_deposits: KeyValueStore<ResourceAddress, Decimal>`
+- [ ] Fee vaults per token: `fee_vaults: KeyValueStore<ResourceAddress, Vault>`
+- [ ] Admin methods: `add_accepted_token()`, `update_token_min_deposit()`
+- [ ] Build + deploy as new package (V2 stays live for existing tasks)
+- [ ] Wire bot + dashboard to V3 component address
+- [ ] Update manifests for multi-token support
 
----
+**Files to change:**
+- `badge-manager/scrypto/task-escrow/src/lib.rs` — major rewrite
+- `bot/services/gateway.js` — read V3 component state
+- `bot/index.js` — `/bounty fund` points to V3
+- `guild-app/src/lib/constants.ts` — V3 component address
+- New TX manifests for each token type
 
-## Priority 4: Feature Completion (Phase 3 Goals)
-
-### 4.1 Phase 3 Success Metrics
-- [ ] 20+ badges minted
-- [ ] 50+ votes cast
-- [ ] 3+ community proposals
-- [ ] Zero critical bugs for 7 days
-- [ ] First completed bounty (paid out via escrow)
-
-### 4.2 Open GitHub Issues (8)
-| # | Issue | Priority | Effort |
-|---|-------|----------|--------|
-| 72 | Content moderation admin controls | Medium | S |
-| 69 | Charter wizard (guided P1-P6 voting) | Medium | M |
-| 58 | CV2 self-host | Low | L |
-| 44 | CrumbsUp integration | Low | M |
-| 36 | Demo video | High | S |
-| 34 | On-chain outcomes | Medium | M |
-| 33 | Delegation | Low | L |
-| 32 | Federation | Low | L |
-
-### 4.3 Quick Wins
-- [ ] Set DISCORD_WEBHOOK_URL on VPS (enables Discord notifications)
-- [ ] Claim accrued badge royalties (need claim-royalties.js script)
-- [ ] Add badge count to homepage stats
-- [ ] Add "Last active" timestamp to profile
+**Effort:** 2-3 sessions | **Impact:** High — stablecoin funding, price stability
 
 ---
 
-## Priority 5: SaaS Preparation (Phase 4 Preview)
+## 3. Dashboard Write Operations (#75)
 
-### What Makes This a SaaS Product
-The guild infrastructure is generic — any DAO can use it:
-- Configurable badge schemas (not hardcoded to Radix Guild)
-- BadgeFactory creates new managers permissionlessly
-- Bot commands are parameterized
-- Dashboard reads from config, not hardcoded addresses
+**What:** Create proposals, vote, claim tasks, and fund escrow directly from the web dashboard — currently these all require Telegram.
 
-### SaaS Config Layer (Phase 4, May)
-- Separate config from code: one codebase, many DAOs
-- Customer onboarding: deploy BadgeManager → configure bot → launch dashboard
-- Revenue: $10/mo membership + 2.5% task fee + 1% AI fee
+**Why:** The dashboard is read-only except for minting. Contributors who don't use Telegram can't participate in governance or claim tasks. This is the biggest UX gap.
 
----
+**Build (prioritised):**
+- [ ] **Vote from dashboard** — TX manifest calls the off-chain vote endpoint (or builds on-chain CV2 TX)
+- [ ] **Create proposal from dashboard** — form → API POST → proposal created
+- [ ] **Claim task from dashboard** — "Claim" button → calls API with wallet proof
+- [ ] **Fund task from dashboard** — "Fund" button → TX manifest for escrow deposit → wallet signs
+- [ ] **Submit work from dashboard** — form with URL/description → API POST
 
-## Deploy Checklist (For Any Change)
+**Requires:** ROLA (step 1) for authenticated sessions. Can't let anonymous users create proposals.
 
-```bash
-# 1. Test locally
-cd guild-app && npm run dev
-cd bot && node index.js
+**Files to change:**
+- `guild-app/src/app/proposals/page.tsx` — add create/vote forms
+- `guild-app/src/app/bounties/[id]/page.tsx` — add claim/fund/submit buttons
+- `bot/services/api.js` — new POST endpoints (proposals, votes, claims)
+- `bot/db.js` — ensure all write functions accept web-originated requests
 
-# 2. Run pipeline tests
-node scripts/pipeline-test.js
-
-# 3. Deploy
-./scripts/deploy.sh all
-
-# 4. CRITICAL: Build dashboard before restart
-ssh guild-vps
-cd /opt/rad-dao/guild-app && npm run build
-pm2 restart all
-
-# 5. Verify
-curl https://radixguild.com
-curl https://radixguild.com/api/proposals
-```
+**Effort:** 3-4 sessions | **Impact:** Very high — makes dashboard a full governance tool
 
 ---
 
-## Architecture Reference
+## 4. Conviction Voting Component (Scrypto)
+
+**What:** On-chain voting where conviction accumulates over time. The longer you support a proposal, the more weight your vote carries. Changing your vote resets the accumulation.
+
+**Why:** Anti-sybil by design — time can't be faked. No identity system needed for the base mechanism. Best for fund allocation decisions where proposals compete for a shared pool.
+
+**Build:**
+- [ ] Scrypto blueprint: `ConvictionVoting`
+  - `stake(proposal_id, xrd_bucket)` — stake XRD on a proposal
+  - `unstake(proposal_id)` — remove support (conviction resets)
+  - `get_conviction(proposal_id)` — current conviction level
+  - `check_threshold(proposal_id)` — has conviction crossed the pass threshold?
+  - Conviction formula: `conviction += staked_amount * time_since_last_update`
+  - Half-life curve: conviction decays if unstaked
+- [ ] Integrate with badge tiers — Silver/Gold get conviction multiplier
+- [ ] Dashboard display — conviction bars, time-to-threshold estimates
+- [ ] Bot commands — `/conviction stake`, `/conviction status`
+
+**Files to change:**
+- `badge-manager/scrypto/conviction-voting/` — new Scrypto package
+- `bot/services/gateway.js` — read conviction state from chain
+- `guild-app/src/app/proposals/page.tsx` — conviction UI
+- `bot/index.js` — conviction bot commands
+
+**Effort:** 3-4 sessions | **Impact:** High — anti-sybil voting, differentiator
+
+---
+
+## Dependency Chain
 
 ```
-Guild VPS (72.62.195.141)
-├── guild-bot (PM2, port 3003)
-│   ├── index.js — Grammy TG bot (36 commands)
-│   ├── db.js — SQLite
-│   └── services/ — api, cv2, xp, gateway, faq, content-filter
-├── guild-app (PM2, port 3002)
-│   └── Next.js dashboard (14 pages)
-├── Caddy — reverse proxy + TLS
-│   ├── radixguild.com → localhost:3002
-│   └── /api/* → localhost:3003
-└── Uptime Kuma (Docker, port 3100)
-    └── guild-status.72-62-195-141.sslip.io
+ROLA (1) → Dashboard Writes (3)
+              ↓
+Escrow V3 (2) — independent, can parallel with ROLA
+              ↓
+Conviction Voting (4) — independent, can parallel with Dashboard Writes
 ```
 
-On-chain:
-- Badge Manager: `component_rdx1czexylvvm0q4uhwpjaqmlznj9sd3y2jnmmah6qug9lm9sfm3tyrtva`
-- Badge NFT: `resource_rdx1n22rq94kh6ugwnrvc65m2pwhle3s6ez6j7702vkn2ctkaxemz4ppwl`
-- CV2 Governance: `component_rdx1cqj99hx2rdx04mrdvd3am7wcenh6c26m2w5uzv8vkv9pudveqzy7d2`
+ROLA first (enables auth for everything). Escrow V3 can run in parallel.
+Dashboard Writes after ROLA. Conviction Voting after Writes.
+
+---
+
+## Current State (for reference)
+
+- 75/75 tests passing
+- 0 bounties (seed data cleaned)
+- TaskEscrow v2 on mainnet (XRD only, 1 XRD min, 2.5% fee)
+- Trust scores live (Bronze/Silver/Gold)
+- 37 bot commands, 33 API endpoints, 14 pages
+- 6 public docs + archive
+- Bot hardened (global error handlers, all callbacks wrapped)
