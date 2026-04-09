@@ -743,11 +743,63 @@ bot.command("bounty", async (ctx) => {
   }
 
   if (sub === "fund") {
-    return ctx.reply(
-      "Task funding is temporarily disabled.\n\n" +
-      "We're building an on-chain escrow vault (Scrypto smart contract) so XRD is locked in a smart contract — not held in any admin wallet.\n\n" +
-      "This will be live soon. Tasks are currently listed as community proposals without funding."
+    const id = parseInt(args[1]);
+    const txHash = args[2];
+    if (!id || !txHash) return ctx.reply(
+      "Usage: /bounty fund <task_id> <tx_hash>\n\n" +
+      "Fund a task via the on-chain escrow.\n" +
+      "1. Create a task on the dashboard or with /bounty create\n" +
+      "2. Send XRD to the TaskEscrow component via Radix Wallet\n" +
+      "3. Paste the transaction hash here to verify\n\n" +
+      "The escrow vault holds your XRD — no admin wallet custody."
     );
+
+    // Verify the tx actually deposited into the escrow component
+    const { verifyEscrowTx } = require("./services/gateway");
+    ctx.reply("Verifying transaction on-chain...");
+    try {
+      const result = await verifyEscrowTx(txHash);
+      if (!result.verified) {
+        console.log("[Escrow] Verification failed for bounty #" + id + ":", result.reason, "tx:", txHash);
+        return ctx.reply(
+          "Could not verify this transaction.\n" +
+          "Reason: " + result.reason + "\n\n" +
+          "Make sure the TX called the TaskEscrow component:\n" +
+          "component_rdx1cp8mwwe...pyg56r"
+        );
+      }
+
+      // Update SQLite with verified funding
+      const dbResult = db.fundTask(id, txHash);
+      if (!dbResult.ok) return ctx.reply("DB error: " + dbResult.error);
+
+      // Log with audit trail
+      db.prepare(
+        "INSERT INTO bounty_transactions (bounty_id, tx_type, amount_xrd, tx_hash, description, actor_tg_id, verified_onchain, onchain_task_id) VALUES (?, 'deposit', ?, ?, ?, ?, 1, ?)"
+      ).run(id, parseFloat(result.amount) || 0, txHash, "On-chain escrow deposit verified", ctx.from.id, result.task_id);
+
+      // Update on-chain tracking
+      if (result.task_id) {
+        try { db.prepare("UPDATE bounties SET onchain_task_id = ?, escrow_verified = 1 WHERE id = ?").run(result.task_id, id); } catch(e) {}
+      }
+
+      const bounty = db.getBounty(id);
+      console.log("[Escrow] VERIFIED: bounty #" + id + " funded, onchain_task_id=" + result.task_id + ", amount=" + result.amount + " XRD, actor=" + ctx.from.id);
+
+      ctx.reply(
+        "Task #" + id + " FUNDED (verified on-chain)\n\n" +
+        (bounty ? bounty.title + "\n" : "") +
+        "Amount: " + (result.amount || "?") + " XRD\n" +
+        "Escrow task ID: " + (result.task_id || "?") + "\n" +
+        "TX: " + txHash.slice(0, 40) + "...\n\n" +
+        "XRD is locked in the Scrypto vault. Workers can now claim this task."
+      );
+      notifyDiscord("**Task #" + id + " funded (on-chain verified)** — " + (result.amount || "?") + " XRD\n" + (bounty ? bounty.title : "") + "\nWorkers can now claim: " + PORTAL + "/bounties/" + id);
+    } catch (e) {
+      console.error("[Escrow] Fund verification error:", e.message);
+      ctx.reply("Error verifying transaction: " + e.message);
+    }
+    return;
   }
 
   ctx.reply(
@@ -764,7 +816,7 @@ bot.command("bounty", async (ctx) => {
     "/bounty verify <id> — verify delivery (admin)\n" +
     "/bounty pay <id> <tx_hash> — release payment (admin)\n" +
     "/bounty approve <app_id> — approve applicant (creator)\n" +
-    "/bounty fund — (coming soon: on-chain escrow)"
+    "/bounty fund <id> <tx_hash> — verify on-chain escrow deposit"
   );
 });
 

@@ -285,21 +285,21 @@ function DocsContent() {
         <CardContent className="space-y-3 text-sm">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="bg-muted rounded-lg p-3">
-              <div className="font-semibold text-xs mb-1">Current (Beta)</div>
+              <div className="font-semibold text-xs mb-1">For Task Creators</div>
               <ol className="text-[11px] text-muted-foreground space-y-1 list-decimal pl-3">
                 <li>Create task: <code className="bg-background px-1 rounded">/bounty create 50 Title</code></li>
-                <li>Tasks are listed as community proposals</li>
-                <li>Workers claim, submit, get verified</li>
-                <li>No funds are held by any wallet</li>
+                <li>Deposit XRD into the on-chain escrow via Radix Wallet</li>
+                <li>Verify: <code className="bg-background px-1 rounded">/bounty fund &lt;id&gt; &lt;tx_hash&gt;</code></li>
+                <li>XRD locked in Scrypto vault — no admin custody</li>
               </ol>
             </div>
             <div className="bg-muted rounded-lg p-3">
-              <div className="font-semibold text-xs mb-1">Coming: On-Chain Escrow</div>
+              <div className="font-semibold text-xs mb-1">For Workers</div>
               <ol className="text-[11px] text-muted-foreground space-y-1 list-decimal pl-3">
-                <li>Creator deposits XRD into a Scrypto smart contract vault</li>
-                <li>XRD locked on-chain — no admin custody</li>
-                <li>Worker delivers, verifier confirms</li>
-                <li>Contract releases XRD automatically (2.5% fee to guild)</li>
+                <li>Browse funded tasks at <a href="/bounties" className="text-primary hover:underline">/bounties</a></li>
+                <li>Claim: <code className="bg-background px-1 rounded">/bounty claim &lt;id&gt;</code></li>
+                <li>Submit work, verifier confirms delivery</li>
+                <li>Escrow releases XRD to your wallet (2.5% fee to guild)</li>
               </ol>
             </div>
           </div>

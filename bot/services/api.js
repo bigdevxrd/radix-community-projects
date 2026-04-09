@@ -263,12 +263,20 @@ function startApi() {
       return res.end(JSON.stringify({ ok: true, data: detail }));
     }
 
-    // GET /api/escrow — escrow balance + transactions
+    // GET /api/escrow — escrow balance + transactions + on-chain stats
     if (url.pathname === "/api/escrow") {
       const balance = db.getEscrowBalance();
       const transactions = db.getBountyTransactions();
+      // Try to fetch on-chain truth (non-blocking — falls back to SQLite)
+      let onchain = null;
+      try {
+        const { getEscrowStats } = require("./gateway");
+        onchain = await getEscrowStats();
+      } catch (e) {
+        console.error("[API] getEscrowStats error:", e.message);
+      }
       res.writeHead(200);
-      return res.end(JSON.stringify({ ok: true, data: { balance, transactions } }));
+      return res.end(JSON.stringify({ ok: true, data: { balance, transactions, onchain } }));
     }
 
     // GET /api/charter — charter parameter status

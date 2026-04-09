@@ -154,7 +154,7 @@ function AboutContent() {
           <CardContent className="text-xs text-muted-foreground space-y-2">
             <p>Radix Guild is experimental beta software provided as-is under the MIT license. Use at your own risk.</p>
             <p>The platform facilitates community governance and task coordination on the Radix network. It does not provide financial advice, investment services, or guarantees of any kind.</p>
-            <p>Task funding is not yet live. An on-chain escrow vault (Scrypto smart contract) is being built. XRD will be deposited directly into the contract — no admin wallet holds user funds. Until the escrow component is deployed, tasks are listed as community proposals without funding.</p>
+            <p>Task escrow is on-chain. XRD is deposited directly into a Scrypto smart contract vault — no admin wallet holds user funds. Funding is verified on-chain before tasks become claimable. The escrow component is deployed on Radix mainnet and verifiable on the Radix Dashboard.</p>
             <p>The admin badge and platform operations are managed by bigdev until the community elects a Radix Advisory Council (Charter Step 3). This is an interim arrangement, not permanent centralisation.</p>
           </CardContent>
         </Card>
@@ -181,7 +181,7 @@ function AboutContent() {
           </CardHeader>
           <CardContent className="text-xs text-muted-foreground space-y-2">
             <p>This is experimental software interacting with blockchain technology. Smart contract risk, network risk, and operational risk exist.</p>
-            <p>Task funding is not yet live. When the on-chain escrow component launches, XRD will be locked in a Scrypto smart contract vault — not held by any individual. Do not send XRD to any wallet claiming to be the guild treasury.</p>
+            <p>Task escrow uses a Scrypto smart contract vault on Radix mainnet. XRD is locked in the component, not held by any individual. Do not send XRD to any wallet claiming to be the guild treasury — all funding goes through the escrow component.</p>
             <p>XRD value fluctuates. Task rewards denominated in XRD may change in fiat value between creation and payment.</p>
             <p>The guild is not a registered entity, financial institution, or investment vehicle. Participation is voluntary and at your own risk.</p>
           </CardContent>

@@ -116,11 +116,17 @@ function init() {
       amount_xrd REAL NOT NULL,
       tx_hash TEXT,
       description TEXT,
+      actor_tg_id INTEGER,
+      verified_onchain INTEGER DEFAULT 0,
+      onchain_task_id INTEGER,
       created_at INTEGER DEFAULT (strftime('%s','now')),
       FOREIGN KEY (bounty_id) REFERENCES bounties(id)
     );
 
     CREATE INDEX IF NOT EXISTS idx_bounties_status ON bounties(status);
+
+    -- Migration: add audit columns if missing (safe to re-run)
+    -- SQLite ignores ALTER TABLE ADD COLUMN if column already exists via IF NOT EXISTS workaround
   `);
 
   // Seed escrow wallet singleton
@@ -142,6 +148,13 @@ function init() {
   try { db.exec("ALTER TABLE bounties ADD COLUMN cancel_reason TEXT"); } catch(e) {}
   try { db.exec("ALTER TABLE bounties ADD COLUMN source TEXT DEFAULT 'bot'"); } catch(e) {}
   try { db.exec("ALTER TABLE escrow_wallet ADD COLUMN total_fees_collected_xrd REAL DEFAULT 0"); } catch(e) {}
+  // Audit trail columns on bounty_transactions
+  try { db.exec("ALTER TABLE bounty_transactions ADD COLUMN actor_tg_id INTEGER"); } catch(e) {}
+  try { db.exec("ALTER TABLE bounty_transactions ADD COLUMN verified_onchain INTEGER DEFAULT 0"); } catch(e) {}
+  try { db.exec("ALTER TABLE bounty_transactions ADD COLUMN onchain_task_id INTEGER"); } catch(e) {}
+  // On-chain escrow tracking on bounties
+  try { db.exec("ALTER TABLE bounties ADD COLUMN onchain_task_id INTEGER"); } catch(e) {}
+  try { db.exec("ALTER TABLE bounties ADD COLUMN escrow_verified INTEGER DEFAULT 0"); } catch(e) {}
 
   // Bounty milestones (partial delivery)
   db.exec(`

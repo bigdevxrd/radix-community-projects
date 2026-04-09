@@ -263,7 +263,7 @@ function BountyDetailContent() {
         <Card className="border-dashed">
           <CardContent className="py-4 text-center">
             <div className="text-sm font-semibold mb-1">This task needs funding</div>
-            <p className="text-xs text-muted-foreground">On-chain escrow vault coming soon. Tasks will be funded directly into a Scrypto smart contract — no admin wallet custody.</p>
+            <p className="text-xs text-muted-foreground">Fund this task by depositing XRD into the on-chain escrow vault via the Radix Wallet, then verify with <code className="bg-muted px-1 rounded">/bounty fund {bounty.id} &lt;tx_hash&gt;</code> in Telegram.</p>
           </CardContent>
         </Card>
       ) : null}
