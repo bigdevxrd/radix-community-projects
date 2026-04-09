@@ -12,8 +12,25 @@ const TOKEN = process.env.TG_BOT_TOKEN;
 if (!TOKEN) { console.error("Set TG_BOT_TOKEN in .env"); process.exit(1); }
 
 const dbInstance = db.init();
-cv2.init(dbInstance);
+try { cv2.init(dbInstance); } catch (e) { console.error("[Init] CV2 init failed (non-fatal):", e.message); }
 const bot = new Bot(TOKEN);
+
+// ── Global Error Handlers ────────────────────────────────
+bot.catch((err) => {
+  const ctx = err.ctx;
+  const e = err.error;
+  console.error("[Bot] Error in handler for " + (ctx?.update?.message?.text || ctx?.update?.callback_query?.data || "unknown") + ":", e.message || e);
+  try { ctx?.reply("Something went wrong. Try again or contact @bigdev_xrd.").catch(() => {}); } catch (_) {}
+});
+
+process.on("unhandledRejection", (reason, promise) => {
+  console.error("[Process] Unhandled rejection:", reason);
+});
+
+process.on("uncaughtException", (err) => {
+  console.error("[Process] Uncaught exception:", err);
+  // Don't exit — PM2 will restart if needed
+});
 
 const PORTAL = process.env.PORTAL_URL || "https://radixguild.com";
 const DAO_URL = "https://www.crumbsup.io/#dao?id=4db790d7-4d75-49ed-a2e0-3514743809e0";
@@ -59,21 +76,27 @@ function buildPollKeyboard(id, options, counts) {
 }
 
 async function requireBadge(ctx) {
-  const user = db.getUser(ctx.from.id);
-  if (!user) {
-    await ctx.reply("Register first: /register <account_rdx1...>");
+  try {
+    const user = db.getUser(ctx.from.id);
+    if (!user) {
+      await ctx.reply("Register first: /register <account_rdx1...>");
+      return null;
+    }
+    const has = await hasBadge(user.radix_address);
+    if (!has) {
+      await ctx.reply(
+        "You need a Guild badge to do this.\n\n" +
+        "Mint one (free): " + PORTAL + "/mint\n" +
+        "After minting, wait ~30s then try again."
+      );
+      return null;
+    }
+    return user;
+  } catch (e) {
+    console.error("[requireBadge] Error:", e.message);
+    await ctx.reply("Could not verify your badge. The Radix Gateway may be temporarily unavailable. Try again in a minute.").catch(() => {});
     return null;
   }
-  const has = await hasBadge(user.radix_address);
-  if (!has) {
-    await ctx.reply(
-      "You need a Guild badge to do this.\n\n" +
-      "Mint one (free): " + PORTAL + "/mint\n" +
-      "After minting, wait ~30s then try again."
-    );
-    return null;
-  }
-  return user;
 }
 
 // ── /start + /help ──────────────────────────────────────

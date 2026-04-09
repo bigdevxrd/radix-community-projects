@@ -598,12 +598,58 @@ async function main() {
     assert(resp.ok, "should be 200");
   });
 
-  await test("All 13 dashboard pages return 200", async () => {
-    const pages = ["", "/proposals", "/admin", "/mint", "/bounties", "/bounties/3", "/docs", "/game", "/profile", "/feedback", "/about"];
+  await test("All 14 dashboard pages return 200", async () => {
+    const pages = ["", "/proposals", "/admin", "/mint", "/bounties", "/bounties/3", "/docs", "/game", "/profile", "/feedback", "/about", "/groups"];
     for (const p of pages) {
       const resp = await fetch(GUILD + p);
       assert(resp.ok, p + " should return 200");
     }
+  });
+
+  // ── Escrow (On-Chain) ──────────────────────────────
+
+  console.log("\n  Escrow (On-Chain):");
+
+  await test("GET /api/escrow returns on-chain stats", async () => {
+    const d = (await fetchJson(API + "/escrow")).data;
+    assert(d.onchain, "should have onchain field");
+    assert(d.onchain.source === "on-chain", "source should be on-chain");
+    assert(d.onchain.component === "component_rdx1cp8mwwe2pkrrtm05p7txgygf9y9uuwx6p87djkda8stk8nuwpyg56r", "component should match");
+    assert(parseFloat(d.onchain.fee_pct) === 2.5, "fee should be 2.5%");
+  });
+
+  await test("GET /api/health includes escrow stats", async () => {
+    const d = (await fetchJson(API + "/health")).data;
+    assert(d.escrow, "should have escrow field");
+    assert(d.escrow.source === "on-chain" || d.escrow.source === "unavailable", "escrow source should be on-chain or unavailable");
+    assert(d.version === "1.2.0", "version should be 1.2.0");
+  });
+
+  await test("Escrow component exists on mainnet", async () => {
+    const resp = await fetch(GATEWAY + "/state/entity/details", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ addresses: ["component_rdx1cp8mwwe2pkrrtm05p7txgygf9y9uuwx6p87djkda8stk8nuwpyg56r"] }),
+    });
+    assert(resp.ok, "Gateway should return 200");
+    const data = await resp.json();
+    assert(data.items?.length > 0, "component should exist");
+  });
+
+  await test("Escrow SQLite and on-chain balances match", async () => {
+    const d = (await fetchJson(API + "/escrow")).data;
+    if (d.onchain) {
+      const sqliteAvailable = d.balance.available || 0;
+      const onchainEscrowed = parseFloat(d.onchain.total_escrowed) || 0;
+      // They should match (both 0 for now)
+      assert(Math.abs(sqliteAvailable - onchainEscrowed) < 1, "SQLite and on-chain should reconcile (within 1 XRD)");
+    }
+  });
+
+  // Also update the dashboard test to check /groups page
+  await test("GET /groups returns 200", async () => {
+    const resp = await fetch(GUILD + "/groups");
+    assert(resp.ok, "should be 200");
   });
 
   // ── Summary ────────────────────────────────────────

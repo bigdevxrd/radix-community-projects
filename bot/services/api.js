@@ -70,12 +70,18 @@ function startApi() {
       return res.end(JSON.stringify({ ok: false, error: "rate_limit_exceeded" }));
     }
 
+    // ── Top-level try/catch — prevents unhandled errors from crashing the server ──
+    try {
+
     // GET /api/health — system health check
     if (url.pathname === "/api/health") {
       const { getXpQueue } = require("./xp");
+      const { getEscrowStats } = require("./gateway");
       const cv2Status = cv2.getSyncStatus();
       const activeProposals = db.getActiveProposals();
       const charterStatus = db.getCharterStatus();
+      let escrow = null;
+      try { escrow = await getEscrowStats(); } catch (e) { console.error("[Health] escrow stats:", e.message); }
       res.writeHead(200);
       return res.end(JSON.stringify({
         ok: true,
@@ -85,9 +91,10 @@ function startApi() {
           cv2: { enabled: cv2Status.enabled, lastSync: cv2Status.lastSync, errors: cv2Status.errors },
           proposals: { active: activeProposals.length, total: db.getTotalProposals() },
           charter: { resolved: charterStatus.resolved, total: charterStatus.total },
+          escrow: escrow ? { tasks: escrow.total_tasks, escrowed: escrow.total_escrowed, completed: escrow.total_completed, source: "on-chain" } : { source: "unavailable" },
           xpQueue: getXpQueue().length,
           memory: Math.round(process.memoryUsage().heapUsed / 1024 / 1024) + "MB",
-          version: "1.1.0",
+          version: "1.2.0",
         }
       }));
     }
@@ -495,6 +502,14 @@ function startApi() {
 
     res.writeHead(404);
     res.end(JSON.stringify({ ok: false, error: "not_found" }));
+
+    } catch (e) {
+      console.error("[API] Unhandled error on " + req.method + " " + req.url + ":", e.message);
+      if (!res.headersSent) {
+        res.writeHead(500);
+        res.end(JSON.stringify({ ok: false, error: "internal_error" }));
+      }
+    }
   });
 
   const API_HOST = process.env.API_HOST || "127.0.0.1";
