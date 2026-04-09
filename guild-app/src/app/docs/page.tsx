@@ -1,4 +1,5 @@
 "use client";
+import { useState, useEffect } from "react";
 import { AppShell } from "@/components/AppShell";
 import { UserJourneyWidget } from "@/components/UserJourneyWidget";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -139,6 +140,64 @@ const GUIDES = [
   { title: "Charter Decision Map", desc: "32 decisions across 3 phases. Each phase unlocks the next.", image: "/infographics/05-charter-decision-map.svg" },
   { title: "Architecture", desc: "TG bot + Next.js dashboard + Scrypto contracts + CV2 governance.", image: "/infographics/06-architecture-at-a-glance.svg" },
 ];
+
+function GuideSlideshow() {
+  const [current, setCurrent] = useState(0);
+  const guide = GUIDES[current];
+  const prev = () => setCurrent(i => Math.max(0, i - 1));
+  const next = () => setCurrent(i => Math.min(GUIDES.length - 1, i + 1));
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "ArrowLeft") prev();
+      if (e.key === "ArrowRight") next();
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  });
+
+  return (
+    <Card>
+      <CardHeader className="pb-2">
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-sm uppercase tracking-wide text-muted-foreground">Visual Guides</CardTitle>
+          <div className="flex items-center gap-2">
+            <Badge variant="secondary" className="text-[10px] font-mono">{current + 1}/{GUIDES.length}</Badge>
+            <button onClick={prev} disabled={current === 0} className="p-1 rounded hover:bg-muted disabled:opacity-30" aria-label="Previous">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M15 18l-6-6 6-6"/></svg>
+            </button>
+            <button onClick={next} disabled={current === GUIDES.length - 1} className="p-1 rounded hover:bg-muted disabled:opacity-30" aria-label="Next">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 18l6-6-6-6"/></svg>
+            </button>
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        <div>
+          <h3 className="text-sm font-bold">{guide.title}</h3>
+          <p className="text-xs text-muted-foreground">{guide.desc}</p>
+        </div>
+        <div className="bg-muted rounded-lg p-2 flex items-center justify-center min-h-[400px]">
+          <img src={guide.image} alt={guide.title} className="max-w-full h-auto max-h-[500px] rounded" />
+        </div>
+        {/* Dots */}
+        <div className="flex justify-center gap-1.5">
+          {GUIDES.map((_, i) => (
+            <button
+              key={i}
+              onClick={() => setCurrent(i)}
+              className={`h-1.5 rounded-full transition-all ${i === current ? "w-4 bg-primary" : "w-1.5 bg-muted-foreground/30 hover:bg-muted-foreground/50"}`}
+              aria-label={`Guide ${i + 1}`}
+            />
+          ))}
+        </div>
+        <div className="hidden sm:flex justify-center">
+          <span className="text-[9px] text-muted-foreground/50">← → arrow keys to navigate</span>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
 
 function DocsContent() {
   return (
@@ -383,23 +442,8 @@ function DocsContent() {
         </CardContent>
       </Card>
 
-      {/* Infographics */}
-      <div>
-        <h2 className="text-lg font-bold mb-4">Visual Guides</h2>
-        <div className="space-y-6">
-          {GUIDES.map((g, i) => (
-            <Card key={i}>
-              <CardContent className="pt-5 pb-5">
-                <h3 className="text-sm font-bold mb-1">{g.title}</h3>
-                <p className="text-xs text-muted-foreground mb-4">{g.desc}</p>
-                <div className="bg-muted rounded-lg p-4 flex items-center justify-center">
-                  <img src={g.image} alt={g.title} className="max-w-full h-auto max-h-80" />
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      </div>
+      {/* Visual Guides Slideshow */}
+      <GuideSlideshow />
 
       {/* Resources */}
       <Card>
