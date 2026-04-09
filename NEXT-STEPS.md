@@ -1,134 +1,129 @@
-# Next Steps — 4 Major Builds
+# Next Steps — Radix Guild
 
-> Updated: 2026-04-10 | Post-escrow deployment
-> Priority order: ROLA → Escrow V3 → Dashboard Writes → Conviction Voting
-
----
-
-## 1. ROLA Integration (Cryptographic Wallet Auth)
-
-**What:** Replace "connect and trust" with cryptographic proof of wallet ownership on the dashboard. Backend verifies signed challenges against on-chain owner_keys.
-
-**Why:** Currently the dashboard trusts whatever wallet address RDT returns. ROLA adds real authentication — the user proves they control the wallet. Foundation for all identity tiers.
-
-**Build:**
-- [ ] Install `@radixdlt/rola` on bot backend
-- [ ] `GET /api/challenge` — generate 32-byte challenge, store with 5-min TTL
-- [ ] `POST /api/verify` — verify signed challenge, issue JWT session
-- [ ] Update `useWallet.tsx` — add `DataRequestBuilder.persona().withProof()` + challenge flow
-- [ ] Session management — JWT in httpOnly cookie, trust tier embedded
-- [ ] Trust score auto-loaded on authenticated sessions
-
-**Files to change:**
-- `bot/services/api.js` — 2 new endpoints
-- `guild-app/src/hooks/useWallet.tsx` — ROLA challenge flow
-- `guild-app/src/lib/auth.ts` — new session management utility
-- `package.json` — add `@radixdlt/rola` dependency
-
-**Effort:** 1-2 sessions | **Impact:** High — enables real auth for all future features
+> Updated: 2026-04-10 | Community activation phase
+> Context: MIDAO legal progressing, RAC elected, WG framework proposed by Daffy,
+> Strategic Council RFC by Phil. The guild is positioning as coordination infrastructure.
 
 ---
 
-## 2. Escrow V3 (Multi-Token Support)
+## Where We Are
 
-**What:** Deploy a new TaskEscrow that accepts XRD, fUSD, hUSDC, wUSDC. Per-token minimum deposits. $5 stablecoin minimum stays stable regardless of XRD price.
-
-**Why:** V2 is XRD-only. Task creators want to fund in stablecoins so the reward value doesn't fluctuate. This also makes the guild accessible to projects that hold stablecoins.
-
-**Build:**
-- [ ] Modify Scrypto: `accepted_tokens: KeyValueStore<ResourceAddress, bool>`
-- [ ] Per-token minimums: `min_deposits: KeyValueStore<ResourceAddress, Decimal>`
-- [ ] Fee vaults per token: `fee_vaults: KeyValueStore<ResourceAddress, Vault>`
-- [ ] Admin methods: `add_accepted_token()`, `update_token_min_deposit()`
-- [ ] Build + deploy as new package (V2 stays live for existing tasks)
-- [ ] Wire bot + dashboard to V3 component address
-- [ ] Update manifests for multi-token support
-
-**Files to change:**
-- `badge-manager/scrypto/task-escrow/src/lib.rs` — major rewrite
-- `bot/services/gateway.js` — read V3 component state
-- `bot/index.js` — `/bounty fund` points to V3
-- `guild-app/src/lib/constants.ts` — V3 component address
-- New TX manifests for each token type
-
-**Effort:** 2-3 sessions | **Impact:** High — stablecoin funding, price stability
+**Live on mainnet:** Badge Manager v4, TaskEscrow v2 (200 XRD min, 2.5% fee on release)
+**Live on VPS:** Bot v5 (37 commands), Dashboard (14 pages), 34 API endpoints, 75 tests
+**Live services:** Gateway event watcher (60s), PR merge watcher (5min), trust scores
+**Community:** 4 TG users, 8+ wallet connects, guild posted in main Radix channels
+**Ecosystem position:** Only task marketplace, only on-chain escrow, only work-coordination DAO on Radix
 
 ---
 
-## 3. Dashboard Write Operations (#75)
+## Priority 1: Working Group Charter (THIS WEEK)
 
-**What:** Create proposals, vote, claim tasks, and fund escrow directly from the web dashboard — currently these all require Telegram.
+The community is forming governance structures NOW. Daffy published a full WG framework with 6 groups defined. Phil proposed a Strategic Council. The RAC is elected. MIDAO legal is in progress.
 
-**Why:** The dashboard is read-only except for minting. Contributors who don't use Telegram can't participate in governance or claim tasks. This is the biggest UX gap.
+**Action: Submit the first operational Working Group charter.**
 
-**Build (prioritised):**
-- [ ] **Vote from dashboard** — TX manifest calls the off-chain vote endpoint (or builds on-chain CV2 TX)
-- [ ] **Create proposal from dashboard** — form → API POST → proposal created
-- [ ] **Claim task from dashboard** — "Claim" button → calls API with wallet proof
-- [ ] **Fund task from dashboard** — "Fund" button → TX manifest for escrow deposit → wallet signs
-- [ ] **Submit work from dashboard** — form with URL/description → API POST
+- [ ] Draft charter using Daffy's template (Strategic Development WG)
+- [ ] Lead: bigdev | Budget: $1.1k USD/month | Sunset: 6 months
+- [ ] Scope: architecture, infrastructure, maintenance, coordination tooling
+- [ ] Deliverables: stand up next 3 WGs, connect guild tooling to WG framework
+- [ ] Submit as PR to github.com/Shadaffy/radix-dao (collaborative, not fork)
+- [ ] Post formal proposal on RadixTalk
+- [ ] Run the WG through guild infrastructure (proving it works)
 
-**Requires:** ROLA (step 1) for authenticated sessions. Can't let anonymous users create proposals.
-
-**Files to change:**
-- `guild-app/src/app/proposals/page.tsx` — add create/vote forms
-- `guild-app/src/app/bounties/[id]/page.tsx` — add claim/fund/submit buttons
-- `bot/services/api.js` — new POST endpoints (proposals, votes, claims)
-- `bot/db.js` — ensure all write functions accept web-originated requests
-
-**Effort:** 3-4 sessions | **Impact:** Very high — makes dashboard a full governance tool
-
----
-
-## 4. Conviction Voting Component (Scrypto)
-
-**What:** On-chain voting where conviction accumulates over time. The longer you support a proposal, the more weight your vote carries. Changing your vote resets the accumulation.
-
-**Why:** Anti-sybil by design — time can't be faked. No identity system needed for the base mechanism. Best for fund allocation decisions where proposals compete for a shared pool.
-
-**Build:**
-- [ ] Scrypto blueprint: `ConvictionVoting`
-  - `stake(proposal_id, xrd_bucket)` — stake XRD on a proposal
-  - `unstake(proposal_id)` — remove support (conviction resets)
-  - `get_conviction(proposal_id)` — current conviction level
-  - `check_threshold(proposal_id)` — has conviction crossed the pass threshold?
-  - Conviction formula: `conviction += staked_amount * time_since_last_update`
-  - Half-life curve: conviction decays if unstaked
-- [ ] Integrate with badge tiers — Silver/Gold get conviction multiplier
-- [ ] Dashboard display — conviction bars, time-to-threshold estimates
-- [ ] Bot commands — `/conviction stake`, `/conviction status`
-
-**Files to change:**
-- `badge-manager/scrypto/conviction-voting/` — new Scrypto package
-- `bot/services/gateway.js` — read conviction state from chain
-- `guild-app/src/app/proposals/page.tsx` — conviction UI
-- `bot/index.js` — conviction bot commands
-
-**Effort:** 3-4 sessions | **Impact:** High — anti-sybil voting, differentiator
+**Rules (from best practices research):**
+- Every charter has a sunset date (default 6 months)
+- Budget is time-boxed, never perpetual
+- Max 7 members per group
+- Reports to RAC monthly (structured: delivered / next / blocked / spent)
+- Lead is named and accountable
+- Closure = success (mission complete, not failure)
 
 ---
 
-## Dependency Chain
+## Priority 2: User Profile Page (THIS WEEK)
 
-```
-ROLA (1) → Dashboard Writes (3)
-              ↓
-Escrow V3 (2) — independent, can parallel with ROLA
-              ↓
-Conviction Voting (4) — independent, can parallel with Dashboard Writes
-```
+People are joining. They need to see their stuff in one place.
 
-ROLA first (enables auth for everything). Escrow V3 can run in parallel.
-Dashboard Writes after ROLA. Conviction Voting after Writes.
+- [ ] `GET /api/profile/:address` — aggregation endpoint (resolve wallet → tg_id → all activity)
+- [ ] Tabbed profile: Badge | Tasks | Votes | Groups | Escrow | PRs
+- [ ] Trust score breakdown visible on profile
+- [ ] Works for wallet-only users (no TG required)
+- [ ] Spec: docs/architecture/10-USER-PROFILE-UX.md
 
 ---
 
-## Current State (for reference)
+## Priority 3: Dashboard Write Operations (NEXT 2 WEEKS)
 
-- 75/75 tests passing
-- 0 bounties (seed data cleaned)
-- TaskEscrow v2 on mainnet (XRD only, 1 XRD min, 2.5% fee)
-- Trust scores live (Bronze/Silver/Gold)
-- 37 bot commands, 33 API endpoints, 14 pages
-- 6 public docs + archive
-- Bot hardened (global error handlers, all callbacks wrapped)
+The biggest UX gap. People who don't use TG can't participate.
+
+- [ ] Vote from dashboard (off-chain proposals)
+- [ ] Create proposal from dashboard (Silver+ trust gate)
+- [ ] Fund task from dashboard (fund button already built, needs ROLA for auth)
+- [ ] Claim task from dashboard
+- [ ] Submit work from dashboard
+
+**Note:** CV2 pattern proves ROLA isn't strictly needed — the TX itself is auth. But for off-chain actions (voting, proposing), we need session auth. Simplest path: TX-based auth for on-chain actions, lightweight session for off-chain.
+
+---
+
+## Priority 4: Escrow V3 Multi-Token (NEXT 2 WEEKS)
+
+- [ ] Accept XRD + xUSDC + xUSDT
+- [ ] Per-token minimum deposits ($5 stablecoin = stable)
+- [ ] Fee vaults per token
+- [ ] Deploy as new component (V2 stays for existing tasks)
+- [ ] Spec: docs/architecture/02-ESCROW-V3.md
+- [ ] Token addresses confirmed: xUSDC and xUSDT (Instabridge)
+
+---
+
+## Priority 5: Conviction Voting (MONTH 2)
+
+- [ ] Scrypto ConvictionVoting component
+- [ ] Mathematical model: y(t+1) = α·y(t) + S(t), 3-day half-life
+- [ ] Badge tier multipliers (Bronze 1x, Silver 1.5x, Gold 2x)
+- [ ] Fund allocation proposals competing for shared pool
+- [ ] Spec: docs/architecture/04-CONVICTION-VOTING.md
+- [ ] This IS CV3 — governance that executes, not just votes
+
+---
+
+## Priority 6: WG Infrastructure (MONTH 2-3)
+
+As working groups form, they need tooling:
+
+- [ ] WG dashboard page — members, tasks, proposals, reports per group
+- [ ] Budget tracking per WG (time-boxed, variance alerts)
+- [ ] Biweekly report template (bot command: `/wg report`)
+- [ ] Charter status tracking (active, sunset approaching, expired)
+- [ ] Multi-sig integration when Radix tooling ships
+
+---
+
+## Architecture Specs (12 docs in docs/architecture/)
+
+| # | Spec | Status |
+|---|------|--------|
+| 01 | ROLA Auth | Designed (parked — CV2 pattern may suffice) |
+| 02 | Escrow V3 Multi-Token | Designed, ready to build |
+| 03 | Dashboard Writes | Designed, 5-phase rollout |
+| 04 | Conviction Voting | Designed, full math model |
+| 05 | Verification System | Designed, PR merged MVP live |
+| 06 | CV3 Evolution | Designed, roadmap mapped |
+| 07 | Gateway Watcher | **Built and deployed** |
+| 08 | GitHub PR Watcher | **Built and deployed** |
+| 09 | Agent Orchestration | Designed, 4 agent modes |
+| 10 | User Profile UX | Designed, ready to build |
+| 11 | WG Charter Analysis | Research complete (Daffy's 6 WGs mapped) |
+| 12 | WG Best Practices | Research complete (IETF, Maker, ENS, Gitcoin, Apache) |
+
+---
+
+## What's Deployed (reference)
+
+- TaskEscrow: `component_rdx1cp8mwwe2pkrrtm05p7txgygf9y9uuwx6p87djkda8stk8nuwpyg56r`
+- Badge Manager: `component_rdx1czexylvvm0q4uhwpjaqmlznj9sd3y2jnmmah6qug9lm9sfm3tyrtva`
+- CV2 Governance: `component_rdx1cqj99hx2rdx04mrdvd3am7wcenh6c26m2w5uzv8vkv9pudveqzy7d2`
+- Dashboard: radixguild.com
+- Bot: @rad_gov
+- 75/75 pipeline tests passing
