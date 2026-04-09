@@ -676,7 +676,19 @@ bot.command("bounty", async (ctx) => {
     if (bountyFilter.blocked) return ctx.reply("Content not allowed. Please rephrase your task title.");
     const id = db.createBounty(title, xrd, ctx.from.id);
     queueXpReward(user.radix_address, "propose");
-    ctx.reply("Bounty #" + id + " created: " + xrd + " XRD\n" + title);
+    ctx.reply(
+      "Task #" + id + " created: " + xrd + " XRD\n" +
+      title + "\n\n" +
+      "Next: fund it on-chain so workers can claim it.\n\n" +
+      "1. Open the Radix Dashboard and send a transaction:\n" +
+      "   Deposit " + xrd + " XRD into the escrow vault\n" +
+      "2. Copy the transaction hash\n" +
+      "3. Run: /bounty fund " + id + " <tx_hash>\n\n" +
+      "The bot verifies your TX on-chain before marking it funded.\n" +
+      "Escrow: component_rdx1cp8m...pyg56r\n" +
+      "Min deposit: 200 XRD (~$5)\n\n" +
+      "View: " + PORTAL + "/bounties/" + id
+    );
     return;
   }
 
@@ -686,7 +698,7 @@ bot.command("bounty", async (ctx) => {
     const id = parseInt(args[1]);
     if (!id) return ctx.reply("Usage: /bounty claim <id>");
     const result = db.assignBounty(id, ctx.from.id, user.radix_address);
-    if (result.error === "not_funded") return ctx.reply("Task #" + id + " isn't funded yet. On-chain escrow vault coming soon — tasks will be fundable directly into a smart contract.");
+    if (result.error === "not_funded") return ctx.reply("Task #" + id + " isn't funded yet.\n\nThe creator needs to deposit XRD into the on-chain escrow, then verify with:\n/bounty fund " + id + " <tx_hash>");
     if (result.error === "not_found") return ctx.reply("Task #" + id + " not found.");
     if (result.error === "not_open") return ctx.reply("Task #" + id + " is not open for claiming.");
     if (result.changes === 0) return ctx.reply("Could not claim task #" + id + ".");
