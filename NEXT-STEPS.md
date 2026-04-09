@@ -1,8 +1,8 @@
 # Guild — Next Steps & Hardening Plan
-> Updated: 2026-04-09 | Phase 3: Beta + Community
+> Updated: 2026-04-10 | Phase 3: Beta + Community
 
 ## Status: Fully Operational
-14 pages, 70 tests, 32 API endpoints, 28+ bot commands, on-chain badges, CV2 voting, task marketplace. Deployed at radixguild.com.
+14 pages, 70 tests, 32 API endpoints, 36 bot commands, on-chain badges, CV2 voting, task marketplace, TaskEscrow Scrypto component (v2, not yet deployed). Deployed at radixguild.com.
 
 ---
 
@@ -18,11 +18,13 @@
 - Decision needed: re-propose with lower thresholds, or archive and move on
 - Check: `GET /api/charter` for current state
 
-### 1.3 Escrow Funding
-- 17 bounties exist but none funded (all show "unfunded")
-- Need: 50-100 XRD deposited to escrow contract
-- Script needed: fund-escrow.js (or manual via Radix Wallet)
-- **RULE: NEVER show tasks as claimable without funded escrow**
+### 1.3 Escrow Deployment
+- TaskEscrow v2 Scrypto component written (badge-manager/scrypto/task-escrow/)
+- NOT yet deployed to mainnet — needs `scrypto build` on VPS (Linux required)
+- `/bounty fund` command disabled until escrow is on-chain
+- 20 bounties exist but none funded — funding goes through smart contract, not wallet
+- Deploy steps: build on VPS → deploy to mainnet → wire bot + dashboard
+- **RULE: NO admin wallet custody. XRD goes into Scrypto vault only.**
 
 ---
 
@@ -137,7 +139,7 @@ node scripts/pipeline-test.js
 
 # 4. CRITICAL: Build dashboard before restart
 ssh guild-vps
-cd /opt/rad-dao/dashboard && npm run build
+cd /opt/rad-dao/guild-app && npm run build
 pm2 restart all
 
 # 5. Verify
@@ -152,7 +154,7 @@ curl https://radixguild.com/api/proposals
 ```
 Guild VPS (72.62.195.141)
 ├── guild-bot (PM2, port 3003)
-│   ├── index.js — Grammy TG bot (28+ commands)
+│   ├── index.js — Grammy TG bot (36 commands)
 │   ├── db.js — SQLite
 │   └── services/ — api, cv2, xp, gateway, faq, content-filter
 ├── guild-app (PM2, port 3002)
