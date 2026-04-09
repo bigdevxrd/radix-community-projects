@@ -130,6 +130,85 @@ Square root of tokens = votes. Reduces whale dominance.
 
 ---
 
+## Radix Native Integration
+
+### ROLA (Radix Off-Ledger Authentication)
+
+Cryptographic proof of wallet control. Built into `@radixdlt/rola` npm package (already in our RDT 2.2.1).
+
+**Flow:**
+1. Backend generates 32-byte challenge with 5-minute TTL
+2. Frontend sends challenge to wallet via dApp Toolkit
+3. Wallet signs challenge with account's private key (blake2b hash)
+4. Backend verifies signature against on-chain `owner_keys` metadata
+5. Session established (JWT/cookie)
+
+**What it proves:** This user controls this wallet address right now.
+**What it doesn't prove:** That this is a unique human.
+
+**Integration plan:**
+- Add `/api/challenge` endpoint (generate ROLA challenges)
+- Add `/api/verify` endpoint (verify signed challenges)
+- Dashboard login: wallet connect + ROLA = authenticated session
+- Replace current "connect and trust" with cryptographic verification
+
+### Radix Persona
+
+Wallet-native identity with selective disclosure. 3 fields available today:
+- Full name (given, family, nickname)
+- Email addresses (array)
+- Phone numbers (array)
+
+All data stored in wallet only — never on-chain, never stored by us. User approves per-field per-dApp. Permission is remembered for ongoing sessions.
+
+**Integration plan (Phase 2):**
+- Request Persona login with `.persona().withProof()`
+- For Silver tier: optionally verify email (send confirmation link)
+- Never store PII — re-request from wallet when needed
+
+### idOS Proof-of-Personhood (Phase 2-3)
+
+Third-party identity verification on Radix. Users verify once (KYC via idOS), receive a DID badge in their wallet. W3C DID/VC standards.
+
+**Integration plan:**
+- For Gold tier: check if account holds idOS PoP badge resource
+- Gateway API query: does this wallet have the PoP resource?
+- No KYC by us — idOS handles verification, we check the badge
+
+### Updated Tier Architecture
+
+```
+Frontend (dApp Toolkit)         Backend (Node)              Ledger (Scrypto)
+─────────────────────          ──────────────             ─────────────────
+GET /api/challenge      →  generateRolaChallenge()
+                        ←  challenge (32 bytes)
+
+Wallet signs challenge
+Returns proof + persona
+
+POST /api/verify        →  verifySignedChallenge()
+                            Check owner_keys on-chain
+                            Calculate trust score
+                            Check idOS badge (Gold)
+
+                        →  Issue session JWT with tier
+```
+
+### All layers are VOLUNTARY
+
+No tier is required. Badge is the minimum. Everything else is opt-in — operators choose how much trust to build. More trust unlocks more capabilities, but nobody is forced to verify anything.
+
+| Tier | Minimum | Optional Boosters | Unlocks |
+|------|---------|-------------------|---------|
+| Badge holder | Free badge mint | — | Vote, browse, join groups |
+| Bronze+ | Badge + ROLA login | Activity score visible | Authenticated sessions |
+| Silver+ | Badge + trust score 50+ | Persona data, email verify | + Create proposals, claim tasks |
+| Gold+ | Badge + trust score 200+ | idOS PoP badge, social vouch | + Verify tasks, treasury ops |
+
+The operator chooses their level. A badge holder who never does ROLA or shares Persona data can still vote and participate. They just can't do higher-trust actions until they earn it through activity or opt into verification.
+
+---
+
 ## What We DON'T Do
 
 - No KYC. Ever.
@@ -139,7 +218,7 @@ Square root of tokens = votes. Reduces whale dominance.
 - No wallet tracking or profiling.
 - No selling identity data.
 
-The guild is a coordination tool. Identity is built through participation, not surveillance.
+The guild is a coordination tool. Identity is built through participation, not surveillance. Every layer of identity is voluntary — operators choose how much trust to build. More trust = more capabilities. Zero trust required to participate.
 
 ---
 
