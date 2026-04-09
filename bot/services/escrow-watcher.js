@@ -74,10 +74,15 @@ async function pollEscrowEvents() {
 
   if (items.length === 0) return;
 
+  // Check if we've already processed all these TXs (same state version = no new data)
+  const maxVersion = Math.max(...items.map(t => t.state_version || 0));
+  if (maxVersion <= lastStateVersion) return; // nothing new
+
   for (const tx of items) {
     if (tx.transaction_status !== "CommittedSuccess") continue;
 
     const stateVersion = tx.state_version || 0;
+    if (stateVersion <= lastStateVersion) continue; // already processed
     const txHash = tx.intent_hash || "";
     const events = tx.receipt?.events || [];
 
@@ -115,7 +120,14 @@ async function pollEscrowEvents() {
     }
   }
 
-  if (items.length > 0) {
+  // Always advance state version to the max in this batch
+  if (maxVersion > lastStateVersion) {
+    lastStateVersion = maxVersion;
+    try {
+      db.prepare("INSERT OR REPLACE INTO watcher_state (key, value) VALUES ('escrow_last_version', ?)").run(String(maxVersion));
+    } catch (e) {
+      console.error("[EscrowWatcher] Failed to save state version:", e.message);
+    }
     console.log("[EscrowWatcher] Processed " + items.length + " TX(s). State version: " + lastStateVersion);
   }
 }
