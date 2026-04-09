@@ -7,6 +7,7 @@ const { setupWizard, setupSkipDesc, pendingProposals } = require("./wizard");
 const { setupGuidedWizards, wizardStates } = require("./wizards");
 const cv2 = require("./services/consultation");
 const { checkContent } = require("./services/content-filter");
+const escrowWatcher = require("./services/escrow-watcher");
 
 const TOKEN = process.env.TG_BOT_TOKEN;
 if (!TOKEN) { console.error("Set TG_BOT_TOKEN in .env"); process.exit(1); }
@@ -1638,5 +1639,8 @@ setInterval(() => {
 const { startApi } = require("./services/api");
 startApi();
 
+// Start escrow event watcher (auto-detects on-chain events)
+try { escrowWatcher.init(dbInstance, bot); } catch (e) { console.error("[Init] Escrow watcher failed (non-fatal):", e.message); }
+
 bot.start();
-console.log("Radix Guild Bot v4 running! (proposals, polls, auto-close, API, RadixTalk ready)");
+console.log("Radix Guild Bot v5 running! (proposals, polls, auto-close, escrow-watcher, API ready)");

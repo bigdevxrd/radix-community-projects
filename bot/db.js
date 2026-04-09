@@ -155,6 +155,11 @@ function init() {
   // On-chain escrow tracking on bounties
   try { db.exec("ALTER TABLE bounties ADD COLUMN onchain_task_id INTEGER"); } catch(e) {}
   try { db.exec("ALTER TABLE bounties ADD COLUMN escrow_verified INTEGER DEFAULT 0"); } catch(e) {}
+  // Verification system columns
+  try { db.exec("ALTER TABLE bounties ADD COLUMN approval_type TEXT DEFAULT 'admin_approved'"); } catch(e) {}
+  try { db.exec("ALTER TABLE bounties ADD COLUMN approval_repo TEXT"); } catch(e) {}
+  try { db.exec("ALTER TABLE bounties ADD COLUMN approval_pr TEXT"); } catch(e) {}
+  try { db.exec("ALTER TABLE bounties ADD COLUMN approval_criteria TEXT"); } catch(e) {}
 
   // Bounty milestones (partial delivery)
   db.exec(`
