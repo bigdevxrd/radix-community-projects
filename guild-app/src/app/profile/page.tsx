@@ -24,6 +24,7 @@ interface AchievementSummary {
 }
 interface MyBounty { id: number; title: string; reward_xrd: number; status: string; category: string; funded: number; }
 interface MyGroup { id: number; name: string; icon: string; role: string; member_count: number; }
+interface MyVote { proposal_id: number; vote: string; voted_at: number; title: string; proposal_status: string; type: string; }
 
 function ProfileContent() {
   const { account, connected, badge, badgeLoading } = useWallet();
@@ -32,6 +33,7 @@ function ProfileContent() {
   const [game, setGame] = useState<GameState | null>(null);
   const [myCreated, setMyCreated] = useState<MyBounty[]>([]);
   const [myAssigned, setMyAssigned] = useState<MyBounty[]>([]);
+  const [myVotes, setMyVotes] = useState<MyVote[]>([]);
   const [myGroups, setMyGroups] = useState<MyGroup[]>([]);
   const [trustScore, setTrustScore] = useState<{ score: number; tier: string } | null>(null);
   const [loading, setLoading] = useState(true);
@@ -43,8 +45,9 @@ function ProfileContent() {
       fetch(API_URL + "/game/" + account).then(r => r.json()).catch(() => null),
       fetch(API_URL + "/game/" + account + "/achievements").then(r => r.json()).catch(() => null),
       fetch(API_URL + "/bounties/my/" + account).then(r => r.json()).catch(() => null),
+      fetch(API_URL + "/votes/my/" + account).then(r => r.json()).catch(() => null),
       fetch(API_URL + "/groups").then(r => r.json()).catch(() => null),
-    ]).then(([badges, g, a, myTasks, groups]) => {
+    ]).then(([badges, g, a, myTasks, votes, groups]) => {
       setAllBadges(badges);
       setGame(g?.data || null);
       if (a?.data) setAchievements(a.data);
@@ -52,11 +55,8 @@ function ProfileContent() {
         setMyCreated(myTasks.data.created || []);
         setMyAssigned(myTasks.data.assigned || []);
       }
-      // Filter groups where this account is a member
-      if (groups?.data) {
-        // Groups API doesn't return per-user membership yet, so show all for now
-        setMyGroups(groups.data);
-      }
+      if (votes?.data) setMyVotes(votes.data);
+      if (groups?.data) setMyGroups(groups.data);
       setLoading(false);
     });
   }, [account]);
@@ -160,6 +160,36 @@ function ProfileContent() {
                 <Link href="/bounties" className="text-sm text-primary hover:underline">Browse tasks to claim</Link>
               </div>
             )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* My Votes */}
+      {myVotes.length > 0 && (
+        <Card>
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-sm uppercase tracking-wide text-muted-foreground">My Votes ({myVotes.length})</CardTitle>
+              <Link href="/proposals"><Button variant="ghost" size="sm">All Proposals</Button></Link>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              {myVotes.slice(0, 10).map(v => (
+                <Link key={v.proposal_id} href={`/proposals/${v.proposal_id}`} className="flex items-center justify-between py-1.5 border-b last:border-0 no-underline text-foreground hover:text-primary">
+                  <div className="flex-1 min-w-0 mr-3">
+                    <div className="flex items-center gap-2">
+                      <span className="text-muted-foreground font-mono text-[11px]">#{v.proposal_id}</span>
+                      <span className="text-sm truncate">{v.title}</span>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <Badge variant="default" className="text-[9px]">{v.vote}</Badge>
+                    <Badge variant={v.proposal_status === "active" ? "secondary" : "outline"} className="text-[9px]">{v.proposal_status}</Badge>
+                  </div>
+                </Link>
+              ))}
+            </div>
           </CardContent>
         </Card>
       )}

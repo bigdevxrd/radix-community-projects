@@ -499,6 +499,14 @@ function startApi() {
       return res.end(JSON.stringify({ ok: true, data: tickets }));
     }
 
+    // GET /api/votes/my/:address — voting history for a wallet address
+    const myVotesMatch = url.pathname.match(/^\/api\/votes\/my\/(account_rdx1[a-z0-9]{40,65})$/);
+    if (myVotesMatch) {
+      const votes = db.getVotesByAddress(myVotesMatch[1]);
+      res.writeHead(200);
+      return res.end(JSON.stringify({ ok: true, data: votes }));
+    }
+
     // GET /api/bounties/my/:address — tasks where user is creator or assignee
     const myBountiesMatch = url.pathname.match(/^\/api\/bounties\/my\/(account_rdx1[a-z0-9]{40,65})$/);
     if (myBountiesMatch) {

@@ -408,6 +408,12 @@ function getUser(tgId) {
   return db.prepare("SELECT * FROM users WHERE tg_id = ?").get(tgId);
 }
 
+function getVotesByAddress(radixAddress) {
+  return db.prepare(
+    "SELECT v.proposal_id, v.vote, v.voted_at, p.title, p.status as proposal_status, p.type FROM votes v JOIN proposals p ON v.proposal_id = p.id WHERE v.radix_address = ? ORDER BY v.voted_at DESC LIMIT 50"
+  ).all(radixAddress);
+}
+
 function getUserByAddress(radixAddress) {
   return db.prepare("SELECT * FROM users WHERE radix_address = ?").get(radixAddress);
 }
@@ -1167,7 +1173,7 @@ function getBoardStats(radixAddress) {
 
 module.exports = {
   init,
-  getUser, getUserByAddress, registerUser,
+  getUser, getUserByAddress, getVotesByAddress, registerUser,
   createProposal, updateProposalMessage, getProposal,
   getActiveProposals, closeExpiredProposals, closeProposal, getAmendments,
   recordVote, getVoteCounts, hasVoted,
