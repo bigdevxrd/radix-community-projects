@@ -66,8 +66,17 @@ function GroupsContent() {
         </div>
       )}
 
+      {/* How Working Groups Work */}
+      <Card>
+        <CardContent className="pt-4 pb-4">
+          <div className="bg-muted rounded-lg p-2 flex items-center justify-center">
+            <img src="/infographics/08-working-groups.svg" alt="Working Groups — Join, Contribute, Report" className="max-w-full h-auto max-h-[500px] rounded" />
+          </div>
+        </CardContent>
+      </Card>
+
       <div className="text-center text-xs text-muted-foreground">
-        Join a group: <a href={TG_BOT_URL} target="_blank" className="text-primary hover:underline">/group join &lt;name&gt;</a> in Telegram
+        Join a group: <a href={TG_BOT_URL} target="_blank" className="text-primary hover:underline">/group join &lt;name&gt;</a> in Telegram, or click Join on any group page above.
       </div>
     </div>
   );
