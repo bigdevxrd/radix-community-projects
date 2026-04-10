@@ -211,6 +211,9 @@ function DocsContent() {
       {/* Interactive Journey Overview */}
       <UserJourneyWidget />
 
+      {/* Visual Guides Slideshow */}
+      <GuideSlideshow />
+
       {/* Quick Start */}
       <Card>
         <CardHeader className="pb-3">
@@ -443,8 +446,7 @@ function DocsContent() {
         </CardContent>
       </Card>
 
-      {/* Visual Guides Slideshow */}
-      <GuideSlideshow />
+      {/* Visual Guides Slideshow — moved to higher position */}
 
       {/* Resources */}
       <Card>
