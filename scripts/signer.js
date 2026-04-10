@@ -1,7 +1,7 @@
 'use strict';
 /**
  * Standalone transaction signer for Radix Governance
- * Extracted from the trading engine — no external dependencies beyond radix-engine-toolkit
+ * Standalone signer — no external dependencies beyond radix-engine-toolkit
  *
  * Required env:
  *   BOT_PRIVATE_KEY — ed25519 hex private key

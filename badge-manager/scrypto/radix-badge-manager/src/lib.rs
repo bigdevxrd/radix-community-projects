@@ -9,7 +9,7 @@ use scrypto::prelude::*;
 pub struct UniversalBadgeData {
     /// Who this badge was issued to
     pub issued_to: String,
-    /// Schema name (e.g. "rad_dao_player", "sats_trader")
+    /// Schema name (e.g. "guild_member", "guild_role")
     pub schema_name: String,
     /// When minted (unix seconds)
     pub issued_at: i64,

@@ -12,7 +12,5 @@ badge-manager/build/
 .next/
 next-env.d.ts
 .env.local
-CLAUDE.md
 .claude/worktrees/
 docs/archive/
-.claude/worktrees/
