@@ -8,9 +8,9 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
-import { API_URL, TG_BOT_URL, ESCROW_COMPONENT, BADGE_NFT } from "@/lib/constants";
+import { API_URL, TG_BOT_URL, ESCROW_COMPONENT, ESCROW_RECEIPT, BADGE_NFT } from "@/lib/constants";
 import { useWallet } from "@/hooks/useWallet";
-import { createEscrowTaskManifest } from "@/lib/manifests";
+import { createEscrowTaskManifest, claimTaskManifest, submitTaskManifest, cancelTaskManifest } from "@/lib/manifests";
 
 interface BountyDetail {
   id: number; title: string; description: string | null; description_long: string | null;
@@ -79,6 +79,52 @@ function BountyDetailContent() {
       setFundError(e instanceof Error ? e.message : "Transaction failed");
     }
     setFunding(false);
+  }
+
+  const [actionStatus, setActionStatus] = useState("");
+  const [actionError, setActionError] = useState("");
+  const [actioning, setActioning] = useState(false);
+
+  async function handleClaim() {
+    if (!rdt || !account || !bounty) return;
+    setActioning(true); setActionStatus(""); setActionError("");
+    try {
+      const manifest = claimTaskManifest(ESCROW_COMPONENT, BADGE_NFT, account, bounty.id);
+      const result = await rdt.walletApi.sendTransaction({ transactionManifest: manifest, version: 1 });
+      if (result.isOk()) {
+        setActionStatus("Claimed! TX: " + result.value.transactionIntentHash.slice(0, 40) + "...");
+        setTimeout(() => fetchData(), 10000);
+      } else { setActionError("Transaction rejected."); }
+    } catch (e: unknown) { setActionError(e instanceof Error ? e.message : "Failed"); }
+    setActioning(false);
+  }
+
+  async function handleSubmit() {
+    if (!rdt || !account || !bounty) return;
+    setActioning(true); setActionStatus(""); setActionError("");
+    try {
+      const manifest = submitTaskManifest(ESCROW_COMPONENT, BADGE_NFT, account, bounty.id);
+      const result = await rdt.walletApi.sendTransaction({ transactionManifest: manifest, version: 1 });
+      if (result.isOk()) {
+        setActionStatus("Submitted! Awaiting verification. TX: " + result.value.transactionIntentHash.slice(0, 40) + "...");
+        setTimeout(() => fetchData(), 10000);
+      } else { setActionError("Transaction rejected."); }
+    } catch (e: unknown) { setActionError(e instanceof Error ? e.message : "Failed"); }
+    setActioning(false);
+  }
+
+  async function handleCancel() {
+    if (!rdt || !account || !bounty) return;
+    setActioning(true); setActionStatus(""); setActionError("");
+    try {
+      const manifest = cancelTaskManifest(ESCROW_COMPONENT, ESCROW_RECEIPT, account, bounty.id);
+      const result = await rdt.walletApi.sendTransaction({ transactionManifest: manifest, version: 1 });
+      if (result.isOk()) {
+        setActionStatus("Cancelled! XRD refunded. TX: " + result.value.transactionIntentHash.slice(0, 40) + "...");
+        setTimeout(() => fetchData(), 10000);
+      } else { setActionError("Transaction rejected."); }
+    } catch (e: unknown) { setActionError(e instanceof Error ? e.message : "Failed"); }
+    setActioning(false);
   }
 
   const fetchData = () => {
@@ -288,40 +334,85 @@ function BountyDetailContent() {
         {bounty.paid_tx && <a href={`https://dashboard.radixdlt.com/transaction/${bounty.paid_tx}`} target="_blank" className="text-xs text-primary hover:underline">Payment TX</a>}
       </div>
 
-      {/* CTA */}
-      {bounty.status === "open" && bounty.funded ? (
-        <a href={TG_BOT_URL} target="_blank" className="block">
-          <Button variant="default" className="w-full">Claim This Task in Telegram</Button>
-        </a>
-      ) : bounty.status === "open" && !bounty.funded ? (
-        <Card className="border-dashed">
-          <CardContent className="py-4 text-center space-y-3">
-            <div className="text-sm font-semibold">This task needs funding</div>
-            <p className="text-xs text-muted-foreground">{bounty.reward_xrd} XRD deposited into an on-chain escrow vault. No admin holds funds.</p>
-            {connected && badge ? (
-              <>
-                <Button
-                  variant="default"
-                  className="w-full"
-                  onClick={handleFund}
-                  disabled={funding}
-                >
-                  {funding ? "Waiting for wallet..." : `Fund ${bounty.reward_xrd} XRD`}
-                </Button>
-                {fundStatus && <p className="text-xs text-primary">{fundStatus}</p>}
-                {fundError && <p className="text-xs text-red-400">{fundError}</p>}
-                <p className="text-[10px] text-muted-foreground">Your Radix Wallet will open. XRD goes into a Scrypto smart contract vault.</p>
-              </>
-            ) : connected && !badge ? (
-              <div className="text-xs text-muted-foreground">
-                <a href="/mint" className="text-primary hover:underline">Mint a badge</a> to fund tasks.
-              </div>
-            ) : (
-              <p className="text-xs text-muted-foreground">Connect your wallet to fund this task.</p>
-            )}
-          </CardContent>
-        </Card>
-      ) : null}
+      {/* CTA — context-sensitive action buttons */}
+      <Card>
+        <CardContent className="py-4 space-y-3">
+          {/* Status message */}
+          {actionStatus && <p className="text-xs text-primary text-center">{actionStatus}</p>}
+          {actionError && <p className="text-xs text-red-400 text-center">{actionError}</p>}
+
+          {/* OPEN + UNFUNDED → Fund button */}
+          {bounty.status === "open" && !bounty.funded && connected && badge && (
+            <>
+              <div className="text-sm font-semibold text-center">This task needs funding</div>
+              <Button variant="default" className="w-full" onClick={handleFund} disabled={funding}>
+                {funding ? "Waiting for wallet..." : `Fund ${bounty.reward_xrd} XRD via Escrow`}
+              </Button>
+              {fundStatus && <p className="text-xs text-primary text-center">{fundStatus}</p>}
+              {fundError && <p className="text-xs text-red-400 text-center">{fundError}</p>}
+              <p className="text-[10px] text-muted-foreground text-center">XRD goes into a Scrypto smart contract vault. Cancel = full refund.</p>
+            </>
+          )}
+
+          {/* OPEN + FUNDED → Claim button */}
+          {bounty.status === "open" && bounty.funded && connected && badge && (
+            <>
+              <Button variant="default" className="w-full" onClick={handleClaim} disabled={actioning}>
+                {actioning ? "Waiting for wallet..." : "Claim This Task"}
+              </Button>
+              <p className="text-[10px] text-muted-foreground text-center">Your Radix Wallet will sign a claim transaction. Badge proof required.</p>
+            </>
+          )}
+
+          {/* OPEN + FUNDED → Cancel button (for creator with receipt NFT) */}
+          {bounty.status === "open" && bounty.funded && connected && account && (
+            <Button variant="ghost" size="sm" className="w-full" onClick={handleCancel} disabled={actioning}>
+              Cancel &amp; Refund (requires receipt NFT)
+            </Button>
+          )}
+
+          {/* ASSIGNED → Submit button (for assignee) */}
+          {bounty.status === "assigned" && connected && bounty.assignee_address === account && (
+            <>
+              <Button variant="default" className="w-full" onClick={handleSubmit} disabled={actioning}>
+                {actioning ? "Waiting for wallet..." : "Submit Work (Mark Complete)"}
+              </Button>
+              <p className="text-[10px] text-muted-foreground text-center">Marks your work as submitted on-chain. Awaiting verification.</p>
+            </>
+          )}
+
+          {/* ASSIGNED → Info for non-assignee */}
+          {bounty.status === "assigned" && connected && bounty.assignee_address !== account && (
+            <p className="text-sm text-muted-foreground text-center">This task is claimed by another worker.</p>
+          )}
+
+          {/* SUBMITTED → Awaiting verification */}
+          {bounty.status === "submitted" && (
+            <div className="text-center">
+              <Badge variant="outline" className="text-xs">Awaiting Verification</Badge>
+              <p className="text-[10px] text-muted-foreground mt-1">
+                {bounty.github_pr ? "PR merge watcher checks every 5 minutes." : "Admin will verify delivery."}
+              </p>
+            </div>
+          )}
+
+          {/* PAID → Complete */}
+          {bounty.status === "paid" && (
+            <div className="text-center">
+              <Badge variant="default" className="text-xs bg-green-600">Completed &amp; Paid</Badge>
+              {bounty.paid_tx && <p className="text-[10px] text-muted-foreground mt-1 font-mono">{bounty.paid_tx.slice(0, 40)}...</p>}
+            </div>
+          )}
+
+          {/* Not connected */}
+          {!connected && (
+            <p className="text-xs text-muted-foreground text-center">Connect your wallet to interact with this task.</p>
+          )}
+          {connected && !badge && bounty.status !== "paid" && bounty.status !== "submitted" && (
+            <p className="text-xs text-muted-foreground text-center"><a href="/mint" className="text-primary hover:underline">Mint a badge</a> to interact with tasks.</p>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

@@ -65,13 +65,11 @@ All code remains MIT licensed. All infrastructure is transferable. If I disappea
 
 ## Cost
 
-**Free for now - time limit tbc - then RAC approved or community crowd funded - $1,100 USD/month for 6 months trial**
-**Role and duties TBC**
-
+**Free for now while the community evaluates.** Proposing a trial arrangement — **$4,000 USD/month** hybrid ($2,400 base + $1,600 milestone bonuses) subject to RAC approval or community crowdfunding and negotiation. Funding allows me to focus full-time on Radix (40 weeks pa). The scope is TBC.
 
 **Payment structure (hybrid):**
-- $500/month base — covers infrastructure and ongoing maintenance
-- $600/month milestone bonus — released on delivery of each month's deliverables
+- $2,400/month base — covers infrastructure, maintenance, and ongoing development time
+- $1,600/month milestone bonus — released on delivery of each month's deliverables
 - Milestones verified by: working code deployed, public on GitHub, testable at radixguild.com
 - If deliverables aren't met → milestone payment withheld, community reviews
 

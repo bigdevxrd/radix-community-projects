@@ -408,6 +408,10 @@ function getUser(tgId) {
   return db.prepare("SELECT * FROM users WHERE tg_id = ?").get(tgId);
 }
 
+function getUserByAddress(radixAddress) {
+  return db.prepare("SELECT * FROM users WHERE radix_address = ?").get(radixAddress);
+}
+
 function registerUser(tgId, radixAddress, username) {
   return db.prepare(
     "INSERT OR REPLACE INTO users (tg_id, radix_address, username) VALUES (?, ?, ?)"
@@ -1163,7 +1167,7 @@ function getBoardStats(radixAddress) {
 
 module.exports = {
   init,
-  getUser, registerUser,
+  getUser, getUserByAddress, registerUser,
   createProposal, updateProposalMessage, getProposal,
   getActiveProposals, closeExpiredProposals, closeProposal, getAmendments,
   recordVote, getVoteCounts, hasVoted,

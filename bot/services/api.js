@@ -498,6 +498,23 @@ function startApi() {
       return res.end(JSON.stringify({ ok: true, data: tickets }));
     }
 
+    // GET /api/bounties/my/:address — tasks where user is creator or assignee
+    const myBountiesMatch = url.pathname.match(/^\/api\/bounties\/my\/(account_rdx1[a-z0-9]{40,65})$/);
+    if (myBountiesMatch) {
+      const addr = myBountiesMatch[1];
+      const user = db.getUserByAddress(addr);
+      const tgId = user ? user.tg_id : -1;
+      try {
+        const created = db.prepare("SELECT * FROM bounties WHERE creator_tg_id = ? ORDER BY created_at DESC").all(tgId);
+        const assigned = db.prepare("SELECT * FROM bounties WHERE assignee_address = ? ORDER BY assigned_at DESC").all(addr);
+        res.writeHead(200);
+        return res.end(JSON.stringify({ ok: true, data: { created, assigned, address: addr } }));
+      } catch (e) {
+        res.writeHead(200);
+        return res.end(JSON.stringify({ ok: true, data: { created: [], assigned: [], address: addr } }));
+      }
+    }
+
     // GET /api/trust/:tg_id — trust score for a user
     const trustMatch = url.pathname.match(/^\/api\/trust\/(\d+)$/);
     if (trustMatch) {

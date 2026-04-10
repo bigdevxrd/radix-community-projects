@@ -23,7 +23,7 @@ The community is forming governance structures NOW. Daffy published a full WG fr
 **Action: Submit the first operational Working Group charter.**
 
 - [ ] Draft charter using Daffy's template (Strategic Development WG)
-- [ ] Lead: bigdev | Budget: $1.1k USD/month | Sunset: 6 months
+- [ ] Lead: bigdev | Budget: $4k USD/month (hybrid) | Sunset: 6 months
 - [ ] Scope: architecture, infrastructure, maintenance, coordination tooling
 - [ ] Deliverables: stand up next 3 WGs, connect guild tooling to WG framework
 - [ ] Submit as PR to github.com/Shadaffy/radix-dao (collaborative, not fork)

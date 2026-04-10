@@ -74,12 +74,14 @@ Production DeFi trading engine on Radix mainnet:
 
 ### Rate
 
-**$1,100 USD per week ($57,200/year)**
+**$4,000 USD per month** — hybrid ($2,400 base + $1,600 milestone bonuses)
+
+Free for now while the community evaluates. Subject to RAC approval or community crowdfunding and negotiation. Funding allows full-time focus on Radix (40 weeks pa). Scope TBC.
 
 This covers:
-- 40+ hours/week dedicated to Radix community infrastructure
+- Full-time development, architecture, maintenance, and support
 - VPS hosting costs ($14/month across 2 servers)
-- AI/LLM costs for development agents ($35/month)
+- AI/LLM costs for development agents (~$100/month)
 - Domain maintenance (radixguild.com)
 
 ### Accountability

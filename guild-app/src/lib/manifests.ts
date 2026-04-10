@@ -222,6 +222,90 @@ CALL_METHOD
 ;`;
 }
 
+export function claimTaskManifest(
+  escrowComponent: string,
+  badgeNft: string,
+  account: string,
+  taskId: number,
+): string {
+  const e = validateAddress(escrowComponent, "component_rdx");
+  const a = validateAddress(account, "account_rdx");
+  const b = validateAddress(badgeNft, "resource_rdx");
+  return `CALL_METHOD
+  Address("${a}")
+  "create_proof_of_non_fungibles"
+  Address("${b}")
+  Array<NonFungibleLocalId>()
+;
+POP_FROM_AUTH_ZONE
+  Proof("badge_proof")
+;
+CALL_METHOD
+  Address("${e}")
+  "claim_task"
+  ${taskId}u64
+  Address("${a}")
+  Proof("badge_proof")
+;`;
+}
+
+export function submitTaskManifest(
+  escrowComponent: string,
+  badgeNft: string,
+  account: string,
+  taskId: number,
+): string {
+  const e = validateAddress(escrowComponent, "component_rdx");
+  const a = validateAddress(account, "account_rdx");
+  const b = validateAddress(badgeNft, "resource_rdx");
+  return `CALL_METHOD
+  Address("${a}")
+  "create_proof_of_non_fungibles"
+  Address("${b}")
+  Array<NonFungibleLocalId>()
+;
+POP_FROM_AUTH_ZONE
+  Proof("badge_proof")
+;
+CALL_METHOD
+  Address("${e}")
+  "submit_task"
+  ${taskId}u64
+  Proof("badge_proof")
+;`;
+}
+
+export function cancelTaskManifest(
+  escrowComponent: string,
+  escrowReceipt: string,
+  account: string,
+  taskId: number,
+): string {
+  const e = validateAddress(escrowComponent, "component_rdx");
+  const a = validateAddress(account, "account_rdx");
+  const r = validateAddress(escrowReceipt, "resource_rdx");
+  return `CALL_METHOD
+  Address("${a}")
+  "create_proof_of_non_fungibles"
+  Address("${r}")
+  Array<NonFungibleLocalId>(NonFungibleLocalId("#${taskId}#"))
+;
+POP_FROM_AUTH_ZONE
+  Proof("receipt_proof")
+;
+CALL_METHOD
+  Address("${e}")
+  "cancel_task"
+  ${taskId}u64
+  Proof("receipt_proof")
+;
+CALL_METHOD
+  Address("${a}")
+  "deposit_batch"
+  Expression("ENTIRE_WORKTOP")
+;`;
+}
+
 export function updateExtraDataManifest(
   manager: string, adminBadge: string, badgeId: string, extraData: string, account: string
 ): string {
