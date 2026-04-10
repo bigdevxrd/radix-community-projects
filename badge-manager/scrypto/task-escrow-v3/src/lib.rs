@@ -293,7 +293,9 @@ mod task_escrow_v3 {
 
             if fee > Decimal::ZERO {
                 let fee_bucket = funds.take(fee);
-                if let Some(mut fv) = self.fee_vaults.get_mut(&resource) {
+                let has_vault = self.fee_vaults.get(&resource).is_some();
+                if has_vault {
+                    let mut fv = self.fee_vaults.get_mut(&resource).unwrap();
                     fv.put(fee_bucket);
                 } else {
                     self.fee_vaults.insert(resource, Vault::with_bucket(fee_bucket));

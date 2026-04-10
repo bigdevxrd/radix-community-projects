@@ -242,18 +242,19 @@ mod conviction_voting {
                 proposal.weighted_staked += weighted_amount;
             }
 
-            // Store stake record
-            let stake_kvs = self.stakes.get_mut(&proposal_id).expect("Stakes not found");
-            let existing = stake_kvs.get(&badge_id);
-            if existing.is_some() {
-                drop(existing);
-                // Update existing stake
+            // Store stake record — check existence first, then act
+            let is_existing = {
+                let stake_kvs = self.stakes.get(&proposal_id).expect("Stakes not found");
+                stake_kvs.get(&badge_id).is_some()
+            };
+
+            if is_existing {
+                let mut stake_kvs = self.stakes.get_mut(&proposal_id).unwrap();
                 let mut stake = stake_kvs.get_mut(&badge_id).unwrap();
                 stake.amount += amount;
                 stake.weighted_amount += weighted_amount;
             } else {
-                drop(existing);
-                // New staker
+                let mut stake_kvs = self.stakes.get_mut(&proposal_id).unwrap();
                 stake_kvs.insert(badge_id.clone(), StakeRecord {
                     staker_badge_id: badge_id.clone(),
                     proposal_id,
