@@ -64,20 +64,14 @@ function BountyDetailContent() {
       const result = await rdt.walletApi.sendTransaction({ transactionManifest: manifest, version: 1 });
       if (result.isOk()) {
         const txHash = result.value.transactionIntentHash;
-        setFundStatus("Funded! Verifying on-chain...");
-        // Notify backend
-        try {
-          await fetch(API_URL + "/bounties", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ title: bounty.title, reward_xrd: bounty.reward_xrd, description: bounty.description }),
-          });
-        } catch (_) { /* backend sync is best-effort, gateway watcher catches it */ }
-        // Refresh bounty data after a short delay
+        setFundStatus("Funded! TX submitted. Verifying on-chain...");
+        // The gateway watcher will auto-detect the escrow event within 60s.
+        // We can also show the TX hash immediately for transparency.
+        // Refresh bounty data after gateway watcher has time to process
         setTimeout(() => {
           fetch(API_URL + "/bounties/" + bounty.id).then(r => r.json()).then(d => { if (d.data) setBounty(d.data); });
-        }, 5000);
-        setFundStatus("Funded on-chain! TX: " + txHash.slice(0, 30) + "...");
+        }, 10000);
+        setFundStatus("Funded on-chain! TX: " + txHash.slice(0, 40) + "...\nThe escrow watcher will verify within 60 seconds.");
       } else {
         setFundError("Transaction rejected or failed.");
       }
