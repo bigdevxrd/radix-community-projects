@@ -11,7 +11,7 @@
 | [PATTERNS.md](./PATTERNS.md) | Scrypto idioms, patterns, and best practices from our codebase |
 | [MANIFESTS.md](./MANIFESTS.md) | Transaction manifest patterns and examples |
 | [DEPLOYED-ADDRESSES.md](./DEPLOYED-ADDRESSES.md) | All mainnet addresses and component map |
-| [EXTERNAL-REPOS.md](./EXTERNAL-REPOS.md) | Official and community Scrypto repos |
+| [EXTERNAL-REPOS.md](./EXTERNAL-REPOS.md) | Official + community Scrypto repos, knowledge bases, SDKs, DeFi codebases, tooling |
 | [BLUEPRINT-CATALOG.md](./BLUEPRINT-CATALOG.md) | Detailed catalog of every blueprint we own |
 
 ---

@@ -13,7 +13,7 @@ This directory compiles everything an agent (or developer) needs to be immediate
 | [PATTERNS.md](./PATTERNS.md) | Scrypto idioms and best practices from our code | Writing or reviewing blueprints |
 | [MANIFESTS.md](./MANIFESTS.md) | Transaction manifest patterns and examples | Working on frontend → on-chain integration |
 | [DEPLOYED-ADDRESSES.md](./DEPLOYED-ADDRESSES.md) | All mainnet addresses and environment config | Deploying, configuring, or debugging |
-| [EXTERNAL-REPOS.md](./EXTERNAL-REPOS.md) | Official and community Scrypto repositories | Looking for examples or patterns |
+| [EXTERNAL-REPOS.md](./EXTERNAL-REPOS.md) | Broader Scrypto ecosystem — official repos, SDKs, community DeFi codebases, tooling, learning | Looking for examples, patterns, or ecosystem context |
 | [BLUEPRINT-CATALOG.md](./BLUEPRINT-CATALOG.md) | Full API reference for every blueprint we own | Implementing new features or integrations |
 
 ## Our Blueprints
