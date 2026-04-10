@@ -7,7 +7,7 @@
 
 ---
 
-**TLDR:** I've built and deployed open-source coordination tooling for Radix — task marketplace with on-chain escrow, badge-gated working groups, trust scoring, and a 14-page dashboard. I'm proposing to connect this infrastructure to the community's emerging governance framework (Daffy's WG charters, the RAC, MIDAO) and maintain it full-time for 6 months at $1,100/month.
+**TLDR:** I've built and deployed open-source coordination tooling for Radix — task marketplace with on-chain escrow, badge-gated working groups, trust scoring, and a 14-page dashboard. I'm proposing to connect this infrastructure to the community's emerging governance framework (Daffy's WG charters, the RAC, MIDAO) and maintain it full-time for trial 6 months at $1,100/month.
 
 ---
 
@@ -30,61 +30,50 @@ Everything below is live, open source (MIT), and verifiable on-chain:
 | REST API (34 endpoints) | Live | [/api/health](https://radixguild.com/api/health) |
 | Source code | Public | [GitHub](https://github.com/bigdevxrd/radix-community-projects) |
 
-Additional infrastructure already deployed:
+Infrastructure deployed:
 - **Trust scoring** — Bronze/Silver/Gold tiers calculated from on-chain activity (no KYC)
 - **Gateway event watcher** — auto-detects on-chain escrow events every 60 seconds
 - **PR merge watcher** — auto-verifies tasks when linked GitHub PRs are merged
 - **75 automated pipeline tests** — API, dashboard, gateway, escrow, data integrity
 - **Working groups** — 5 groups with badge-gated membership, join/leave from dashboard and TG
+- **All Self-Funded**
 
-Self-funded to date: ~$680 (domain, VPS, AI dev tools). Revenue: $0.
-
-## What I'm Proposing
+## PROPOSAL
 
 Connect this infrastructure to the community's governance framework and maintain it full-time for 6 months. Specifically:
 
-**Month 1-2: Working Group Operations**
+**Working Group Operations**
 - Working group scoped task boards (tasks linked to specific groups)
 - Per-WG role system (lead / steward / member / observer)
 - Per-WG budget tracking with spend-vs-envelope dashboard
 - Monthly structured reporting template (`/wg report`)
 - Charter lifecycle management (create → operate → sunset)
 
-**Month 3-4: Dashboard Write Operations + Multi-Token Escrow**
+**Dashboard Write Operations + Multi-Token Escrow**
 - Vote on proposals from the dashboard (not just TG)
 - Create proposals from the dashboard (trust-gated)
 - Fund tasks from the dashboard (wallet TX — fund button already built)
 - Escrow V3: accept xUSDC + xUSDT alongside XRD ($5 stablecoin minimum)
 
-**Month 5-6: Conviction Voting + Handover**
+**MConviction Voting + Handover**
 - On-chain conviction voting component (Scrypto) — time-weighted, anti-sybil
 - Badge tier multipliers for governance weight
 - Working group infrastructure handover documentation
-- Sunset review — community decides whether to renew
+- Sunset review — community decides whether to renew etc
 
 All code remains MIT licensed. All infrastructure is transferable. If I disappear, fork the code and deploy your own — everything is public.
 
 ## Cost
 
-**$1,100 USD/month for 6 months ($6,600 total)**
+**Free for now - time limit tbc - then RAC approved or community crowd funded - $1,100 USD/month for 6 months trial**
+**Role and duties TBC**
 
-| Item | Monthly |
-|------|---------|
-| Developer time (architecture, code, maintenance, support) | ~$950 |
-| VPS hosting (72.62.195.141) | $7 |
-| Domain (radixguild.com, 3yr prepaid) | $1 |
-| AI development tools | ~$100 |
-| Contingency | ~$42 |
-
-For context: a full-time Web3 developer at this level (Scrypto + React + Node + infrastructure) costs $4,000-8,000/month. This proposal is ~25% of market rate. The scope of work is substantial — I'm asking for enough to focus full-time on Radix rather than splitting my time.
 
 **Payment structure (hybrid):**
 - $500/month base — covers infrastructure and ongoing maintenance
 - $600/month milestone bonus — released on delivery of each month's deliverables
 - Milestones verified by: working code deployed, public on GitHub, testable at radixguild.com
 - If deliverables aren't met → milestone payment withheld, community reviews
-
-**Compare:** Dework raised $5M to build a task board for DAOs. This proposal delivers comparable functionality for the Radix ecosystem at 0.1% of that cost.
 
 ## How This Fits the Ecosystem
 
@@ -100,7 +89,7 @@ This proposal is complementary to all of the above, competitive with none.
 
 ## Track Record
 
-- 200+ commits over 7 days of development
+- 5 years hodling xrd
 - 2 Scrypto components deployed on mainnet (Badge Manager + TaskEscrow)
 - First on-chain escrow service on Radix
 - First task marketplace on Radix
