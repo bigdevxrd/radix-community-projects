@@ -262,7 +262,8 @@ bot.command("propose", async (ctx) => {
     title + "\n\n" +
     "By: @" + (ctx.from.username || ctx.from.first_name) + "\n" +
     "Ends: " + endsLabel() + " (" + HOURS + "h)\n" +
-    "Type: Yes/No/Amend",
+    "Type: Yes/No/Amend\n\n" +
+    "Vote: " + PORTAL + "/proposals/" + id,
     { reply_markup: buildYesNoKeyboard(id, counts) }
   );
   db.updateProposalMessage(id, msg.message_id, ctx.chat.id);
@@ -312,7 +313,8 @@ bot.command("poll", async (ctx) => {
     question + "\n\n" +
     "By: @" + (ctx.from.username || ctx.from.first_name) + "\n" +
     "Ends: " + endsLabel() + " (" + HOURS + "h)\n" +
-    "Type: Multi-choice (pick one)",
+    "Type: Multi-choice (pick one)\n\n" +
+    "Vote: " + PORTAL + "/proposals/" + id,
     { reply_markup: buildPollKeyboard(id, options, counts) }
   );
   db.updateProposalMessage(id, msg.message_id, ctx.chat.id);
@@ -346,7 +348,9 @@ bot.command("temp", async (ctx) => {
     question + "\n\n" +
     "By: @" + (ctx.from.username || ctx.from.first_name) + "\n" +
     "Ends: " + new Date(Date.now() + 86400000).toISOString().slice(0, 16).replace("T", " ") + " UTC (24h)\n" +
-    "Non-binding — just gauging interest",
+    "Non-binding — just gauging interest\n\n" +
+    "Vote: " + PORTAL + "/proposals/" + id + "\n" +
+    "Or tap the buttons below. Badge required.",
     { reply_markup: buildPollKeyboard(id, options, counts) }
   );
   db.updateProposalMessage(id, msg.message_id, ctx.chat.id);
