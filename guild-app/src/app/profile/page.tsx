@@ -22,12 +22,18 @@ interface AchievementSummary {
   achievements: { name: string; count: number }[];
   next_milestone: { name: string; grids_needed: number; nft: boolean } | null;
 }
+interface MyBounty { id: number; title: string; reward_xrd: number; status: string; category: string; funded: number; }
+interface MyGroup { id: number; name: string; icon: string; role: string; }
 
 function ProfileContent() {
   const { account, connected, badge, badgeLoading } = useWallet();
   const [allBadges, setAllBadges] = useState<BadgeInfo[]>([]);
   const [achievements, setAchievements] = useState<AchievementSummary | null>(null);
   const [game, setGame] = useState<GameState | null>(null);
+  const [myCreated, setMyCreated] = useState<MyBounty[]>([]);
+  const [myAssigned, setMyAssigned] = useState<MyBounty[]>([]);
+  const [myGroups, setMyGroups] = useState<MyGroup[]>([]);
+  const [trustScore, setTrustScore] = useState<{ score: number; tier: string } | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -36,10 +42,21 @@ function ProfileContent() {
       lookupAllBadges(account).catch(() => []),
       fetch(API_URL + "/game/" + account).then(r => r.json()).catch(() => null),
       fetch(API_URL + "/game/" + account + "/achievements").then(r => r.json()).catch(() => null),
-    ]).then(([badges, g, a]) => {
+      fetch(API_URL + "/bounties/my/" + account).then(r => r.json()).catch(() => null),
+      fetch(API_URL + "/groups").then(r => r.json()).catch(() => null),
+    ]).then(([badges, g, a, myTasks, groups]) => {
       setAllBadges(badges);
       setGame(g?.data || null);
       if (a?.data) setAchievements(a.data);
+      if (myTasks?.data) {
+        setMyCreated(myTasks.data.created || []);
+        setMyAssigned(myTasks.data.assigned || []);
+      }
+      // Filter groups where this account is a member
+      if (groups?.data) {
+        // Groups API doesn't return per-user membership yet, so show all for now
+        setMyGroups(groups.data);
+      }
       setLoading(false);
     });
   }, [account]);
@@ -93,6 +110,78 @@ function ProfileContent() {
           <CardContent className="py-8">
             <p className="text-muted-foreground text-sm mb-3">No badge found. Mint one to start participating.</p>
             <Link href="/mint"><Button size="sm">Mint Badge</Button></Link>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* My Tasks */}
+      {(myCreated.length > 0 || myAssigned.length > 0) && (
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm uppercase tracking-wide text-muted-foreground">My Tasks</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {myAssigned.length > 0 && (
+              <div>
+                <div className="text-[10px] text-muted-foreground uppercase mb-1">Claimed by me</div>
+                {myAssigned.map(b => (
+                  <Link key={b.id} href={`/bounties/${b.id}`} className="flex items-center justify-between py-1.5 border-b last:border-0 no-underline text-foreground hover:text-primary">
+                    <div className="flex items-center gap-2">
+                      <span className="text-muted-foreground font-mono text-[11px]">#{b.id}</span>
+                      <span className="text-sm truncate">{b.title.slice(0, 35)}</span>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span className="text-xs font-mono text-primary">{b.reward_xrd} XRD</span>
+                      <Badge variant="secondary" className="text-[9px]">{b.status}</Badge>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            )}
+            {myCreated.length > 0 && (
+              <div>
+                <div className="text-[10px] text-muted-foreground uppercase mb-1">Created by me</div>
+                {myCreated.map(b => (
+                  <Link key={b.id} href={`/bounties/${b.id}`} className="flex items-center justify-between py-1.5 border-b last:border-0 no-underline text-foreground hover:text-primary">
+                    <div className="flex items-center gap-2">
+                      <span className="text-muted-foreground font-mono text-[11px]">#{b.id}</span>
+                      <span className="text-sm truncate">{b.title.slice(0, 35)}</span>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span className="text-xs font-mono text-primary">{b.reward_xrd} XRD</span>
+                      <Badge variant={b.funded ? "default" : "outline"} className="text-[9px]">{b.funded ? "Funded" : "Unfunded"}</Badge>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            )}
+            {myCreated.length === 0 && myAssigned.length === 0 && (
+              <div className="text-center py-2">
+                <Link href="/bounties" className="text-sm text-primary hover:underline">Browse tasks to claim</Link>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* My Groups */}
+      {myGroups.length > 0 && (
+        <Card>
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-sm uppercase tracking-wide text-muted-foreground">Working Groups</CardTitle>
+              <Link href="/groups"><Button variant="ghost" size="sm">View All</Button></Link>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+              {myGroups.slice(0, 6).map(g => (
+                <Link key={g.id} href={`/groups/${g.id}`} className="bg-muted rounded-lg px-3 py-2 text-center no-underline text-foreground hover:bg-accent/10 transition-colors">
+                  <div className="text-sm font-semibold">{g.name}</div>
+                  <div className="text-[10px] text-muted-foreground">{g.member_count} members</div>
+                </Link>
+              ))}
+            </div>
           </CardContent>
         </Card>
       )}
