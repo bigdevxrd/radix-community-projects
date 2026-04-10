@@ -15,6 +15,8 @@ Idea --> Vote --> Decision --> Fund --> Build --> Verify --> Reward
 |--------|-------------|--------|
 | **On-chain Badges** | NFT identity (Scrypto v4, free mint) | Mainnet |
 | **On-chain Escrow** | TaskEscrow vault — XRD locked in Scrypto, no admin custody | Mainnet |
+| **Escrow V3** | Multi-token escrow (XRD, xUSDC, xUSDT) — per-token vaults | Ready |
+| **Conviction Voting** | Time-weighted fund allocation (CV3) — stake + auto-execute | Ready |
 | **Off-chain Voting** | Propose + vote in Telegram (free, badge-gated) | Live |
 | **On-chain Governance** | CV2 temperature checks + proposals (XRD-weighted) | Mainnet |
 | **Trust Scores** | Bronze/Silver/Gold tiers from on-chain activity (no KYC) | Live |
@@ -24,7 +26,9 @@ Idea --> Vote --> Decision --> Fund --> Build --> Verify --> Reward
 | **Dashboard** | 14 pages with fund button (wallet TX), trust scores, groups | Live |
 | **Gateway Watcher** | Auto-detects escrow events on-chain every 60s | Live |
 | **Dice Game** | Every governance action = dice roll = bonus XP | Live |
-| **REST API** | 33 endpoints including /api/health + /api/trust + /api/escrow | Live |
+| **Dashboard Writes** | Create proposals + bounties from dashboard (badge-gated) | Live |
+| **Profile Tabs** | Tabbed profile: Overview, Tasks, Votes, Groups, Trust Score | Live |
+| **REST API** | 37 endpoints including /api/health + /api/profile + /api/trust | Live |
 | **Pipeline Tests** | 75 automated tests (API, dashboard, gateway, escrow, CV2) | Passing |
 
 ## Quick Start (5 minutes)
@@ -94,7 +98,7 @@ Proposals are classified visually:
 | `/bounties` | Bounty board with categories, filters, funded/unfunded, escrow |
 | `/bounties/:id` | Task detail with acceptance criteria, milestones, claiming |
 | `/game` | Dice mechanics, XP rewards, leaderboard |
-| `/profile` | Badges, game stats, quick actions |
+| `/profile` | Tabbed profile: overview, tasks, votes, groups, trust score |
 | `/docs` | Guides, voting, XP, commands, FAQ, costs & transparency |
 | `/feedback` | Support tickets with status filters |
 | `/about` | Mission, operator, services, legal, on-chain verification |
@@ -105,8 +109,10 @@ Proposals are classified visually:
 ```
 Radix Ledger
   +-- BadgeManager (Scrypto v4) -- NFT identity + royalties
-  +-- TaskEscrow (Scrypto v2) -- on-chain vault, no admin custody
+  +-- TaskEscrow v2 (Scrypto) -- on-chain vault, XRD only
+  +-- TaskEscrow v3 (Scrypto) -- multi-token vault (XRD, xUSDC, xUSDT)
   +-- CV2 Governance (Scrypto) -- on-chain proposals + votes
+  +-- ConvictionVoting (Scrypto) -- time-weighted fund allocation (CV3)
   |
   | Gateway API (polled every 60s by escrow watcher)
   v
@@ -117,11 +123,11 @@ radixguild.com (Caddy, auto-TLS)
   |     +-- github.js (PR merge detection for auto-verify)
   |     +-- consultation.js (CV2 sync)
   |     +-- gateway.js (badge + escrow reads)
-  |     +-- REST API (33 endpoints)
+  |     +-- REST API (37 endpoints)
   |
   +-- guild-app (Next.js 16, port 3002)
   |     +-- shadcn/ui + Radix dApp Toolkit 2.2.1
-  |     +-- 14 pages, fund button (wallet TX), trust scores
+  |     +-- 14 pages, create proposals/bounties, fund (wallet TX), trust scores
   |
   +-- Caddy (reverse proxy, auto-TLS)
         /api/* --> bot (3003)
@@ -137,7 +143,7 @@ radixguild.com (Caddy, auto-TLS)
 - Run: `node scripts/pipeline-test.js`
 
 ### API
-See [docs/API-REFERENCE.md](./docs/API-REFERENCE.md) for all 33 endpoints.
+See [docs/API-REFERENCE.md](./docs/API-REFERENCE.md) for all 37 endpoints.
 
 ### Bot Commands
 See [docs/BOT-COMMANDS.md](./docs/BOT-COMMANDS.md) for all commands.

@@ -115,6 +115,49 @@ function ProposalsContent() {
   const [tcResult, setTcResult] = useState("");
   const [tcError, setTcError] = useState("");
 
+  // Off-chain proposal creation
+  const [showCreateProposal, setShowCreateProposal] = useState(false);
+  const [propTitle, setPropTitle] = useState("");
+  const [propDesc, setPropDesc] = useState("");
+  const [propType, setPropType] = useState("yesno");
+  const [propOptions, setPropOptions] = useState("");
+  const [propDays, setPropDays] = useState("3");
+  const [propSubmitting, setPropSubmitting] = useState(false);
+  const [propResult, setPropResult] = useState("");
+  const [propError, setPropError] = useState("");
+
+  async function handleCreateProposal() {
+    if (!propTitle.trim() || !account) return;
+    setPropSubmitting(true); setPropResult(""); setPropError("");
+    try {
+      const body: Record<string, unknown> = {
+        title: propTitle.trim(),
+        description: propDesc.trim() || null,
+        type: propType,
+        days_active: parseInt(propDays) || 3,
+        address: account,
+      };
+      if (propType === "multi" && propOptions.trim()) {
+        body.options = propOptions.split(",").map(o => o.trim()).filter(Boolean);
+      }
+      const res = await fetch(API_URL + "/proposals", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      const data = await res.json();
+      if (data.ok) {
+        setPropResult("Proposal #" + data.data.id + " created!");
+        setPropTitle(""); setPropDesc(""); setPropType("yesno"); setPropOptions(""); setPropDays("3");
+        setShowCreateProposal(false);
+        fetchData();
+      } else {
+        setPropError(data.error || "Failed to create proposal");
+      }
+    } catch { setPropError("Network error"); }
+    setPropSubmitting(false);
+  }
+
   async function handleCreateTC() {
     if (!rdt || !account || !tcTitle.trim()) return;
     const desc = tcDesc.trim() || tcTitle.trim();
@@ -489,6 +532,59 @@ function ProposalsContent() {
             </div>
           </CardContent>
         </Card>
+      )}
+
+      {/* ═══ CREATE PROPOSAL ═══ */}
+      {connected && (
+        <div>
+          <Button onClick={() => setShowCreateProposal(!showCreateProposal)} size="sm"
+            variant={showCreateProposal ? "outline" : "default"}>
+            {showCreateProposal ? "Cancel" : "+ Create Proposal"}
+          </Button>
+          {showCreateProposal && (
+            <Card className="mt-3">
+              <CardContent className="pt-4 pb-4 space-y-3">
+                <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">New Proposal</div>
+                <Input placeholder="Proposal title *" value={propTitle}
+                  onChange={e => setPropTitle(e.target.value)} className="text-sm" maxLength={500} />
+                <textarea placeholder="Description (optional)" value={propDesc}
+                  onChange={e => setPropDesc(e.target.value)} maxLength={2000}
+                  className="w-full min-h-[80px] rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring" />
+                <div>
+                  <div className="text-[10px] text-muted-foreground uppercase mb-1">Type</div>
+                  <div className="flex gap-1">
+                    {([["yesno", "Yes / No"], ["multi", "Multi-Choice"], ["temp", "Temp Check"]] as const).map(([val, label]) => (
+                      <Button key={val} variant={propType === val ? "secondary" : "ghost"} size="sm"
+                        onClick={() => setPropType(val)} className="text-[11px] h-7 px-2">{label}</Button>
+                    ))}
+                  </div>
+                </div>
+                {propType === "multi" && (
+                  <Input placeholder="Options (comma-separated, e.g. Option A, Option B, Option C)" value={propOptions}
+                    onChange={e => setPropOptions(e.target.value)} className="text-sm" />
+                )}
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] text-muted-foreground uppercase">Duration:</span>
+                  <Input type="number" min="1" max="14" value={propDays}
+                    onChange={e => setPropDays(e.target.value)} className="text-sm w-20" />
+                  <span className="text-xs text-muted-foreground">days (max 14)</span>
+                </div>
+                {propError && <p className="text-destructive text-xs">{propError}</p>}
+                <div className="flex gap-2">
+                  <Button onClick={handleCreateProposal} disabled={propSubmitting || !propTitle.trim()} size="sm">
+                    {propSubmitting ? "Creating..." : "Create Proposal"}
+                  </Button>
+                  <Button size="sm" variant="ghost" onClick={() => setShowCreateProposal(false)}>Cancel</Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+          {(propResult || propError) && !showCreateProposal && (
+            <Alert variant={propError ? "destructive" : "default"} className="mt-2">
+              <AlertDescription>{propError || propResult}</AlertDescription>
+            </Alert>
+          )}
+        </div>
       )}
 
       {/* ═══ ALL PROPOSALS ═══ */}

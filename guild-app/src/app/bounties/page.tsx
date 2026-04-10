@@ -6,6 +6,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import Link from "next/link";
+import { Input } from "@/components/ui/input";
+import { useWallet } from "@/hooks/useWallet";
 import { API_URL, TG_BOT_URL } from "@/lib/constants";
 
 interface Bounty {
@@ -54,6 +56,7 @@ function deadlineCountdown(deadline: number | null): string | null {
 }
 
 function BountiesContent() {
+  const { account, connected, badge } = useWallet();
   const [bounties, setBounties] = useState<Bounty[]>([]);
   const [stats, setStats] = useState<BountyStats | null>(null);
   const [transactions, setTransactions] = useState<EscrowTx[]>([]);
@@ -63,6 +66,48 @@ function BountiesContent() {
   const [filter, setFilter] = useState("all");
   const [catFilter, setCatFilter] = useState("all");
   const [showTxs, setShowTxs] = useState(false);
+
+  // Create form state
+  const [showCreate, setShowCreate] = useState(false);
+  const [newTitle, setNewTitle] = useState("");
+  const [newReward, setNewReward] = useState("");
+  const [newDescription, setNewDescription] = useState("");
+  const [newCategory, setNewCategory] = useState("general");
+  const [newDifficulty, setNewDifficulty] = useState("medium");
+  const [newDeadlineDays, setNewDeadlineDays] = useState("");
+  const [creating, setCreating] = useState(false);
+  const [createError, setCreateError] = useState("");
+
+  async function handleCreateBounty() {
+    if (!newTitle.trim() || !newReward) { setCreateError("Title and reward are required"); return; }
+    const reward = parseFloat(newReward);
+    if (isNaN(reward) || reward < 1) { setCreateError("Reward must be at least 1 XRD"); return; }
+    setCreating(true); setCreateError("");
+    try {
+      const res = await fetch(API_URL + "/bounties", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: newTitle.trim(),
+          reward_xrd: reward,
+          description: newDescription.trim() || null,
+          category: newCategory,
+          difficulty: newDifficulty,
+          deadline_days: newDeadlineDays ? parseInt(newDeadlineDays) : null,
+        }),
+      });
+      const data = await res.json();
+      if (data.ok) {
+        setShowCreate(false);
+        setNewTitle(""); setNewReward(""); setNewDescription("");
+        setNewCategory("general"); setNewDifficulty("medium"); setNewDeadlineDays("");
+        fetchData();
+      } else {
+        setCreateError(data.error || "Failed to create task");
+      }
+    } catch { setCreateError("Network error"); }
+    setCreating(false);
+  }
 
   const fetchData = () => {
     setLoading(true); setError(false);
@@ -117,6 +162,59 @@ function BountiesContent() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Create Task */}
+      {connected && badge && (
+        <div>
+          <Button onClick={() => setShowCreate(!showCreate)} size="sm"
+            variant={showCreate ? "outline" : "default"}>
+            {showCreate ? "Cancel" : "+ Create Task"}
+          </Button>
+          {showCreate && (
+            <Card className="mt-3">
+              <CardContent className="pt-4 pb-4 space-y-3">
+                <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">New Task</div>
+                <Input placeholder="Task title *" value={newTitle}
+                  onChange={e => setNewTitle(e.target.value)} className="text-sm" />
+                <div className="grid grid-cols-2 gap-3">
+                  <Input type="number" placeholder="Reward (XRD) *" min="1" value={newReward}
+                    onChange={e => setNewReward(e.target.value)} className="text-sm" />
+                  <Input type="number" placeholder="Deadline (days)" min="1" value={newDeadlineDays}
+                    onChange={e => setNewDeadlineDays(e.target.value)} className="text-sm" />
+                </div>
+                <textarea placeholder="Description (optional)" value={newDescription}
+                  onChange={e => setNewDescription(e.target.value)}
+                  className="w-full min-h-[80px] rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring" />
+                <div className="flex flex-wrap gap-2">
+                  <div>
+                    <div className="text-[10px] text-muted-foreground uppercase mb-1">Category</div>
+                    <div className="flex gap-1">
+                      {(categories.length > 0 ? categories.map(c => c.name) : ["general", "development", "design", "docs", "community", "research"]).map(c => (
+                        <Button key={c} variant={newCategory === c ? "secondary" : "ghost"} size="sm"
+                          onClick={() => setNewCategory(c)} className="text-[11px] h-7 px-2 capitalize">{c}</Button>
+                      ))}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-[10px] text-muted-foreground uppercase mb-1">Difficulty</div>
+                    <div className="flex gap-1">
+                      {["easy", "medium", "hard", "expert"].map(d => (
+                        <Button key={d} variant={newDifficulty === d ? "secondary" : "ghost"} size="sm"
+                          onClick={() => setNewDifficulty(d)}
+                          className={`text-[11px] h-7 px-2 capitalize ${DIFFICULTY_COLORS[d] || ""}`}>{d}</Button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+                {createError && <p className="text-destructive text-xs">{createError}</p>}
+                <Button onClick={handleCreateBounty} disabled={creating} size="sm">
+                  {creating ? "Creating..." : "Create Task"}
+                </Button>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      )}
 
       {/* Error State */}
       {error && !loading && (
@@ -321,11 +419,11 @@ function BountiesContent() {
         </div>
       )}
 
-      <div className="text-center pt-2">
-        <a href={TG_BOT_URL} target="_blank" className="text-primary text-sm font-semibold hover:underline">
-          Create Bounties in Telegram
-        </a>
-      </div>
+      {!connected && (
+        <div className="text-center pt-2 text-sm text-muted-foreground">
+          Connect your wallet to create tasks.
+        </div>
+      )}
     </div>
   );
 }

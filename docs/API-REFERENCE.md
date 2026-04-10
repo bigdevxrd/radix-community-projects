@@ -1,6 +1,6 @@
 # API Reference
 
-REST API for the Radix Guild governance system. 34 endpoints covering proposals, badges, bounties, escrow, charter, gamification, trust scores, working groups, feedback, and CV2 on-chain governance.
+REST API for the Radix Guild governance system. 37 endpoints covering proposals, badges, bounties, escrow, charter, gamification, trust scores, working groups, feedback, profiles, and CV2 on-chain governance.
 
 ## Base URL
 
@@ -256,7 +256,38 @@ Single on-chain proposal detail.
 
 ### GET /api/trust/:tg_id
 
-Trust score and tier for a user. Returns score, tier (bronze/silver/gold), and full breakdown of contributing factors.
+Trust score and tier for a user by Telegram ID. Returns score, tier (bronze/silver/gold), and full breakdown of contributing factors.
+
+### GET /api/trust/address/:address
+
+Trust score by wallet address. Resolves address to tg_id internally. Returns same data as above.
+
+---
+
+## Profile
+
+### GET /api/profile/:address
+
+Consolidated profile data for a wallet address. Single call replaces 6 parallel fetches. Returns:
+- `trust` — trust score + breakdown (if TG linked)
+- `votes` — full voting history
+- `tasks` — `{ created: [], assigned: [] }`
+- `groups` — working groups the user belongs to
+- `game` — dice game stats
+- `achievements` — grid game achievements
+- `user` — username + registration date
+
+---
+
+## Proposals (Write)
+
+### POST /api/proposals
+
+Create a new off-chain proposal from the dashboard. Badge-gated.
+
+Body: `{ title, description?, type, options?, days_active?, address }`
+
+Types: `yesno` (default), `multi` (requires `options` array), `temp`
 
 ---
 

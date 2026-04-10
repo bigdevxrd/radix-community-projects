@@ -59,7 +59,8 @@ function startApi() {
     const isBountyPost = req.method === "POST" && url.pathname === "/api/bounties";
     const isGroupPost = req.method === "POST" && url.pathname.match(/^\/api\/groups\/\d+\/(join|leave)$/);
     const isVotePost = req.method === "POST" && url.pathname.match(/^\/api\/proposals\/\d+\/vote$/);
-    if (req.method !== "GET" && !isGamePost && !isFeedbackPost && !isBountyPost && !isGroupPost && !isVotePost) {
+    const isProposalPost = req.method === "POST" && url.pathname === "/api/proposals";
+    if (req.method !== "GET" && !isGamePost && !isFeedbackPost && !isBountyPost && !isGroupPost && !isVotePost && !isProposalPost) {
       res.writeHead(405);
       return res.end(JSON.stringify({ ok: false, error: "method_not_allowed" }));
     }
@@ -125,6 +126,44 @@ function startApi() {
 
       res.writeHead(200);
       return res.end(JSON.stringify({ ok: true, data: result, page, limit }));
+    }
+
+    // POST /api/proposals — create proposal from dashboard
+    if (url.pathname === "/api/proposals" && req.method === "POST") {
+      try {
+        const body = await readBody(req);
+        if (!body.title || !body.title.trim()) {
+          res.writeHead(400);
+          return res.end(JSON.stringify({ ok: false, error: "title_required" }));
+        }
+        if (!body.address) {
+          res.writeHead(400);
+          return res.end(JSON.stringify({ ok: false, error: "address_required" }));
+        }
+        const text = body.title + " " + (body.description || "");
+        const filterCheck = checkContent(text);
+        if (filterCheck.blocked) {
+          res.writeHead(400);
+          return res.end(JSON.stringify({ ok: false, error: "content_not_allowed" }));
+        }
+        let user = db.getUserByAddress(body.address);
+        let tgId = user ? user.tg_id : -Math.floor(Date.now() / 1000);
+        if (!user) {
+          try { db.registerUser(tgId, body.address, "web-user"); } catch (e) { /* ignore */ }
+        }
+        const id = db.createProposal(body.title.trim().slice(0, 500), tgId, {
+          type: body.type || "yesno",
+          options: body.options || null,
+          daysActive: Math.min(parseInt(body.days_active) || 3, 14),
+          minVotes: parseInt(body.min_votes) || 3,
+          description: (body.description || "").trim().slice(0, 2000),
+        });
+        res.writeHead(200);
+        return res.end(JSON.stringify({ ok: true, data: { id } }));
+      } catch (e) {
+        res.writeHead(400);
+        return res.end(JSON.stringify({ ok: false, error: "invalid_body" }));
+      }
     }
 
     // ── Game Board Endpoints (before general game route) ──
@@ -576,6 +615,53 @@ function startApi() {
       }
       res.writeHead(200);
       return res.end(JSON.stringify({ ok: true, data: score }));
+    }
+
+    // GET /api/trust/address/:address — trust score by wallet address
+    const trustAddrMatch = url.pathname.match(/^\/api\/trust\/address\/(account_rdx1[a-z0-9]{40,65})$/);
+    if (trustAddrMatch) {
+      const user = db.getUserByAddress(trustAddrMatch[1]);
+      if (!user) {
+        res.writeHead(404);
+        return res.end(JSON.stringify({ ok: false, error: "user_not_found" }));
+      }
+      const score = db.getTrustScore(user.tg_id);
+      res.writeHead(200);
+      return res.end(JSON.stringify({ ok: true, data: score || { score: 0, tier: "none", breakdown: {} } }));
+    }
+
+    // GET /api/profile/:address — consolidated profile data
+    const profileMatch = url.pathname.match(/^\/api\/profile\/(account_rdx1[a-z0-9]{40,65})$/);
+    if (profileMatch) {
+      const addr = profileMatch[1];
+      const user = db.getUserByAddress(addr);
+      const tgId = user ? user.tg_id : -1;
+
+      const trust = tgId > 0 ? db.getTrustScore(tgId) : null;
+      const votes = db.getVotesByAddress(addr);
+      const groups = db.getGroupsForMember(addr);
+      const game = db.getGameState(addr);
+      const achievements = db.getAchievementSummary(addr);
+
+      let created = [], assigned = [];
+      try {
+        created = db.prepare("SELECT * FROM bounties WHERE creator_tg_id = ? ORDER BY created_at DESC").all(tgId);
+        assigned = db.prepare("SELECT * FROM bounties WHERE assignee_address = ? ORDER BY assigned_at DESC").all(addr);
+      } catch (e) { /* no bounties */ }
+
+      res.writeHead(200);
+      return res.end(JSON.stringify({
+        ok: true,
+        data: {
+          trust,
+          votes,
+          tasks: { created, assigned },
+          groups,
+          game,
+          achievements,
+          user: user ? { username: user.username, registered_at: user.registered_at } : null,
+        },
+      }));
     }
 
     // GET /api/feedback/stats — ticket counts
