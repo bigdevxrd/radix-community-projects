@@ -89,10 +89,16 @@ function Dashboard() {
           {/* Value Proposition */}
           <Card className="bg-gradient-to-br from-card to-muted">
             <CardContent className="px-6 py-8 text-center">
-              <h1 className="text-2xl font-bold mb-2">Radix Guild</h1>
-              <p className="text-base text-muted-foreground mb-4 max-w-lg mx-auto">
+              <div className="flex items-center justify-center gap-2 mb-2">
+                <h1 className="text-2xl font-bold">Radix Guild</h1>
+                <Badge variant="outline" className="text-[9px] font-mono border-yellow-500 text-yellow-500">BETA</Badge>
+              </div>
+              <p className="text-base text-muted-foreground mb-1 max-w-lg mx-auto">
                 Community governance + task marketplace for Radix.<br />
                 Free badges. Paid tasks. On-chain identity.
+              </p>
+              <p className="text-[11px] text-muted-foreground/70 mb-4 max-w-md mx-auto">
+                System is in test mode. All governance parameters are builder defaults until the community resolves the <a href="/proposals" className="text-primary hover:underline">32 charter decisions</a>.
               </p>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 max-w-xl mx-auto mb-4">
                 <div className="bg-background/50 rounded-lg p-3">

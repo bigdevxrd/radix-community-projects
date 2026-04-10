@@ -29,7 +29,7 @@ function init() {
       round INTEGER DEFAULT 1,
       created_at INTEGER DEFAULT (strftime('%s','now')),
       ends_at INTEGER NOT NULL,
-      min_votes INTEGER DEFAULT 2,
+      min_votes INTEGER DEFAULT 3,
       tg_message_id INTEGER,
       tg_chat_id INTEGER,
       FOREIGN KEY (creator_tg_id) REFERENCES users(tg_id),
@@ -424,7 +424,7 @@ function createProposal(title, creatorTgId, opts = {}) {
     type = "yesno",
     options = null,
     daysActive = 3,
-    minVotes = 2,
+    minVotes = 3,
     parentId = null,
     round = 1,
   } = opts;
