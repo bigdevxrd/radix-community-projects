@@ -10,7 +10,7 @@
 1. Go to https://dashboard.radixdlt.com
 2. Connect your wallet (use the dApp definition account)
 3. Deploy Package → select `task_escrow.wasm` from the VPS
-4. **Download the WASM first:** `scp guild-vps:/opt/rad-dao/badge-manager/scrypto/task-escrow/target/wasm32-unknown-unknown/release/task_escrow.wasm .`
+4. **Download the WASM first:** `scp guild-vps:/opt/radix-guild/badge-manager/scrypto/task-escrow/target/wasm32-unknown-unknown/release/task_escrow.wasm .`
 5. Confirm the transaction
 6. Copy the **Package Address** → `package_rdx1...`
 

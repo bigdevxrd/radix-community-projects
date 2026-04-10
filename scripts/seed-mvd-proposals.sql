@@ -1,5 +1,5 @@
 -- Seed MVD Proposals — Full Decision Flow
--- Run: cd /opt/rad-dao/bot && sqlite3 guild.db < /path/to/seed-mvd-proposals.sql
+-- Run: cd /opt/radix-guild/bot && sqlite3 guild.db < /path/to/seed-mvd-proposals.sql
 
 -- Ensure user exists
 INSERT OR IGNORE INTO users (tg_id, radix_address, username)
