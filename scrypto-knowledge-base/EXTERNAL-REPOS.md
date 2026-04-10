@@ -147,15 +147,15 @@
 | Repository | Stars | Project | What You Can Learn |
 |-----------|-------|---------|-------------------|
 | [EtherealDAO/ethereal-contracts](https://github.com/EtherealDAO/ethereal-contracts) | 8 ⭐ | **EtherealDAO** | DAO protocol Scrypto contracts |
-| [ArcaneLabyrinth/arcane-blueprint](https://github.com/ArcaneLabyrinth/arcane-blueprint) | — | ArcaneLabyrinth | Secure decentralised voting system |
+| [ArcaneLabyrinth/arcane-blueprint](https://github.com/ArcaneLabyrinth/arcane-blueprint) | 0 ⭐ | ArcaneLabyrinth | Secure decentralised voting system |
 
 ### Cross-Chain & Bridging
 
 | Repository | Stars | Project | What You Can Learn |
 |-----------|-------|---------|-------------------|
 | [hyperlane-xyz/hyperlane-radix](https://github.com/hyperlane-xyz/hyperlane-radix) | 8 ⭐ | **Hyperlane** | Cross-chain messaging protocol in Scrypto |
-| [Morpher-io/radix-oracle-contracts](https://github.com/Morpher-io/radix-oracle-contracts) | — | Morpher | Oracle contracts for external data feeds |
-| [redstone-finance/radix-connector-demo](https://github.com/redstone-finance/radix-connector-demo) | — | RedStone | Oracle data feed connector demo |
+| [Morpher-io/radix-oracle-contracts](https://github.com/Morpher-io/radix-oracle-contracts) | 0 ⭐ | Morpher | Oracle contracts for external data feeds |
+| [redstone-finance/radix-connector-demo](https://github.com/redstone-finance/radix-connector-demo) | 0 ⭐ | RedStone | Oracle data feed connector demo |
 
 ### Token Launches & Utilities
 
@@ -197,7 +197,7 @@
 | [radixdlt/official-examples](https://github.com/radixdlt/official-examples) | 9 ⭐ | Officially maintained examples | Guaranteed up-to-date patterns |
 | [radixdlt/experimental-examples](https://github.com/radixdlt/experimental-examples) | 7 ⭐ | Experimental snippets and POCs | Cutting-edge patterns, may not be production-ready |
 | [radixdlt/rola-examples](https://github.com/radixdlt/rola-examples) | 3 ⭐ | ROLA authentication examples | Wallet authentication integration |
-| [hknio/l1-fuzzing-workshop](https://github.com/hknio/l1-fuzzing-workshop) | — | Layer 1 fuzzing workshop for Scrypto | Security testing and fuzzing techniques |
+| [hknio/l1-fuzzing-workshop](https://github.com/hknio/l1-fuzzing-workshop) | 0 ⭐ | Layer 1 fuzzing workshop for Scrypto | Security testing and fuzzing techniques |
 
 ---
 
