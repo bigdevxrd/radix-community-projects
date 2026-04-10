@@ -1,0 +1,180 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 1080" width="1080" height="1080">
+  <defs>
+    <linearGradient id="bg8" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0f172a"/>
+      <stop offset="100%" stop-color="#1e293b"/>
+    </linearGradient>
+    <filter id="glow8">
+      <feGaussianBlur stdDeviation="4" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <style>
+      .t8 { font-family: Inter, system-ui, sans-serif; font-weight: 700; fill: #f8fafc; }
+      .s8 { font-family: Inter, system-ui, sans-serif; font-weight: 500; fill: #94a3b8; }
+      .b8 { font-family: Inter, system-ui, sans-serif; font-weight: 400; fill: #cbd5e1; }
+      .h8 { font-family: Inter, system-ui, sans-serif; font-weight: 600; }
+      .mono8 { font-family: 'JetBrains Mono', monospace; font-weight: 600; }
+    </style>
+  </defs>
+
+  <rect width="1080" height="1080" fill="url(#bg8)"/>
+
+  <!-- Header -->
+  <text x="540" y="65" text-anchor="middle" class="s8" font-size="20">COORDINATION</text>
+  <text x="540" y="115" text-anchor="middle" class="t8" font-size="44">Working Groups</text>
+  <text x="540" y="155" text-anchor="middle" class="s8" font-size="18">Join a group. Claim a task. Get paid. File a report.</text>
+
+  <!-- 3-Step Join Flow -->
+  <text x="540" y="210" text-anchor="middle" class="h8" font-size="18" fill="#2dd4bf">HOW TO JOIN</text>
+
+  <!-- Step 1 -->
+  <g transform="translate(180, 260)">
+    <circle cx="0" cy="0" r="28" fill="#0f172a" stroke="#2dd4bf" stroke-width="2.5" filter="url(#glow8)"/>
+    <text x="0" y="8" text-anchor="middle" class="mono8" font-size="22" fill="#2dd4bf">1</text>
+    <text x="50" y="-5" class="h8" font-size="17" fill="#f8fafc">Discover</text>
+    <text x="50" y="15" class="b8" font-size="13">Browse groups at radixguild.com/groups</text>
+  </g>
+
+  <!-- Arrow -->
+  <line x1="420" y1="260" x2="440" y2="260" stroke="#334155" stroke-width="2" marker-end="url(#arr8)"/>
+
+  <!-- Step 2 -->
+  <g transform="translate(540, 260)">
+    <circle cx="0" cy="0" r="28" fill="#0f172a" stroke="#4ea8de" stroke-width="2.5" filter="url(#glow8)"/>
+    <text x="0" y="8" text-anchor="middle" class="mono8" font-size="22" fill="#4ea8de">2</text>
+    <text x="50" y="-5" class="h8" font-size="17" fill="#f8fafc">Join</text>
+    <text x="50" y="15" class="b8" font-size="13">Click Join (badge required)</text>
+  </g>
+
+  <!-- Step 3 -->
+  <g transform="translate(540, 330)">
+    <circle cx="-360" cy="0" r="28" fill="#0f172a" stroke="#a78bfa" stroke-width="2.5" filter="url(#glow8)"/>
+    <text x="-360" y="8" text-anchor="middle" class="mono8" font-size="22" fill="#a78bfa">3</text>
+    <text x="-310" y="-5" class="h8" font-size="17" fill="#f8fafc">Contribute</text>
+    <text x="-310" y="15" class="b8" font-size="13">Claim a task, do the work, get paid from escrow</text>
+  </g>
+
+  <!-- Divider -->
+  <line x1="100" y1="390" x2="980" y2="390" stroke="#334155" stroke-width="1"/>
+
+  <!-- WG Structure -->
+  <text x="540" y="435" text-anchor="middle" class="h8" font-size="18" fill="#2dd4bf">WORKING GROUP STRUCTURE</text>
+
+  <!-- Role cards -->
+  <g transform="translate(120, 470)">
+    <rect width="200" height="100" rx="12" fill="#1e293b" stroke="#f59e0b" stroke-width="2"/>
+    <text x="100" y="30" text-anchor="middle" class="h8" font-size="16" fill="#f59e0b">Lead</text>
+    <text x="100" y="52" text-anchor="middle" class="b8" font-size="12">Accountable for delivery</text>
+    <text x="100" y="70" text-anchor="middle" class="b8" font-size="12">Sets direction + reports</text>
+    <text x="100" y="88" text-anchor="middle" class="mono8" font-size="11" fill="#f59e0b">6-month term</text>
+  </g>
+
+  <g transform="translate(350, 470)">
+    <rect width="200" height="100" rx="12" fill="#1e293b" stroke="#a78bfa" stroke-width="2"/>
+    <text x="100" y="30" text-anchor="middle" class="h8" font-size="16" fill="#a78bfa">Steward</text>
+    <text x="100" y="52" text-anchor="middle" class="b8" font-size="12">Reviews + verifies work</text>
+    <text x="100" y="70" text-anchor="middle" class="b8" font-size="12">Co-signs budget spends</text>
+    <text x="100" y="88" text-anchor="middle" class="mono8" font-size="11" fill="#a78bfa">Elected</text>
+  </g>
+
+  <g transform="translate(580, 470)">
+    <rect width="200" height="100" rx="12" fill="#1e293b" stroke="#4ea8de" stroke-width="2"/>
+    <text x="100" y="30" text-anchor="middle" class="h8" font-size="16" fill="#4ea8de">Member</text>
+    <text x="100" y="52" text-anchor="middle" class="b8" font-size="12">Claims + delivers tasks</text>
+    <text x="100" y="70" text-anchor="middle" class="b8" font-size="12">Earns XRD from escrow</text>
+    <text x="100" y="88" text-anchor="middle" class="mono8" font-size="11" fill="#4ea8de">Badge-gated</text>
+  </g>
+
+  <g transform="translate(810, 470)">
+    <rect width="150" height="100" rx="12" fill="#1e293b" stroke="#64748b" stroke-width="1.5"/>
+    <text x="75" y="30" text-anchor="middle" class="h8" font-size="16" fill="#64748b">Observer</text>
+    <text x="75" y="52" text-anchor="middle" class="b8" font-size="12">Read-only access</text>
+    <text x="75" y="70" text-anchor="middle" class="b8" font-size="12">Can apply to join</text>
+    <text x="75" y="88" text-anchor="middle" class="mono8" font-size="11" fill="#64748b">Open</text>
+  </g>
+
+  <!-- Divider -->
+  <line x1="100" y1="600" x2="980" y2="600" stroke="#334155" stroke-width="1"/>
+
+  <!-- WG Dashboard -->
+  <text x="540" y="645" text-anchor="middle" class="h8" font-size="18" fill="#2dd4bf">WHAT EACH GROUP HAS</text>
+
+  <!-- Feature grid -->
+  <g transform="translate(120, 675)">
+    <rect width="280" height="70" rx="10" fill="#1e293b" stroke="#334155" stroke-width="1.5"/>
+    <text x="20" y="28" class="h8" font-size="20" fill="#2dd4bf">📋</text>
+    <text x="55" y="28" class="h8" font-size="15" fill="#f8fafc">Task Board</text>
+    <text x="55" y="50" class="b8" font-size="12">Scoped tasks with on-chain escrow</text>
+  </g>
+
+  <g transform="translate(420, 675)">
+    <rect width="280" height="70" rx="10" fill="#1e293b" stroke="#334155" stroke-width="1.5"/>
+    <text x="20" y="28" class="h8" font-size="20" fill="#4ea8de">💰</text>
+    <text x="55" y="28" class="h8" font-size="15" fill="#f8fafc">Budget Tracking</text>
+    <text x="55" y="50" class="b8" font-size="12">Spend vs envelope with variance alerts</text>
+  </g>
+
+  <g transform="translate(720, 675)">
+    <rect width="260" height="70" rx="10" fill="#1e293b" stroke="#334155" stroke-width="1.5"/>
+    <text x="20" y="28" class="h8" font-size="20" fill="#a78bfa">📊</text>
+    <text x="55" y="28" class="h8" font-size="15" fill="#f8fafc">Monthly Reports</text>
+    <text x="55" y="50" class="b8" font-size="12">Delivered / Next / Blocked / Spent</text>
+  </g>
+
+  <g transform="translate(120, 765)">
+    <rect width="280" height="70" rx="10" fill="#1e293b" stroke="#334155" stroke-width="1.5"/>
+    <text x="20" y="28" class="h8" font-size="20" fill="#f59e0b">📜</text>
+    <text x="55" y="28" class="h8" font-size="15" fill="#f8fafc">Charter</text>
+    <text x="55" y="50" class="b8" font-size="12">Purpose, scope, deliverables, sunset date</text>
+  </g>
+
+  <g transform="translate(420, 765)">
+    <rect width="280" height="70" rx="10" fill="#1e293b" stroke="#334155" stroke-width="1.5"/>
+    <text x="20" y="28" class="h8" font-size="20" fill="#00e49f">👥</text>
+    <text x="55" y="28" class="h8" font-size="15" fill="#f8fafc">Member Roles</text>
+    <text x="55" y="50" class="b8" font-size="12">Lead / Steward / Member / Observer</text>
+  </g>
+
+  <g transform="translate(720, 765)">
+    <rect width="260" height="70" rx="10" fill="#1e293b" stroke="#334155" stroke-width="1.5"/>
+    <text x="20" y="28" class="h8" font-size="20" fill="#f472b6">🔗</text>
+    <text x="55" y="28" class="h8" font-size="15" fill="#f8fafc">PR Verification</text>
+    <text x="55" y="50" class="b8" font-size="12">PR merged = task auto-verified</text>
+  </g>
+
+  <!-- Divider -->
+  <line x1="100" y1="870" x2="980" y2="870" stroke="#334155" stroke-width="1"/>
+
+  <!-- Lifecycle -->
+  <text x="540" y="910" text-anchor="middle" class="h8" font-size="18" fill="#2dd4bf">LIFECYCLE</text>
+
+  <!-- Lifecycle flow -->
+  <g transform="translate(130, 940)">
+    <rect width="140" height="45" rx="8" fill="#2dd4bf" fill-opacity="0.15" stroke="#2dd4bf" stroke-width="1.5"/>
+    <text x="70" y="28" text-anchor="middle" class="mono8" font-size="13" fill="#2dd4bf">Propose</text>
+  </g>
+  <text x="290" y="965" class="s8" font-size="18">→</text>
+  <g transform="translate(310, 940)">
+    <rect width="140" height="45" rx="8" fill="#4ea8de" fill-opacity="0.15" stroke="#4ea8de" stroke-width="1.5"/>
+    <text x="70" y="28" text-anchor="middle" class="mono8" font-size="13" fill="#4ea8de">Approve</text>
+  </g>
+  <text x="470" y="965" class="s8" font-size="18">→</text>
+  <g transform="translate(490, 940)">
+    <rect width="140" height="45" rx="8" fill="#a78bfa" fill-opacity="0.15" stroke="#a78bfa" stroke-width="1.5"/>
+    <text x="70" y="28" text-anchor="middle" class="mono8" font-size="13" fill="#a78bfa">Operate</text>
+  </g>
+  <text x="650" y="965" class="s8" font-size="18">→</text>
+  <g transform="translate(670, 940)">
+    <rect width="140" height="45" rx="8" fill="#f59e0b" fill-opacity="0.15" stroke="#f59e0b" stroke-width="1.5"/>
+    <text x="70" y="28" text-anchor="middle" class="mono8" font-size="13" fill="#f59e0b">Report</text>
+  </g>
+  <text x="830" y="965" class="s8" font-size="18">→</text>
+  <g transform="translate(850, 940)">
+    <rect width="140" height="45" rx="8" fill="#00e49f" fill-opacity="0.15" stroke="#00e49f" stroke-width="1.5"/>
+    <text x="70" y="28" text-anchor="middle" class="mono8" font-size="13" fill="#00e49f">Renew ↻</text>
+  </g>
+
+  <!-- Footer -->
+  <text x="540" y="1030" text-anchor="middle" class="s8" font-size="14">Charter expires by default — renewal = community vote — closure = success</text>
+  <text x="540" y="1055" text-anchor="middle" class="b8" font-size="12">radixguild.com/groups</text>
+</svg>

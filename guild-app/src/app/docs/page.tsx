@@ -139,6 +139,7 @@ const GUIDES = [
   { title: "Badge and XP System", desc: "Free badge, earn XP, level up tiers. Voting weights decided by charter vote.", image: "/infographics/04-badge-xp-system.svg" },
   { title: "Charter Decision Map", desc: "32 decisions across 3 phases. Each phase unlocks the next.", image: "/infographics/05-charter-decision-map.svg" },
   { title: "Architecture", desc: "TG bot + Next.js dashboard + Scrypto contracts + CV2 governance.", image: "/infographics/06-architecture-at-a-glance.svg" },
+  { title: "Working Groups", desc: "Join a group, claim tasks, get paid, file reports. Badge-gated coordination.", image: "/infographics/08-working-groups.svg" },
 ];
 
 function GuideSlideshow() {
