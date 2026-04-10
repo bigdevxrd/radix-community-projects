@@ -23,7 +23,7 @@ interface AchievementSummary {
   next_milestone: { name: string; grids_needed: number; nft: boolean } | null;
 }
 interface MyBounty { id: number; title: string; reward_xrd: number; status: string; category: string; funded: number; }
-interface MyGroup { id: number; name: string; icon: string; role: string; }
+interface MyGroup { id: number; name: string; icon: string; role: string; member_count: number; }
 
 function ProfileContent() {
   const { account, connected, badge, badgeLoading } = useWallet();
