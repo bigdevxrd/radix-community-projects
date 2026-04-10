@@ -1,0 +1,8 @@
+node_modules/
+.next/
+.env.local
+server/meme-grid.db
+server/meme-grid.db-wal
+server/meme-grid.db-shm
+*.tsbuildinfo
+next-env.d.ts
