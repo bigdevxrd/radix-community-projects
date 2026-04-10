@@ -53,6 +53,7 @@ No XRD required for off-chain governance. On-chain CV2 votes require a small tx 
 | DAO Charter | [radix.wiki](https://radix.wiki/ideas/radix-network-dao-charter) |
 | API Reference | [docs/API-REFERENCE.md](./docs/API-REFERENCE.md) |
 | Bot Commands | [docs/BOT-COMMANDS.md](./docs/BOT-COMMANDS.md) |
+| RFC vs RFP Guide | [docs/RFC-VS-RFP-GUIDE.md](./docs/RFC-VS-RFP-GUIDE.md) |
 | Identity Design | [docs/IDENTITY-DESIGN.md](./docs/IDENTITY-DESIGN.md) |
 
 ## Two-Tier Governance
