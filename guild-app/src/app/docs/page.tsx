@@ -79,6 +79,9 @@ const BOT_COMMANDS = [
     { cmd: "/group <name>", desc: "View group detail + members" },
     { cmd: "/group join <name>", desc: "Join a group (badge required)" },
     { cmd: "/group leave <name>", desc: "Leave a group (leads can't leave)" },
+    { cmd: "/wg report <group>", desc: "File a structured monthly report (delivered/next/blocked/spent)" },
+    { cmd: "/wg assign <task_id> <group>", desc: "Link a task to a working group" },
+    { cmd: "/wg budget <group>", desc: "Show group budget status" },
   ]},
   { section: "Charter & Game", cmds: [
     { cmd: "/charter", desc: "View charter resolution progress (32 parameters)" },
@@ -445,8 +448,6 @@ function DocsContent() {
           </div>
         </CardContent>
       </Card>
-
-      {/* Visual Guides Slideshow — moved to higher position */}
 
       {/* Resources */}
       <Card>
