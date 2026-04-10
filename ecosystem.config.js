@@ -6,7 +6,7 @@ module.exports = {
   apps: [
     {
       name: "guild-bot",
-      cwd: "/opt/guild/bot",
+      cwd: "/opt/radix-guild/bot",
       script: "index.js",
       env: { NODE_ENV: "production" },
       watch: false,
@@ -14,12 +14,12 @@ module.exports = {
       restart_delay: 5000,
       max_memory_restart: "500M",
       log_date_format: "YYYY-MM-DD HH:mm:ss",
-      error_file: "/opt/guild/logs/bot-error.log",
-      out_file: "/opt/guild/logs/bot-out.log",
+      error_file: "/opt/radix-guild/logs/bot-error.log",
+      out_file: "/opt/radix-guild/logs/bot-out.log",
     },
     {
       name: "guild-app",
-      cwd: "/opt/guild/dashboard",
+      cwd: "/opt/radix-guild/guild-app",
       script: "node_modules/.bin/next",
       args: "start --hostname 127.0.0.1 --port 3002",
       env: { NODE_ENV: "production" },
@@ -28,8 +28,8 @@ module.exports = {
       restart_delay: 5000,
       max_memory_restart: "500M",
       log_date_format: "YYYY-MM-DD HH:mm:ss",
-      error_file: "/opt/guild/logs/app-error.log",
-      out_file: "/opt/guild/logs/app-out.log",
+      error_file: "/opt/radix-guild/logs/app-error.log",
+      out_file: "/opt/radix-guild/logs/app-out.log",
     },
   ],
 };

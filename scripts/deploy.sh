@@ -7,7 +7,7 @@
 set -euo pipefail
 
 VPS="${GUILD_VPS:-guild-vps}"
-REMOTE_BASE="/opt/rad-dao"
+REMOTE_BASE="/opt/radix-guild"
 LOCAL_BASE="$(cd "$(dirname "$0")/.." && pwd)"
 
 TARGET="${1:-all}"
