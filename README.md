@@ -55,6 +55,7 @@ No XRD required for off-chain governance. On-chain CV2 votes require a small tx 
 | Bot Commands | [docs/BOT-COMMANDS.md](./docs/BOT-COMMANDS.md) |
 | RFC vs RFP Guide | [docs/RFC-VS-RFP-GUIDE.md](./docs/RFC-VS-RFP-GUIDE.md) |
 | Identity Design | [docs/IDENTITY-DESIGN.md](./docs/IDENTITY-DESIGN.md) |
+| **Scrypto Knowledge Base** | [scrypto-knowledge-base/](./scrypto-knowledge-base/) |
 
 ## Two-Tier Governance
 
@@ -135,6 +136,9 @@ radixguild.com (Caddy, auto-TLS)
 - 8 Scrypto escrow tests (create, cancel, lifecycle, fees, rejection)
 - 11 Scrypto badge tests (factory, manager, mint, validation, duplicates)
 - Run: `node scripts/pipeline-test.js`
+
+### Scrypto Knowledge Base
+All Scrypto code, patterns, manifests, deployed addresses, and external resources are compiled in [scrypto-knowledge-base/](./scrypto-knowledge-base/). Start with [INDEX.md](./scrypto-knowledge-base/INDEX.md) for the master catalog.
 
 ### API
 See [docs/API-REFERENCE.md](./docs/API-REFERENCE.md) for all 33 endpoints.
