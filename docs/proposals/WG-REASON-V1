@@ -1,0 +1,142 @@
+Great questions. Let me synthesize everything from the three research agents into a strategic answer.
+
+**The core problem:** Most DAO working groups die from friction. MakerDAO's core units became bureaucratic fiefdoms. Gitcoin's workstreams fragmented into 7+ tools nobody could navigate. ENS had working groups where nobody knew who was responsible for what. The tools exist but they're scattered, disconnected, and designed for protocol DAOs with millions in treasury — not small guilds of operators.
+
+**The strategic analysis:**
+
+From 13 architecture specs + 3 research agents, here's what we know:
+
+**What kills working groups (from best practices research):**
+- Too many steps to join (MakerDAO: 3 proposals just to create a group)
+- Too many tools to learn (Gitcoin: Snapshot + Safe + Discord + Dework + Notion + Coordinape)
+- Reporting to nobody (everyone posts to forums, nobody reads)
+- Perpetual budgets with no sunset (impossible to stop once started)
+- No clear "done" (open-ended mandates with no deliverables)
+- Groups larger than 7 people (Orca's research: >10 = uncoordinated)
+
+**What works (proven patterns):**
+- IETF: charter is a contract with deliverables + end date. Closure = success.
+- Apache: earn your way in, brief quarterly reports to a board that actually reads them
+- Orca pods: <7 people, scoped permissions, low friction to create
+- Coordinape: peers decide compensation, not managers
+- Dework: familiar kanban, crypto payments, GitHub integration
+
+**Now — the two questions:**
+
+---
+
+### "How do we make a working group easy as 1-2-3?"
+
+**Joining (the user journey):**
+
+```
+1. DISCOVER  →  Browse groups at radixguild.com/groups
+                See: name, purpose, members, open tasks, budget remaining
+
+2. JOIN      →  Click "Join" (badge required, wallet connected)
+                Instant. No application, no vote, no waiting period.
+                You're a Member. You can see tasks and discussions.
+
+3. CONTRIBUTE →  Claim a task from the group's task board
+                 Do the work. Submit. Get paid from escrow.
+                 Your trust score increases. Unlock Steward role over time.
+```
+
+That's it. Three clicks from "who are these people" to "I'm working on something."
+
+**Forming a new group (the lead journey):**
+
+```
+1. PROPOSE   →  /wg propose "Group Name" in TG (or form on dashboard)
+                Fill charter template: purpose, scope, 3 deliverables, 
+                budget, sunset date. Takes 10 minutes.
+
+2. APPROVE   →  Community temperature check (48h)
+                3+ votes in favour → group activates
+                Charter, budget, and lead approved as one package.
+
+3. OPERATE   →  Group appears on dashboard with:
+                - Member list (join button live)
+                - Task board (scoped to this group)
+                - Budget tracker (spend vs envelope)
+                - Report template (monthly, structured)
+```
+
+The charter template does the heavy lifting. Pre-filled with sensible defaults. The lead just fills in: what, who, how much, by when.
+
+---
+
+### "How do we make a working group productive easy as 1-2-3?"
+
+**The daily workflow (what a WG member actually does):**
+
+```
+1. CHECK     →  Open radixguild.com/groups/[id]
+                See: my tasks, group tasks, who's working on what,
+                budget remaining, days until next report due
+
+2. DO        →  Claim a task → do the work → submit PR or deliverable
+                Bot auto-verifies (PR merged = done)
+                Escrow releases XRD to your wallet
+                Trust score increases
+
+3. REPORT    →  Monthly: /wg report (or dashboard form)
+                Pre-filled template: what was delivered, what's next,
+                what's blocked, budget spent
+                Auto-posted to group page + sent to council
+```
+
+**The magic:** the group's dashboard page IS the project management tool. No Notion, no Dework, no separate kanban board. Everything is in one place — tasks, members, budget, reports, linked PRs — all on the guild dashboard.
+
+**What the dashboard group page should look like:**
+
+```
+/groups/[id]
+┌─────────────────────────────────────────────────┐
+│  🛡️ Guild Operations WG                         │
+│  Lead: bigdev · 5 members · Budget: $800/$1100  │
+│  Charter expires: Oct 2026 (162 days)            │
+│                                                   │
+│  [Members] [Tasks] [Budget] [Reports] [Charter]  │
+├─────────────────────────────────────────────────┤
+│  TASKS (3 open · 2 in progress · 5 completed)   │
+│                                                   │
+│  □ Draft Community WG charter    200 XRD  OPEN   │
+│  ■ Build budget tracking API     300 XRD  IN PROG│
+│  ✓ WG scoped task board          150 XRD  DONE   │
+│  ✓ Monthly report template       100 XRD  DONE   │
+│  ✓ Role system (lead/member)      50 XRD  DONE   │
+│                                                   │
+│  [+ Create Task]  [Claim Open Task]              │
+├─────────────────────────────────────────────────┤
+│  BUDGET                                           │
+│  ████████████░░░░  $800 / $1,100 spent (73%)     │
+│  Last payment: Mar 15 · Next report due: Apr 1   │
+├─────────────────────────────────────────────────┤
+│  LATEST REPORT (Mar 2026)                        │
+│  Delivered: scoped tasks, role system, 2 charters│
+│  Next: budget API, dashboard writes              │
+│  Blocked: multi-sig (waiting on Radix tooling)   │
+│  Spent: $800 of $1,100                           │
+└─────────────────────────────────────────────────┘
+```
+
+Everything in one view. No tool-switching. No separate logins. Badge gets you in, tasks keep you busy, escrow gets you paid, reports keep you accountable.
+
+---
+
+**Strategic summary:**
+
+| Layer | What Exists (fragmented) | What Guild Provides (unified) |
+|-------|------------------------|------------------------------|
+| Membership | Discord roles, manual spreadsheets | Badge-gated join, dashboard display, role hierarchy |
+| Tasks | Dework (separate tool, EVM-only) | Built-in task board scoped per WG, on-chain escrow |
+| Budget | Gnosis Safe (EVM-only) | Per-WG budget tracking in dashboard, variance alerts |
+| Compensation | Coordinape (separate tool) | Escrow pays on delivery, peer allocation planned |
+| Reporting | Forum posts nobody reads | Structured template, monthly to council, on dashboard |
+| Voting | Snapshot (EVM-only) | Built-in proposals + CV2 on-chain integration |
+| Docs | Notion (separate tool, paid) | Charter + reports stored per WG on dashboard |
+
+**The pitch in one line:** "One dashboard. Join a group. Claim a task. Get paid. File a report. All badge-gated, all Radix-native, all open source."
+
+Want me to start building the WG-scoped task board and enhanced group page? That's the highest-impact item — it makes the proposal tangible. When someone reads the RFC and clicks through to radixguild.com/groups, it should already look like what we described.
