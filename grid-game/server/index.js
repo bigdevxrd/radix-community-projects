@@ -600,8 +600,8 @@ app.post('/api/game/:address/roll', (req, res) => {
       }
     }
 
-    // Update grid in the board row
-    grid[cell.row][cell.col] = cell;
+    // Update grid in the board row (use Number() to prevent prototype pollution)
+    grid[Number(cell.row)][Number(cell.col)] = cell;
     const newScore = boardRow.score + Math.max(0, coinsDelta + ROLL_COST);
     const newRolls = boardRow.rolls_used + 1;
 
@@ -703,10 +703,13 @@ app.post('/api/game/:address/use-wild', (req, res) => {
     const boardRow = stmts.getActiveBoard.get(player.id);
     if (!boardRow) return res.status(404).json({ error: 'No active board.' });
 
-    const { row, col } = req.body;
-    if (!Number.isInteger(row) || !Number.isInteger(col) || row < 0 || row >= GRID_SIZE || col < 0 || col >= GRID_SIZE) {
+    const { row: rawRow, col: rawCol } = req.body;
+    if (!Number.isInteger(rawRow) || !Number.isInteger(rawCol) || rawRow < 0 || rawRow >= GRID_SIZE || rawCol < 0 || rawCol >= GRID_SIZE) {
       return res.status(400).json({ error: 'Invalid row/col. Must be integers 0-7.' });
     }
+    // Use Number() to guarantee numeric indices and prevent prototype pollution
+    const row = Number(rawRow);
+    const col = Number(rawCol);
 
     const grid = JSON.parse(boardRow.grid);
     const targetCell = grid[row][col];
