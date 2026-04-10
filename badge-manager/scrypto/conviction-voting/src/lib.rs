@@ -242,37 +242,35 @@ mod conviction_voting {
                 proposal.weighted_staked += weighted_amount;
             }
 
-            // Store stake record
-            // Try to update existing stake first; if not found, insert new one
-            {
+            // Check if staker already exists via the staker list (avoids KVS borrow issues)
+            let is_new_staker = {
+                let staker_list = self.proposal_staker_lists.get(&proposal_id).unwrap();
+                !staker_list.contains(&badge_id)
+            };
+
+            if is_new_staker {
+                // Insert new stake
                 let mut stake_kvs = self.stakes.get_mut(&proposal_id).expect("Stakes not found");
-                // Scrypto KVS: use get_mut, if None then insert
-                match stake_kvs.get_mut(&badge_id) {
-                    Some(mut stake) => {
-                        stake.amount += amount;
-                        stake.weighted_amount += weighted_amount;
-                    }
-                    None => {
-                        stake_kvs.insert(badge_id.clone(), StakeRecord {
-                            staker_badge_id: badge_id.clone(),
-                            proposal_id,
-                            amount,
-                            weighted_amount,
-                            tier_multiplier,
-                            staked_at: now,
-                        });
-                    }
-                }
-            }
-            // If new staker, update count + list (check via staker_list length change)
-            {
+                stake_kvs.insert(badge_id.clone(), StakeRecord {
+                    staker_badge_id: badge_id.clone(),
+                    proposal_id,
+                    amount,
+                    weighted_amount,
+                    tier_multiplier,
+                    staked_at: now,
+                });
+                drop(stake_kvs);
                 let mut staker_list = self.proposal_staker_lists.get_mut(&proposal_id).unwrap();
-                if !staker_list.contains(&badge_id) {
-                    staker_list.push(badge_id.clone());
-                    drop(staker_list);
-                    let mut proposal = self.proposals.get_mut(&proposal_id).unwrap();
-                    proposal.staker_count += 1;
-                }
+                staker_list.push(badge_id.clone());
+                drop(staker_list);
+                let mut proposal = self.proposals.get_mut(&proposal_id).unwrap();
+                proposal.staker_count += 1;
+            } else {
+                // Update existing stake
+                let mut stake_kvs = self.stakes.get_mut(&proposal_id).expect("Stakes not found");
+                let mut stake = stake_kvs.get_mut(&badge_id).unwrap();
+                stake.amount += amount;
+                stake.weighted_amount += weighted_amount;
             }
 
             // Put XRD into proposal stake vault
