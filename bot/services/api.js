@@ -58,7 +58,8 @@ function startApi() {
     const isFeedbackPost = req.method === "POST" && url.pathname === "/api/feedback";
     const isBountyPost = req.method === "POST" && url.pathname === "/api/bounties";
     const isGroupPost = req.method === "POST" && url.pathname.match(/^\/api\/groups\/\d+\/(join|leave)$/);
-    if (req.method !== "GET" && !isGamePost && !isFeedbackPost && !isBountyPost && !isGroupPost) {
+    const isVotePost = req.method === "POST" && url.pathname.match(/^\/api\/proposals\/\d+\/vote$/);
+    if (req.method !== "GET" && !isGamePost && !isFeedbackPost && !isBountyPost && !isGroupPost && !isVotePost) {
       res.writeHead(405);
       return res.end(JSON.stringify({ ok: false, error: "method_not_allowed" }));
     }
@@ -512,6 +513,48 @@ function startApi() {
       } catch (e) {
         res.writeHead(200);
         return res.end(JSON.stringify({ ok: true, data: { created: [], assigned: [], address: addr } }));
+      }
+    }
+
+    // POST /api/proposals/:id/vote — vote from dashboard
+    const voteMatch = url.pathname.match(/^\/api\/proposals\/(\d+)\/vote$/);
+    if (voteMatch && req.method === "POST") {
+      try {
+        const body = await readBody(req);
+        if (!body.address || !body.vote) {
+          res.writeHead(400);
+          return res.end(JSON.stringify({ ok: false, error: "address and vote required" }));
+        }
+        const proposalId = parseInt(voteMatch[1]);
+        const proposal = db.getProposal(proposalId);
+        if (!proposal) {
+          res.writeHead(404);
+          return res.end(JSON.stringify({ ok: false, error: "proposal_not_found" }));
+        }
+        if (proposal.status !== "active") {
+          res.writeHead(400);
+          return res.end(JSON.stringify({ ok: false, error: "proposal_not_active" }));
+        }
+        // Resolve address to tg_id
+        const user = db.getUserByAddress(body.address);
+        const tgId = user ? user.tg_id : 0; // 0 for web-only voters
+        // If tg_id is 0, create a temporary user record for web voters
+        if (!user) {
+          try { db.prepare("INSERT OR IGNORE INTO users (tg_id, radix_address, username) VALUES (?, ?, ?)").run(-Math.floor(Date.now() / 1000), body.address, "web-voter"); } catch(e) {}
+        }
+        const resolvedTgId = user ? user.tg_id : -Math.floor(Date.now() / 1000);
+        const result = db.recordVote(proposalId, resolvedTgId, body.address, body.vote);
+        if (!result.ok) {
+          res.writeHead(409);
+          return res.end(JSON.stringify({ ok: false, error: result.error }));
+        }
+        // Return updated counts
+        const counts = db.getVoteCounts(proposalId);
+        res.writeHead(200);
+        return res.end(JSON.stringify({ ok: true, data: { counts, vote: body.vote } }));
+      } catch (e) {
+        res.writeHead(400);
+        return res.end(JSON.stringify({ ok: false, error: "invalid_body" }));
       }
     }
 

@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import { API_URL, TG_BOT_URL } from "@/lib/constants";
+import { useWallet } from "@/hooks/useWallet";
 
 interface ProposalDetail {
   id: number; title: string; type: string; status: string;
@@ -40,9 +41,36 @@ const CLASS_LABEL: Record<ProposalClass, { label: string; badge: "default" | "se
 function ProposalDetailContent() {
   const params = useParams();
   const id = params?.id;
+  const { account, connected, badge } = useWallet();
   const [proposal, setProposal] = useState<ProposalDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const [voting, setVoting] = useState(false);
+  const [voted, setVoted] = useState<string | null>(null);
+  const [voteError, setVoteError] = useState("");
+
+  async function handleVote(choice: string) {
+    if (!account || !proposal) return;
+    setVoting(true); setVoteError("");
+    try {
+      const resp = await fetch(API_URL + "/proposals/" + proposal.id + "/vote", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ address: account, vote: choice }),
+      });
+      const data = await resp.json();
+      if (data.ok) {
+        setVoted(choice);
+        // Update counts immediately
+        if (data.data?.counts && proposal) {
+          setProposal({ ...proposal, counts: data.data.counts, total_votes: Object.values(data.data.counts as Record<string, number>).reduce((a: number, b: number) => a + b, 0) });
+        }
+      } else {
+        setVoteError(data.error === "already_voted" ? "You already voted on this proposal." : data.error || "Vote failed");
+      }
+    } catch (_) { setVoteError("Network error — try again"); }
+    setVoting(false);
+  }
 
   const fetchData = () => {
     if (!id) return;
@@ -158,10 +186,8 @@ function ProposalDetailContent() {
             <CardTitle className="text-sm uppercase tracking-wide text-muted-foreground">
               Results ({proposal.total_votes} vote{proposal.total_votes !== 1 ? "s" : ""})
             </CardTitle>
-            {isActive && (
-              <a href={TG_BOT_URL} target="_blank">
-                <Button variant="default" size="sm">Vote in Telegram</Button>
-              </a>
+            {isActive && !connected && (
+              <span className="text-xs text-muted-foreground">Connect wallet to vote</span>
             )}
           </div>
         </CardHeader>
@@ -191,6 +217,45 @@ function ProposalDetailContent() {
           )}
         </CardContent>
       </Card>
+
+      {/* Vote Buttons */}
+      {isActive && connected && (
+        <Card>
+          <CardContent className="py-4 space-y-3">
+            {voted ? (
+              <div className="text-center">
+                <Badge variant="default" className="text-sm">Voted: {voted}</Badge>
+                <p className="text-xs text-muted-foreground mt-1">+10 XP earned</p>
+              </div>
+            ) : voteError ? (
+              <div className="text-center">
+                <p className="text-xs text-red-400">{voteError}</p>
+                {voteError !== "You already voted on this proposal." && (
+                  <p className="text-[10px] text-muted-foreground mt-1">You can also vote via <a href={TG_BOT_URL} target="_blank" className="text-primary hover:underline">Telegram</a></p>
+                )}
+              </div>
+            ) : (
+              <>
+                <div className="text-xs text-muted-foreground text-center mb-2">Cast your vote{!badge && " (badge recommended for XP)"}</div>
+                <div className="flex flex-wrap gap-2 justify-center">
+                  {proposal.type === "yesno" ? (
+                    <>
+                      <Button variant="default" size="sm" onClick={() => handleVote("for")} disabled={voting}>For</Button>
+                      <Button variant="destructive" size="sm" onClick={() => handleVote("against")} disabled={voting}>Against</Button>
+                      <Button variant="outline" size="sm" onClick={() => handleVote("amend")} disabled={voting}>Amend</Button>
+                    </>
+                  ) : (
+                    (proposal.options || Object.keys(proposal.counts)).map(opt => (
+                      <Button key={opt} variant="outline" size="sm" onClick={() => handleVote(opt)} disabled={voting}>{opt}</Button>
+                    ))
+                  )}
+                </div>
+                {voting && <p className="text-xs text-muted-foreground text-center">Submitting vote...</p>}
+              </>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Amendments */}
       {proposal.amendments && proposal.amendments.length > 0 && (
