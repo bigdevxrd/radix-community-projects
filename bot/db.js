@@ -271,6 +271,32 @@ function init() {
   try { db.exec("ALTER TABLE proposals ADD COLUMN group_id INTEGER"); } catch(e) {}
   try { db.exec("ALTER TABLE bounties ADD COLUMN group_id INTEGER"); } catch(e) {}
 
+  // ── Working Group Infrastructure migrations ──
+  try { db.exec("ALTER TABLE working_group_members ADD COLUMN role TEXT DEFAULT 'member'"); } catch(e) {}
+  try { db.exec("ALTER TABLE working_groups ADD COLUMN charter TEXT"); } catch(e) {}
+  try { db.exec("ALTER TABLE working_groups ADD COLUMN budget_monthly REAL DEFAULT 0"); } catch(e) {}
+  try { db.exec("ALTER TABLE working_groups ADD COLUMN budget_spent REAL DEFAULT 0"); } catch(e) {}
+  try { db.exec("ALTER TABLE working_groups ADD COLUMN sunset_date INTEGER"); } catch(e) {}
+  // status column already exists in CREATE TABLE but migration ensures it for older DBs
+  try { db.exec("ALTER TABLE working_groups ADD COLUMN status TEXT DEFAULT 'active'"); } catch(e) {}
+
+  // WG reports table
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS wg_reports (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      group_id INTEGER NOT NULL,
+      author_tg_id INTEGER NOT NULL,
+      delivered TEXT,
+      next_steps TEXT,
+      blocked TEXT,
+      budget_spent REAL DEFAULT 0,
+      period TEXT,
+      created_at INTEGER DEFAULT (strftime('%s','now')),
+      FOREIGN KEY (group_id) REFERENCES working_groups(id)
+    );
+    CREATE INDEX IF NOT EXISTS idx_wg_reports_group ON wg_reports(group_id, created_at);
+  `);
+
   // Seed working groups
   const ADMIN_TG_ID = 6102618406;
   const ADMIN_ADDRESS = "account_rdx12yh4fwevmvnqgd3ppzau66cm9xu874srmrt9g2cye3fa8j8y78z9sq";
@@ -792,6 +818,66 @@ function getGroupByName(name) {
   return db.prepare("SELECT * FROM working_groups WHERE LOWER(name) = LOWER(?)").get(name);
 }
 
+// ── Working Group Infrastructure ─────────────────────────
+
+function getGroupTasks(groupId) {
+  return db.prepare(
+    "SELECT id, title, reward_xrd, status, category, difficulty, assignee_tg_id FROM bounties WHERE group_id = ? ORDER BY created_at DESC"
+  ).all(groupId);
+}
+
+function assignTaskToGroup(bountyId, groupId) {
+  const result = db.prepare("UPDATE bounties SET group_id = ? WHERE id = ?").run(groupId, bountyId);
+  return { ok: result.changes > 0, error: result.changes === 0 ? "bounty_not_found" : null };
+}
+
+function updateMemberRole(groupId, tgId, role) {
+  const valid = ["lead", "steward", "member", "observer"];
+  if (!valid.includes(role)) return { ok: false, error: "invalid_role" };
+  const result = db.prepare("UPDATE working_group_members SET role = ? WHERE group_id = ? AND tg_id = ?").run(role, groupId, tgId);
+  return { ok: result.changes > 0, error: result.changes === 0 ? "member_not_found" : null };
+}
+
+function createWGReport(groupId, authorTgId, delivered, nextSteps, blocked, budgetSpent, period) {
+  const result = db.prepare(
+    "INSERT INTO wg_reports (group_id, author_tg_id, delivered, next_steps, blocked, budget_spent, period) VALUES (?, ?, ?, ?, ?, ?, ?)"
+  ).run(groupId, authorTgId, delivered, nextSteps, blocked, budgetSpent || 0, period);
+  // Update running budget_spent on the group
+  if (budgetSpent && budgetSpent > 0) {
+    db.prepare("UPDATE working_groups SET budget_spent = budget_spent + ? WHERE id = ?").run(budgetSpent, groupId);
+  }
+  return result.lastInsertRowid;
+}
+
+function getWGReports(groupId, limit = 10) {
+  return db.prepare(
+    "SELECT * FROM wg_reports WHERE group_id = ? ORDER BY created_at DESC LIMIT ?"
+  ).all(groupId, limit);
+}
+
+function updateGroupCharter(groupId, charter) {
+  const result = db.prepare("UPDATE working_groups SET charter = ? WHERE id = ?").run(charter, groupId);
+  return { ok: result.changes > 0 };
+}
+
+function updateGroupBudget(groupId, budgetMonthly) {
+  const result = db.prepare("UPDATE working_groups SET budget_monthly = ? WHERE id = ?").run(budgetMonthly, groupId);
+  return { ok: result.changes > 0 };
+}
+
+function getGroupBudgetStatus(groupId) {
+  const group = db.prepare("SELECT budget_monthly, budget_spent FROM working_groups WHERE id = ?").get(groupId);
+  if (!group) return null;
+  const remaining = group.budget_monthly - group.budget_spent;
+  const percentage = group.budget_monthly > 0 ? Math.round((group.budget_spent / group.budget_monthly) * 100) : 0;
+  return {
+    monthly: group.budget_monthly,
+    spent: group.budget_spent,
+    remaining: Math.max(0, remaining),
+    percentage,
+  };
+}
+
 // ── Grid Game ──────────────────────────────────────────
 // Weighted dice: 1=30%, 2=25%, 3=20%, 4=13%, 5=8%, 6=4%
 
@@ -1155,6 +1241,14 @@ module.exports.joinGroup = joinGroup;
 module.exports.leaveGroup = leaveGroup;
 module.exports.getGroupsForMember = getGroupsForMember;
 module.exports.getGroupByName = getGroupByName;
+module.exports.getGroupTasks = getGroupTasks;
+module.exports.assignTaskToGroup = assignTaskToGroup;
+module.exports.updateMemberRole = updateMemberRole;
+module.exports.createWGReport = createWGReport;
+module.exports.getWGReports = getWGReports;
+module.exports.updateGroupCharter = updateGroupCharter;
+module.exports.updateGroupBudget = updateGroupBudget;
+module.exports.getGroupBudgetStatus = getGroupBudgetStatus;
 module.exports.fundTask = fundTask;
 module.exports.getCategories = getCategories;
 module.exports.getPlatformConfig = getPlatformConfig;

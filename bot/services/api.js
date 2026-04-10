@@ -372,14 +372,51 @@ function startApi() {
       return res.end(JSON.stringify({ ok: true, data: db.getGroups() }));
     }
 
-    // GET /api/groups/:id — group detail with members + linked tasks/proposals
+    // GET /api/groups/:id/tasks — tasks linked to a working group
+    const groupTasksMatch = url.pathname.match(/^\/api\/groups\/(\d+)\/tasks$/);
+    if (groupTasksMatch) {
+      const tasks = db.getGroupTasks(parseInt(groupTasksMatch[1]));
+      res.writeHead(200);
+      return res.end(JSON.stringify({ ok: true, data: tasks }));
+    }
+
+    // GET /api/groups/:id/reports — WG reports
+    const groupReportsMatch = url.pathname.match(/^\/api\/groups\/(\d+)\/reports$/);
+    if (groupReportsMatch) {
+      const limit = Math.min(50, Math.max(1, parseInt(url.searchParams.get("limit") || "10")));
+      const reports = db.getWGReports(parseInt(groupReportsMatch[1]), limit);
+      res.writeHead(200);
+      return res.end(JSON.stringify({ ok: true, data: reports }));
+    }
+
+    // GET /api/groups/:id/budget — budget status for a working group
+    const groupBudgetMatch = url.pathname.match(/^\/api\/groups\/(\d+)\/budget$/);
+    if (groupBudgetMatch) {
+      const budget = db.getGroupBudgetStatus(parseInt(groupBudgetMatch[1]));
+      if (!budget) {
+        res.writeHead(404);
+        return res.end(JSON.stringify({ ok: false, error: "not_found" }));
+      }
+      res.writeHead(200);
+      return res.end(JSON.stringify({ ok: true, data: budget }));
+    }
+
+    // GET /api/groups/:id — group detail with members + linked tasks/proposals + budget + latest report
     const groupMatch = url.pathname.match(/^\/api\/groups\/(\d+)$/);
     if (groupMatch) {
-      const detail = db.getGroupDetail(parseInt(groupMatch[1]));
+      const groupId = parseInt(groupMatch[1]);
+      const detail = db.getGroupDetail(groupId);
       if (!detail) {
         res.writeHead(404);
         return res.end(JSON.stringify({ ok: false, error: "not_found" }));
       }
+      // Enrich with task count, budget status, and latest report
+      const tasks = db.getGroupTasks(groupId);
+      const budget = db.getGroupBudgetStatus(groupId);
+      const reports = db.getWGReports(groupId, 1);
+      detail.tasks_count = tasks.length;
+      detail.budget = budget;
+      detail.latest_report = reports.length > 0 ? reports[0] : null;
       res.writeHead(200);
       return res.end(JSON.stringify({ ok: true, data: detail }));
     }

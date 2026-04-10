@@ -164,6 +164,13 @@ bot.command("help", (ctx) => {
     "/bounty claim <id> — Claim a bounty\n" +
     "/bounty stats — Stats + escrow balance\n\n" +
 
+    "Working Groups:\n" +
+    "/groups — List all working groups\n" +
+    "/group <name> — View group details\n" +
+    "/wg report <group> — File a WG report\n" +
+    "/wg assign <id> <group> — Link task to group\n" +
+    "/wg budget <group> — View budget status\n\n" +
+
     "Game:\n" +
     "/game — Your dice roll stats\n" +
     "/leaderboard — Top players by bonus XP\n\n" +
@@ -960,6 +967,106 @@ bot.command("group", async (ctx) => {
   ctx.reply(msg);
 });
 
+// ── /wg (Working Group management) ────────────────────
+
+bot.command("wg", async (ctx) => {
+  const args = ctx.message.text.split(/\s+/).slice(1);
+  const sub = args[0]?.toLowerCase();
+
+  // /wg report <group_name> — create a WG report (wizard or inline)
+  if (sub === "report") {
+    const user = await requireBadge(ctx);
+    if (!user) return;
+    const name = args.slice(1).join(" ");
+    if (!name) return ctx.reply("Usage: /wg report <group name>\n\nExample: /wg report Guild");
+    const group = db.getGroupByName(name);
+    if (!group) return ctx.reply("Group not found. See /groups for available groups.");
+
+    // Check inline args: /wg report Guild delivered="X" next="Y" blocked="Z" spent=500
+    const inline = args.slice(1).join(" ");
+    const deliveredMatch = inline.match(/delivered="([^"]+)"/);
+    const nextMatch = inline.match(/next="([^"]+)"/);
+    const blockedMatch = inline.match(/blocked="([^"]+)"/);
+    const spentMatch = inline.match(/spent=(\d+(?:\.\d+)?)/);
+
+    if (deliveredMatch) {
+      // Inline mode — create report immediately
+      const delivered = deliveredMatch[1];
+      const nextSteps = nextMatch ? nextMatch[1] : null;
+      const blocked = blockedMatch ? blockedMatch[1] : null;
+      const spent = spentMatch ? parseFloat(spentMatch[1]) : 0;
+      const now = new Date();
+      const period = now.toISOString().slice(0, 7); // YYYY-MM
+      const reportId = db.createWGReport(group.id, ctx.from.id, delivered, nextSteps, blocked, spent, period);
+      return ctx.reply(
+        "Report #" + reportId + " filed for " + group.name + "\n\n" +
+        "Delivered: " + delivered + "\n" +
+        (nextSteps ? "Next: " + nextSteps + "\n" : "") +
+        (blocked ? "Blocked: " + blocked + "\n" : "") +
+        (spent > 0 ? "Spent: " + spent + " XRD\n" : "") +
+        "Period: " + period
+      );
+    }
+
+    // Wizard mode — store state and prompt for fields
+    wizardStates.set(ctx.from.id, {
+      wizard: "wg_report",
+      step: "delivered",
+      groupId: group.id,
+      groupName: group.name,
+      data: {},
+    });
+    return ctx.reply(
+      "WG Report: " + group.name + "\n\n" +
+      "Step 1/4: What was delivered this period?\n" +
+      "(Type your answer, or /cancel to abort)"
+    );
+  }
+
+  // /wg assign <task_id> <group_name> — link a bounty to a WG
+  if (sub === "assign") {
+    const user = await requireBadge(ctx);
+    if (!user) return;
+    const taskId = parseInt(args[1]);
+    const name = args.slice(2).join(" ");
+    if (!taskId || !name) return ctx.reply("Usage: /wg assign <task_id> <group name>");
+    const group = db.getGroupByName(name);
+    if (!group) return ctx.reply("Group not found. See /groups for available groups.");
+    const result = db.assignTaskToGroup(taskId, group.id);
+    if (!result.ok) return ctx.reply("Error: " + result.error);
+    return ctx.reply("Task #" + taskId + " assigned to " + group.name + ".");
+  }
+
+  // /wg budget <group_name> — show budget status
+  if (sub === "budget") {
+    const name = args.slice(1).join(" ");
+    if (!name) return ctx.reply("Usage: /wg budget <group name>");
+    const group = db.getGroupByName(name);
+    if (!group) return ctx.reply("Group not found. See /groups for available groups.");
+    const budget = db.getGroupBudgetStatus(group.id);
+    if (!budget) return ctx.reply("Could not load budget.");
+    const bar = budget.monthly > 0
+      ? "[" + "#".repeat(Math.min(20, Math.round(budget.percentage / 5))) + "-".repeat(Math.max(0, 20 - Math.round(budget.percentage / 5))) + "] " + budget.percentage + "%"
+      : "No budget set";
+    return ctx.reply(
+      "Budget: " + group.name + "\n\n" +
+      "Monthly: " + budget.monthly + " XRD\n" +
+      "Spent:   " + budget.spent + " XRD\n" +
+      "Left:    " + budget.remaining + " XRD\n" +
+      bar
+    );
+  }
+
+  // Default: show usage
+  ctx.reply(
+    "Working Group Commands\n\n" +
+    "/wg report <group> — File a WG report\n" +
+    "/wg assign <task_id> <group> — Link task to group\n" +
+    "/wg budget <group> — View budget status\n\n" +
+    "See /groups for all working groups."
+  );
+});
+
 // ── /badges ────────────────────────────────────────────
 
 bot.command("badges", async (ctx) => {
@@ -1524,6 +1631,55 @@ bot.on("message:new_chat_members", async (ctx) => {
 });
 
 bot.on("message:text", (ctx) => {
+  // WG report wizard handler
+  const wgState = wizardStates.get(ctx.from.id);
+  if (wgState && wgState.wizard === "wg_report") {
+    const text = ctx.message.text.trim();
+    if (text === "/cancel") {
+      wizardStates.delete(ctx.from.id);
+      return ctx.reply("Report cancelled.");
+    }
+
+    if (wgState.step === "delivered") {
+      wgState.data.delivered = text;
+      wgState.step = "next_steps";
+      wizardStates.set(ctx.from.id, wgState);
+      return ctx.reply("Step 2/4: What are the next steps?\n(Type your answer, or \"none\" to skip)");
+    }
+    if (wgState.step === "next_steps") {
+      wgState.data.nextSteps = text.toLowerCase() === "none" ? null : text;
+      wgState.step = "blocked";
+      wizardStates.set(ctx.from.id, wgState);
+      return ctx.reply("Step 3/4: Any blockers?\n(Type your answer, or \"none\" to skip)");
+    }
+    if (wgState.step === "blocked") {
+      wgState.data.blocked = text.toLowerCase() === "none" ? null : text;
+      wgState.step = "spent";
+      wizardStates.set(ctx.from.id, wgState);
+      return ctx.reply("Step 4/4: XRD spent this period?\n(Enter a number, or 0 if none)");
+    }
+    if (wgState.step === "spent") {
+      const spent = parseFloat(text) || 0;
+      const now = new Date();
+      const period = now.toISOString().slice(0, 7);
+      const reportId = db.createWGReport(
+        wgState.groupId, ctx.from.id,
+        wgState.data.delivered, wgState.data.nextSteps, wgState.data.blocked,
+        spent, period
+      );
+      wizardStates.delete(ctx.from.id);
+      return ctx.reply(
+        "Report #" + reportId + " filed for " + wgState.groupName + "\n\n" +
+        "Delivered: " + wgState.data.delivered + "\n" +
+        (wgState.data.nextSteps ? "Next: " + wgState.data.nextSteps + "\n" : "") +
+        (wgState.data.blocked ? "Blocked: " + wgState.data.blocked + "\n" : "") +
+        (spent > 0 ? "Spent: " + spent + " XRD\n" : "") +
+        "Period: " + period
+      );
+    }
+    return;
+  }
+
   // Check if user is in wizard flow
   if (handleWizardText(ctx)) return;
   if (handleGuidedText(ctx)) return;
