@@ -1,6 +1,6 @@
 # API Reference
 
-REST API for the Radix Guild governance system. 42 endpoints covering proposals, badges, bounties, escrow, charter, gamification, trust scores, working groups, feedback, profiles, CV2 on-chain governance, and CV3 conviction voting.
+REST API for the Radix Guild governance system. 44 endpoints covering proposals, badges, bounties, escrow, charter, gamification, trust scores, working groups, feedback, profiles, decisions, CV2 on-chain governance, and CV3 conviction voting.
 
 ## Base URL
 
@@ -296,6 +296,18 @@ Types: `yesno` (default), `multi` (requires `options` array), `temp`
 ### GET /api/xp-queue
 
 Pending XP rewards awaiting on-ledger settlement.
+
+---
+
+## Decisions
+
+### GET /api/decisions
+
+Full governance decision tree — 47 decisions across charter (3 phases), structural, and P3 service categories. Returns dependency status, linked proposals with vote counts, RadixTalk thread URLs, and unlock state.
+
+### GET /api/decisions/radixtalk
+
+Proxied RadixTalk governance topics (5-minute cache). Returns: `[{ id, title, posts_count, views, url }]`
 
 ---
 

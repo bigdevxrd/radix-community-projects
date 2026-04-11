@@ -470,6 +470,59 @@ async function main() {
   await sleep(3000);
 
   // ══════════════════════════════════════════════════════
+  // LIFECYCLE 7: DECISIONS
+  // ══════════════════════════════════════════════════════
+
+  console.log("\n  Decisions:");
+
+  await test("GET /api/decisions — returns full tree", async () => {
+    const data = await fetchJson(API + "/decisions");
+    assert(data.ok === true);
+    assert(data.data.length >= 40, "should have 40+ decisions");
+  });
+
+  await test("Decisions have 3 categories", async () => {
+    const data = await fetchJson(API + "/decisions");
+    const cats = new Set(data.data.map((d: any) => d.category));
+    assert(cats.has("charter"), "should have charter category");
+    assert(cats.has("structural"), "should have structural category");
+    assert(cats.has("p3_services"), "should have p3_services category");
+  });
+
+  await test("Charter Phase 1 has 6 decisions", async () => {
+    const data = await fetchJson(API + "/decisions");
+    const p1 = data.data.filter((d: any) => d.phase === 1 && d.category === "charter");
+    assert(p1.length === 6, "Phase 1 should have 6 decisions, got " + p1.length);
+  });
+
+  await test("Phase 2 decisions are locked (charter not passed)", async () => {
+    const data = await fetchJson(API + "/decisions");
+    const p2 = data.data.filter((d: any) => d.phase === 2);
+    const locked = p2.filter((d: any) => !d.unlocked);
+    assert(locked.length === p2.length, "All Phase 2 should be locked");
+  });
+
+  await test("Structural decisions have RadixTalk links", async () => {
+    const data = await fetchJson(API + "/decisions");
+    const structural = data.data.filter((d: any) => d.category === "structural");
+    const withLinks = structural.filter((d: any) => d.radixtalk_url);
+    assert(withLinks.length >= 8, "Most structural decisions should have RadixTalk links");
+  });
+
+  await test("GET /api/decisions/radixtalk — returns cached topics", async () => {
+    const data = await fetchJson(API + "/decisions/radixtalk");
+    assert(data.ok === true);
+    assert(data.data.length >= 10);
+    const t = data.data[0];
+    assert(t.id, "should have id");
+    assert(t.title, "should have title");
+    assert(t.url, "should have url");
+    assert(typeof t.posts_count === "number", "should have posts_count");
+  });
+
+  await sleep(3000);
+
+  // ══════════════════════════════════════════════════════
   // CROSS-SYSTEM INTEGRITY
   // ══════════════════════════════════════════════════════
 

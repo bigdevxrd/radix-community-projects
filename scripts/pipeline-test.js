@@ -715,6 +715,49 @@ async function main() {
     assert(Array.isArray(data.data));
   });
 
+  // ── Decisions ──────────────────────────────────────
+
+  console.log("\n  Decisions:");
+
+  await test("GET /api/decisions returns 47 decisions", async () => {
+    const data = await fetchJson(API + "/decisions");
+    assert(data.ok === true);
+    assert(Array.isArray(data.data));
+    assert(data.data.length >= 40, "should have at least 40 decisions, got " + data.data.length);
+  });
+
+  await test("Decisions have required fields", async () => {
+    const data = await fetchJson(API + "/decisions");
+    for (const d of data.data.slice(0, 5)) {
+      assert(d.title, "should have title");
+      assert(d.summary, "should have summary");
+      assert(typeof d.phase === "number", "should have phase");
+      assert(Array.isArray(d.depends_on), "depends_on should be array");
+      assert(typeof d.unlocked === "boolean", "should have unlocked flag");
+    }
+  });
+
+  await test("Decision dependencies resolve correctly", async () => {
+    const data = await fetchJson(API + "/decisions");
+    const charter = data.data.find(d => d.title === "Adopt the Charter");
+    assert(charter, "Charter decision should exist");
+    assert(charter.unlocked === true, "Charter should be unlocked (no dependencies)");
+    const phase2 = data.data.filter(d => d.phase === 2);
+    assert(phase2.length >= 15, "should have phase 2 decisions");
+  });
+
+  await test("GET /api/decisions/radixtalk returns topics", async () => {
+    const data = await fetchJson(API + "/decisions/radixtalk");
+    assert(data.ok === true);
+    assert(Array.isArray(data.data));
+    assert(data.data.length >= 10, "should have RadixTalk topics");
+  });
+
+  await test("GET /decisions page returns 200", async () => {
+    const resp = await fetch(GUILD + "/decisions");
+    assert(resp.ok, "/decisions should return 200");
+  });
+
   // ── Summary ────────────────────────────────────────
 
   console.log("\n  Results: " + passed + " passed, " + failed + " failed");

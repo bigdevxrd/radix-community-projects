@@ -26,9 +26,10 @@ Idea --> Vote --> Decision --> Fund --> Build --> Verify --> Reward
 | **Dashboard** | 14 pages with fund button (wallet TX), trust scores, groups | Live |
 | **Gateway Watcher** | Auto-detects escrow events on-chain every 60s | Live |
 | **Dice Game** | Every governance action = dice roll = bonus XP | Live |
+| **Decisions Page** | 47 governance decisions with dependency tree + RadixTalk integration | Live |
 | **Dashboard Writes** | Create proposals + bounties from dashboard (badge-gated) | Live |
 | **Profile Tabs** | Tabbed profile: Overview, Tasks, Votes, Groups, Trust Score | Live |
-| **REST API** | 42 endpoints including /api/health + /api/profile + /api/trust | Live |
+| **REST API** | 44 endpoints including /api/health + /api/profile + /api/trust | Live |
 | **Pipeline Tests** | 75 automated tests (API, dashboard, gateway, escrow, CV2) | Passing |
 
 ## Quick Start (5 minutes)
@@ -93,7 +94,8 @@ Proposals are classified visually:
 
 | Route | Description |
 |-------|-------------|
-| `/` | Home: badge, stats, active votes, charter, bounties, onboarding |
+| `/` | Home: badge, stats, decisions banner, active votes, charter, bounties |
+| `/decisions` | 47 governance decisions — charter tree + structural + P3 services |
 | `/mint` | Free badge minting with username |
 | `/proposals` | Vote Now hero + proposal classification + decision tree + CV2 |
 | `/proposals/:id` | Proposal detail with classification, countdown, results |
@@ -127,7 +129,7 @@ radixguild.com (Caddy, auto-TLS)
   |     +-- github.js (PR merge detection for auto-verify)
   |     +-- consultation.js (CV2 sync)
   |     +-- gateway.js (badge + escrow reads)
-  |     +-- REST API (42 endpoints)
+  |     +-- REST API (44 endpoints)
   |
   +-- guild-app (Next.js 16, port 3002)
   |     +-- shadcn/ui + Radix dApp Toolkit 2.2.1
@@ -147,7 +149,7 @@ radixguild.com (Caddy, auto-TLS)
 - Run: `node scripts/pipeline-test.js`
 
 ### API
-See [docs/API-REFERENCE.md](./docs/API-REFERENCE.md) for all 42 endpoints.
+See [docs/API-REFERENCE.md](./docs/API-REFERENCE.md) for all 44 endpoints.
 
 ### Bot Commands
 See [docs/BOT-COMMANDS.md](./docs/BOT-COMMANDS.md) for all commands.
