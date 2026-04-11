@@ -483,7 +483,7 @@ async function main() {
 
   await test("Decisions have 3 categories", async () => {
     const data = await fetchJson(API + "/decisions");
-    const cats = new Set(data.data.map((d: any) => d.category));
+    const cats = new Set(data.data.map((d) => d.category));
     assert(cats.has("charter"), "should have charter category");
     assert(cats.has("structural"), "should have structural category");
     assert(cats.has("p3_services"), "should have p3_services category");
@@ -491,21 +491,21 @@ async function main() {
 
   await test("Charter Phase 1 has 6 decisions", async () => {
     const data = await fetchJson(API + "/decisions");
-    const p1 = data.data.filter((d: any) => d.phase === 1 && d.category === "charter");
+    const p1 = data.data.filter((d) => d.phase === 1 && d.category === "charter");
     assert(p1.length === 6, "Phase 1 should have 6 decisions, got " + p1.length);
   });
 
   await test("Phase 2 decisions are locked (charter not passed)", async () => {
     const data = await fetchJson(API + "/decisions");
-    const p2 = data.data.filter((d: any) => d.phase === 2);
-    const locked = p2.filter((d: any) => !d.unlocked);
+    const p2 = data.data.filter((d) => d.phase === 2);
+    const locked = p2.filter((d) => !d.unlocked);
     assert(locked.length === p2.length, "All Phase 2 should be locked");
   });
 
   await test("Structural decisions have RadixTalk links", async () => {
     const data = await fetchJson(API + "/decisions");
-    const structural = data.data.filter((d: any) => d.category === "structural");
-    const withLinks = structural.filter((d: any) => d.radixtalk_url);
+    const structural = data.data.filter((d) => d.category === "structural");
+    const withLinks = structural.filter((d) => d.radixtalk_url);
     assert(withLinks.length >= 8, "Most structural decisions should have RadixTalk links");
   });
 
