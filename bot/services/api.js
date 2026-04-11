@@ -68,7 +68,7 @@ function startApi() {
 
     // Rate limiting (stricter for POST: 10/min)
     const clientIp = req.headers["x-forwarded-for"]?.split(",")[0]?.trim() || req.socket.remoteAddress;
-    if (!rateLimit(clientIp, isGamePost ? 10 : 60)) {
+    if (!rateLimit(clientIp, isGamePost ? 10 : 120)) {
       res.writeHead(429);
       return res.end(JSON.stringify({ ok: false, error: "rate_limit_exceeded" }));
     }

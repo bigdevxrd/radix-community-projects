@@ -652,6 +652,69 @@ async function main() {
     assert(resp.ok, "should be 200");
   });
 
+  // ── CV3 Conviction Voting ─────────────────────────
+
+  console.log("\n  CV3 (Conviction Voting):");
+
+  await test("GET /api/cv3/status returns sync status", async () => {
+    const data = await fetchJson(API + "/cv3/status");
+    assert(data.ok === true);
+    assert(typeof data.data.enabled === "boolean");
+    assert(typeof data.data.proposalCount === "number");
+    assert(typeof data.data.poolBalance === "number");
+    assert(data.data.component.startsWith("component_rdx1"));
+  });
+
+  await test("GET /api/cv3/proposals returns array", async () => {
+    const data = await fetchJson(API + "/cv3/proposals");
+    assert(data.ok === true);
+    assert(Array.isArray(data.data));
+  });
+
+  await test("GET /api/cv3/stats returns counts", async () => {
+    const data = await fetchJson(API + "/cv3/stats");
+    assert(data.ok === true);
+    assert(typeof data.data.proposal_count === "number");
+    assert(typeof data.data.pool_balance === "number");
+  });
+
+  // ── Profile Aggregation ───────────────────────────
+
+  console.log("\n  Profile:");
+
+  await test("GET /api/profile/:address returns consolidated data", async () => {
+    const data = await fetchJson(API + "/profile/" + TEST_ACCOUNT);
+    assert(data.ok === true);
+    assert(data.data.votes !== undefined, "should have votes");
+    assert(data.data.tasks !== undefined, "should have tasks");
+    assert(data.data.groups !== undefined, "should have groups");
+  });
+
+  await test("GET /api/trust/address/:address returns trust score", async () => {
+    const data = await fetchJson(API + "/trust/address/" + TEST_ACCOUNT);
+    assert(data.ok === true);
+    assert(typeof data.data.score === "number");
+    assert(typeof data.data.tier === "string");
+    assert(data.data.breakdown !== undefined, "should have breakdown");
+  });
+
+  // ── Working Groups (P6) ───────────────────────────
+
+  console.log("\n  Working Groups (P6):");
+
+  await test("GET /api/groups/overdue returns period + groups", async () => {
+    const data = await fetchJson(API + "/groups/overdue");
+    assert(data.ok === true);
+    assert(typeof data.data.period === "string");
+    assert(Array.isArray(data.data.groups));
+  });
+
+  await test("GET /api/groups/expiring returns array", async () => {
+    const data = await fetchJson(API + "/groups/expiring");
+    assert(data.ok === true);
+    assert(Array.isArray(data.data));
+  });
+
   // ── Summary ────────────────────────────────────────
 
   console.log("\n  Results: " + passed + " passed, " + failed + " failed");
