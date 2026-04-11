@@ -15,8 +15,8 @@ Idea --> Vote --> Decision --> Fund --> Build --> Verify --> Reward
 |--------|-------------|--------|
 | **On-chain Badges** | NFT identity (Scrypto v4, free mint) | Mainnet |
 | **On-chain Escrow** | TaskEscrow vault — XRD locked in Scrypto, no admin custody | Mainnet |
-| **Escrow V3** | Multi-token escrow (XRD, xUSDC, xUSDT) — per-token vaults | Ready |
-| **Conviction Voting** | Time-weighted fund allocation (CV3) — stake + auto-execute | Ready |
+| **Escrow V3** | Multi-token escrow (XRD, xUSDC, xUSDT) — per-token vaults | Mainnet |
+| **Conviction Voting** | Time-weighted fund allocation (CV3) — stake + auto-execute | Mainnet |
 | **Off-chain Voting** | Propose + vote in Telegram (free, badge-gated) | Live |
 | **On-chain Governance** | CV2 temperature checks + proposals (XRD-weighted) | Mainnet |
 | **Trust Scores** | Bronze/Silver/Gold tiers from on-chain activity (no KYC) | Live |

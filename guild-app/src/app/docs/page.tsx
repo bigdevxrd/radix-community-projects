@@ -18,25 +18,25 @@ const QUICK_START = [
 
 const VOTING_GUIDE = [
   {
-    type: "Off-Chain (Telegram)",
+    type: "Off-Chain (Telegram + Dashboard)",
     badge: "secondary" as const,
     items: [
       "Free — no transaction fees",
       "1 badge = 1 vote",
-      "Vote with /vote in @rad_gov",
-      "Results visible here and in Telegram",
+      "Vote with /vote in @rad_gov or from the dashboard",
+      "Create proposals from Telegram or the dashboard",
       "Used for: charter votes, community polls, temp checks",
     ],
   },
   {
-    type: "On-Chain (Consultation v2)",
+    type: "On-Chain (CV2 + Conviction Voting)",
     badge: "outline" as const,
     items: [
       "Recorded on the Radix ledger permanently",
-      "XRD-weighted — vote power = XRD held",
-      "Vote on the Proposals page with your Radix Wallet",
-      "Same CV2 system used by the Radix Foundation",
-      "Used for: binding treasury decisions, formal governance",
+      "CV2: XRD-weighted temperature checks + proposals",
+      "CV3: Conviction voting — stake XRD, conviction grows over time",
+      "Badge tier multipliers: Member 1x, Contributor 1.5x, Builder+ 2x",
+      "Used for: binding decisions, treasury, fund allocation",
     ],
   },
 ];
@@ -124,12 +124,13 @@ const FAQ = [
   { q: "What are the charter votes?", a: "32 governance decisions that build the DAO from the ground up. Phase 1 (Foundation) sets the rules. Phase 2 (Configuration) sets the details. Phase 3 (Operations) starts the DAO. Each phase unlocks when the previous completes." },
   { q: "What is Consultation v2?", a: "The Radix Foundation's on-chain governance system. We use the same CV2 smart contract for formal, binding votes. Your votes are recorded permanently on the Radix ledger and weighted by XRD holdings." },
   { q: "Who runs this?", a: "bigdev built and maintains it. The code is open source (MIT). Admin controls transfer to the elected RAC (Radix Advisory Council) when Charter Step 3 completes. See Costs & Transparency section below." },
-  { q: "How do bounties work?", a: "Anyone with a badge can create a task with an XRD reward. Workers claim it (/bounty claim), submit work (/bounty submit), a verifier checks the acceptance criteria, and XRD releases from escrow. Tasks have categories, difficulty levels, and deadlines." },
+  { q: "How do bounties work?", a: "Anyone with a badge can create a task — either from the dashboard or with /bounty create in Telegram. Workers claim, submit, verify, and get paid from on-chain escrow. Escrow V3 supports XRD, xUSDC, and xUSDT." },
   { q: "What are the fees?", a: "2.5% platform fee on escrow release (not deposit — cancel = full refund). Workers receive 100% of the net reward. Component royalties (0.1-0.5 XRD per on-chain call) go to the guild. All percentages are charter-voteable." },
+  { q: "What is conviction voting?", a: "CV3 — a time-weighted governance system for fund allocation. Stake XRD on proposals you believe in. Conviction grows over time (3-day half-life). When conviction exceeds the threshold, the proposal auto-executes and funds are released. Badge tier multipliers: Member 1x, Contributor 1.5x, Builder+ 2x." },
   { q: "How is the guild funded?", a: "Platform fees + on-chain component royalties + SaaS hosting fees. No donations, no token. Revenue from usage funds more development, which produces more royalty-earning code. See Costs & Transparency section below." },
   { q: "What are working groups?", a: "Teams that organize the guild's work: Guild, DAO, Radix Infra, Business Development, Marketing. Join one with /group join <name> in Telegram. Groups have leads, members, and linked tasks." },
   { q: "How does task funding work?", a: "XRD is deposited into an on-chain escrow vault (Scrypto smart contract on Radix mainnet). No admin wallet holds funds. The contract releases XRD to the worker when delivery is verified. Fund a task by sending XRD to the escrow component via your Radix Wallet, then verify with /bounty fund <id> <tx_hash> in Telegram." },
-  { q: "Where do I do things — dashboard or Telegram?", a: "Dashboard for reading, browsing, minting, on-chain votes, and the game. Telegram for governance actions: creating proposals, voting, managing tasks, joining groups. See the Dashboard vs Telegram guide above." },
+  { q: "Where do I do things — dashboard or Telegram?", a: "Both! Dashboard now supports creating proposals, creating bounties, voting, funding tasks, joining groups, and viewing your full profile with trust score. Telegram is still great for quick governance actions. See the Dashboard vs Telegram guide above." },
   { q: "What is the trust score?", a: "A score calculated from your on-chain activity: account age, votes cast, proposals created, tasks completed, groups joined. Tiers: Bronze (0+), Silver (50+), Gold (200+). Higher trust unlocks more capabilities. All voluntary — badge is the minimum to participate. Check yours with /trust in Telegram." },
   { q: "How does auto-verification work?", a: "When creating a task, add --approval pr_merged --repo owner/repo. Workers submit a GitHub PR link. The bot checks every 5 minutes — when the PR is merged, the task is auto-verified. No manual admin step needed for code tasks. The escrow release is then queued for the verifier." },
   { q: "Can I fund tasks from the dashboard?", a: "Yes. On any unfunded task page, click the 'Fund' button. Your Radix Wallet opens with the TX manifest pre-built. One click to deposit XRD into the on-chain escrow vault. The gateway watcher auto-detects your deposit within 60 seconds." },
@@ -374,6 +375,7 @@ function DocsContent() {
             </div>
           </div>
           <p className="text-xs text-muted-foreground">Tasks &gt;100 XRD require applications (<code className="bg-muted px-1 rounded">/bounty apply</code>) instead of instant claims.</p>
+          <p className="text-xs text-muted-foreground mt-1"><strong>Escrow V3:</strong> Now supports multi-token deposits — XRD, xUSDC, and xUSDT. Per-token minimum deposits and fee vaults. V2 stays active for existing tasks.</p>
         </CardContent>
       </Card>
 
@@ -388,7 +390,10 @@ function DocsContent() {
               { action: "Mint badge", where: "Dashboard", how: "/mint page with wallet" },
               { action: "Vote on proposals", where: "Telegram", how: "/vote or tap inline buttons" },
               { action: "Create on-chain vote", where: "Dashboard", how: "Proposals page → Create Temperature Check" },
-              { action: "Create/claim/submit tasks", where: "Telegram", how: "/bounty commands" },
+              { action: "Create proposals", where: "Both", how: "Dashboard form or /propose in TG" },
+              { action: "Create bounties", where: "Both", how: "Dashboard form or /bounty create in TG" },
+              { action: "Claim/submit tasks", where: "Both", how: "Dashboard buttons or /bounty claim in TG" },
+              { action: "View profile & trust", where: "Dashboard", how: "/profile → tabbed view with trust breakdown" },
               { action: "Browse tasks & proposals", where: "Both", how: "Dashboard to read, bot to act" },
               { action: "Join working groups", where: "Both", how: "Dashboard button or /group join <name>" },
               { action: "Submit feedback", where: "Both", how: "Dashboard form or /feedback in TG" },
@@ -405,7 +410,7 @@ function DocsContent() {
             ))}
           </div>
           <p className="text-[11px] text-muted-foreground mt-3">
-            The dashboard is for reading, browsing, and wallet-connected actions (minting, on-chain votes, game). The Telegram bot is for governance actions (proposals, voting, task management, groups).
+            Most actions now work from both dashboard and Telegram. Dashboard is best for wallet-connected actions (minting, on-chain votes, funding, profile). Telegram is great for quick governance (voting, task management, groups).
           </p>
         </CardContent>
       </Card>

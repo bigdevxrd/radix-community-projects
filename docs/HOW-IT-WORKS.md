@@ -15,7 +15,7 @@ You ──> Mint Badge ──> Vote ──> Earn XP ──> Level Up ──> Tra
 3. Link your wallet in the Telegram bot
 4. Vote on proposals
 5. Every vote earns XP + a dice roll for bonus XP
-6. XP determines your tier (Initiate → Contributor → Builder → Architect → Elder)
+6. XP determines your tier (Member → Contributor → Builder → Steward → Elder)
 
 ---
 
@@ -123,10 +123,10 @@ YOU VOTE ON-CHAIN (CV2)
 
 | Tier | XP Required | What It Means |
 |------|-------------|--------------|
-| **Initiate** | 0 | New member, just getting started |
+| **Member** | 0 | New member, just getting started |
 | **Contributor** | 100 | Active participant |
 | **Builder** | 500 | Regular contributor |
-| **Architect** | 2000 | Experienced governance participant |
+| **Steward** | 2000 | Experienced governance participant |
 | **Elder** | 10000 | Long-term community pillar |
 
 **XP is a participation tracker, not voting power.** It shows how active you've been in governance. Every action (vote, propose, bounty) earns base XP plus a random dice roll bonus. Tiers are recognition — they show your commitment level on your on-chain badge.
@@ -210,7 +210,7 @@ Type `/charter` in the bot or visit `/proposals` on the dashboard to see real-ti
 
 ---
 
-## System Architecture (Simple Version)
+## System Stewardure (Simple Version)
 
 ```
 ┌─────────────────────────────────────────────────────────┐

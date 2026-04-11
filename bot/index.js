@@ -187,6 +187,10 @@ bot.command("help", (ctx) => {
     "/dao — CrumbsUp DAO page\n" +
     "/source — GitHub repo\n\n" +
 
+    "Dashboard: radixguild.com\n" +
+    "Create proposals + bounties from the dashboard too!\n" +
+    "Profile + trust score: radixguild.com/profile\n\n" +
+
     "Voting is free — no XRD required."
   );
 });
@@ -1392,10 +1396,11 @@ bot.command("readme", (ctx) => ctx.reply(
   "Radix Guild = the first community using it\n\n" +
   "What's live:\n" +
   "• On-chain badges (free mint)\n" +
-  "• 20 governance proposals (6 active)\n" +
   "• 32 charter decisions with dependency tracking\n" +
-  "• Bounty + escrow system\n" +
-  "• Dashboard with decision tree\n\n" +
+  "• Bounty marketplace + multi-token escrow (V3)\n" +
+  "• Conviction voting (CV3) — time-weighted fund allocation\n" +
+  "• Dashboard with proposals, bounties, profile, trust scores\n" +
+  "• Create proposals + bounties from dashboard or Telegram\n\n" +
   "GitHub: " + GITHUB + "\n" +
   "Dashboard: " + PORTAL + "\n" +
   "Charter: radix.wiki/ideas/radix-network-dao-charter\n\n" +
