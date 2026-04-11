@@ -4,7 +4,7 @@ import { AppShell } from "@/components/AppShell";
 import { UserJourneyWidget } from "@/components/UserJourneyWidget";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { TG_BOT_URL, MANAGER, BADGE_NFT } from "@/lib/constants";
+import { TG_BOT_URL, MANAGER, BADGE_NFT, ESCROW_COMPONENT, ESCROW_V3_COMPONENT, CV2_COMPONENT, CV3_COMPONENT } from "@/lib/constants";
 import Link from "next/link";
 
 const QUICK_START = [
@@ -142,7 +142,7 @@ const GUIDES = [
   { title: "Bounty Pipeline", desc: "Create, claim, submit, verify, pay — earn XRD for contributing.", image: "/infographics/03-bounty-pipeline.svg" },
   { title: "Badge and XP System", desc: "Free badge, earn XP, level up tiers. Voting weights decided by charter vote.", image: "/infographics/04-badge-xp-system.svg" },
   { title: "Charter Decision Map", desc: "32 decisions across 3 phases. Each phase unlocks the next.", image: "/infographics/05-charter-decision-map.svg" },
-  { title: "Architecture", desc: "TG bot + Next.js dashboard + Scrypto contracts + CV2 governance.", image: "/infographics/06-architecture-at-a-glance.svg" },
+  { title: "Architecture", desc: "TG bot + Next.js dashboard + Scrypto contracts + CV2 + CV3 conviction voting.", image: "/infographics/06-architecture-at-a-glance.svg" },
   { title: "Working Groups", desc: "Join a group, claim tasks, get paid, file reports. Badge-gated coordination.", image: "/infographics/08-working-groups.svg" },
 ];
 
@@ -267,6 +267,133 @@ function DocsContent() {
               <Badge variant="secondary" className="text-[8px] mx-0.5">Community Vote</Badge> = formal but non-binding,{" "}
               <Badge variant="outline" className="text-[8px] mx-0.5">Gauging Interest</Badge> = 24h quick pulse check
             </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Conviction Voting (CV3) */}
+      <Card className="border-l-4 border-l-primary">
+        <CardHeader className="pb-3">
+          <div className="flex items-center gap-2">
+            <CardTitle className="text-sm uppercase tracking-wide text-muted-foreground">Conviction Voting (CV3)</CardTitle>
+            <Badge variant="outline" className="text-[9px] text-yellow-500 border-yellow-500">BETA</Badge>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="bg-primary/5 rounded-lg p-3">
+            <p className="text-sm font-semibold mb-1">What is it?</p>
+            <p className="text-xs text-muted-foreground">
+              Time-weighted governance for fund allocation. Instead of a one-time vote, you <strong>stake XRD</strong> on proposals you believe in.
+              Your conviction grows over time. When it crosses the threshold, funds release automatically from a shared pool. No admin step needed.
+            </p>
+          </div>
+
+          <div>
+            <p className="text-sm font-semibold mb-2">How it works — step by step</p>
+            <div className="flex items-center gap-1 flex-wrap">
+              {[
+                { step: "1", label: "Stake", desc: "Lock XRD on a proposal" },
+                { step: "2", label: "Wait", desc: "Conviction grows each hour" },
+                { step: "3", label: "Threshold", desc: "Conviction reaches target" },
+                { step: "4", label: "Execute", desc: "Funds auto-release" },
+              ].map((s, i) => (
+                <div key={s.step} className="flex items-center gap-1">
+                  {i > 0 && <span className="text-muted-foreground text-xs mx-0.5">&rarr;</span>}
+                  <div className="bg-muted rounded px-2 py-1.5 text-center">
+                    <div className="text-[11px] font-semibold">{s.label}</div>
+                    <div className="text-[9px] text-muted-foreground">{s.desc}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <p className="text-sm font-semibold mb-2">Why conviction voting?</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              {[
+                { problem: "Snapshot voting is gameable", solution: "Conviction requires sustained commitment — can't dump votes last-minute" },
+                { problem: "Whales dominate", solution: "Badge tier multipliers reward earned trust, not just wealth" },
+                { problem: "Admin bottleneck on payouts", solution: "Auto-execution when threshold met — no human in the loop" },
+                { problem: "No signal about intensity", solution: "Staking shows HOW MUCH you care, not just which side you're on" },
+              ].map(r => (
+                <div key={r.problem} className="bg-muted rounded-lg p-2.5">
+                  <div className="text-[10px] text-red-400 line-through mb-0.5">{r.problem}</div>
+                  <div className="text-[11px] text-muted-foreground">{r.solution}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <div className="flex items-center gap-2 mb-2">
+              <p className="text-sm font-semibold">Beta Parameters</p>
+              <Badge variant="outline" className="text-[9px] text-yellow-500 border-yellow-500">Subject to charter vote</Badge>
+            </div>
+            <div className="space-y-2">
+              {[
+                {
+                  param: "Decay factor (alpha)",
+                  value: "0.9904",
+                  reasoning: "Gives a 3-day half-life. If everyone unstakes, conviction halves every 72 hours. Fast enough to respond to changing sentiment, slow enough to reward patience. Based on Commons Stack / 1Hive research — most conviction systems use 2-7 day half-lives.",
+                },
+                {
+                  param: "Threshold multiplier",
+                  value: "10x requested amount",
+                  reasoning: "A proposal requesting 1,000 XRD needs conviction score of 10,000 to auto-execute. This means a single person staking 1,000 XRD would need ~4 days of sustained staking to pass. A group of 10 staking 1,000 each would pass in hours. Prevents lone-wolf proposals while rewarding community support.",
+                },
+                {
+                  param: "Time step",
+                  value: "1 hour",
+                  reasoning: "Conviction updates hourly (anyone can trigger). Short enough for responsive governance, long enough to prevent gas-wasting spam. Each update applies: new_conviction = 0.9904 * old_conviction + weighted_stake.",
+                },
+                {
+                  param: "Tier multipliers",
+                  value: "Member 1x, Contributor 1.5x, Builder+ 2x",
+                  reasoning: "Earned trust amplifies your voice. A Builder staking 100 XRD has the conviction weight of a Member staking 200 XRD. Tiers come from XP (voting, proposing, completing tasks) — not wealth. Prevents pure plutocracy.",
+                },
+                {
+                  param: "Funding pool",
+                  value: "Shared XRD vault",
+                  reasoning: "All proposals compete for the same pool. The community can only fund what the pool holds. This creates natural prioritization — high-conviction proposals drain the pool first. Admin funds the pool; later this can be fed by platform fees.",
+                },
+              ].map(p => (
+                <div key={p.param} className="bg-muted rounded-lg p-3">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-xs font-semibold">{p.param}</span>
+                    <code className="text-[11px] font-mono text-primary bg-background px-1.5 py-0.5 rounded">{p.value}</code>
+                  </div>
+                  <p className="text-[11px] text-muted-foreground">{p.reasoning}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="bg-muted rounded-lg p-3">
+            <p className="text-xs font-semibold mb-1">The math</p>
+            <div className="font-mono text-xs text-primary mb-2">y(t+1) = 0.9904 * y(t) + S(t)</div>
+            <div className="text-[11px] text-muted-foreground space-y-1">
+              <p><strong>y(t)</strong> = current conviction score for a proposal</p>
+              <p><strong>S(t)</strong> = total weighted stake (sum of all stakers, adjusted by badge tier)</p>
+              <p><strong>0.9904</strong> = decay factor (conviction fades if stake is removed)</p>
+              <p><strong>Steady state:</strong> With constant stake S, conviction approaches S / (1 - 0.9904) = S * 104.2</p>
+              <p><strong>Half-life:</strong> 72 hours (3 days) — if all stake removed, conviction halves every 3 days</p>
+              <p><strong>Threshold:</strong> When y(t) exceeds requested_amount * 10, proposal auto-executes</p>
+            </div>
+          </div>
+
+          <div className="bg-yellow-500/10 rounded-lg p-3">
+            <p className="text-xs font-semibold text-yellow-500 mb-1">Beta Notice</p>
+            <p className="text-[11px] text-muted-foreground">
+              These parameters are starting values based on research from Commons Stack, 1Hive Gardens, and Gitcoin.
+              All values are tuneable by the contract owner and will be subject to community charter vote.
+              The contract is deployed on Radix mainnet but integration with the dashboard and bot is in progress.
+            </p>
+          </div>
+
+          <div className="text-[11px] text-muted-foreground space-y-1">
+            <p><strong>Prior art:</strong> 1Hive Gardens (Ethereum), Commons Stack Conviction Voting, Gitcoin Allo Protocol, Token Engineering Commons</p>
+            <p><strong>On-chain:</strong> <a href={`https://dashboard.radixdlt.com/component/${CV3_COMPONENT}`} target="_blank" className="font-mono text-primary hover:underline">{CV3_COMPONENT.slice(0, 25)}...</a></p>
           </div>
         </CardContent>
       </Card>
@@ -542,15 +669,20 @@ function DocsContent() {
             <CardTitle className="text-sm uppercase tracking-wide text-muted-foreground">On-Chain Verification</CardTitle>
           </CardHeader>
           <CardContent className="space-y-2 text-sm">
-            <div className="flex items-center justify-between py-1.5 border-b">
-              <span className="text-muted-foreground">Badge Manager</span>
-              <a href={`https://dashboard.radixdlt.com/component/${MANAGER}`} target="_blank" className="font-mono text-xs text-primary hover:underline">{MANAGER.slice(0, 20)}...</a>
-            </div>
-            <div className="flex items-center justify-between py-1.5 border-b">
-              <span className="text-muted-foreground">Badge NFT</span>
-              <a href={`https://dashboard.radixdlt.com/resource/${BADGE_NFT}`} target="_blank" className="font-mono text-xs text-primary hover:underline">{BADGE_NFT.slice(0, 20)}...</a>
-            </div>
-            <div className="flex items-center justify-between py-1.5">
+            {[
+              { label: "Badge Manager", addr: MANAGER, type: "component" },
+              { label: "Badge NFT", addr: BADGE_NFT, type: "resource" },
+              { label: "TaskEscrow V2", addr: ESCROW_COMPONENT, type: "component" },
+              { label: "Escrow V3 (Multi-Token)", addr: ESCROW_V3_COMPONENT, type: "component" },
+              { label: "CV2 Governance", addr: CV2_COMPONENT, type: "component" },
+              { label: "ConvictionVoting (CV3)", addr: CV3_COMPONENT, type: "component" },
+            ].map((item, i) => (
+              <div key={item.label} className={`flex items-center justify-between py-1.5 ${i < 5 ? "border-b" : ""}`}>
+                <span className="text-muted-foreground">{item.label}</span>
+                <a href={`https://dashboard.radixdlt.com/${item.type}/${item.addr}`} target="_blank" className="font-mono text-xs text-primary hover:underline">{item.addr.slice(0, 20)}...</a>
+              </div>
+            ))}
+            <div className="flex items-center justify-between py-1.5 border-t">
               <span className="text-muted-foreground">Source Code</span>
               <a href="https://github.com/bigdevxrd/radix-community-projects" target="_blank" className="font-mono text-xs text-primary hover:underline">MIT Licensed</a>
             </div>
