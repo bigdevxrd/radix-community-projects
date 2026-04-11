@@ -154,6 +154,8 @@ bot.command("help", (ctx) => {
 
     "View + Manage:\n" +
     "/proposals — Active proposals\n" +
+    "/temps — Active temp checks only\n" +
+    "/decisions — Dashboard decisions page\n" +
     "/results <id> — Vote counts\n" +
     "/history — Recent proposals\n" +
     "/cancel <id> — Cancel your proposal\n" +
@@ -507,6 +509,42 @@ bot.command("proposals", (ctx) => {
   });
   text += "Tap /vote <id> to open vote buttons for any proposal.";
   ctx.reply(text);
+});
+
+// ── /temps — list active temp checks only ────────────────
+
+bot.command("temps", (ctx) => {
+  db.closeExpiredProposals();
+  const active = db.getActiveProposals().filter(p => p.type === "temp");
+  if (active.length === 0) {
+    return ctx.reply("No active temp checks.\n\nCreate one: /temp Your question here");
+  }
+
+  let text = "Active Temp Checks (" + active.length + "):\n\n";
+  active.slice(0, 15).forEach(p => {
+    const counts = db.getVoteCounts(p.id);
+    const total = Object.values(counts).reduce((a, b) => a + b, 0);
+    const ends = new Date(p.ends_at * 1000).toISOString().slice(0, 16).replace("T", " ");
+    text += "#" + p.id + " " + p.title + "\n";
+    text += "  " + total + " vote" + (total !== 1 ? "s" : "") + " | Ends: " + ends + "\n";
+    text += "  Vote: /vote " + p.id + "\n\n";
+  });
+  if (active.length > 15) text += "... and " + (active.length - 15) + " more\n\n";
+  text += "Dashboard: " + PORTAL + "/decisions\n";
+  text += "All non-binding pulse checks. Create: /temp <question>";
+  ctx.reply(text);
+});
+
+// ── /decisions — link to dashboard decisions page ────────
+
+bot.command("decisions", (ctx) => {
+  ctx.reply(
+    "Governance Decisions\n\n" +
+    "47 decisions mapped across charter, structural, and P3 service categories.\n" +
+    "All currently running as non-binding temp checks.\n\n" +
+    "Vote on the dashboard: " + PORTAL + "/decisions\n" +
+    "Or view temp checks here: /temps"
+  );
 });
 
 // ── /vote (re-post a proposal with vote buttons) ────────
