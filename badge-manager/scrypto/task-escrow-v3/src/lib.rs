@@ -432,6 +432,9 @@ mod task_escrow_v3 {
             self.accepted_tokens.insert(resource, new_min);
         }
 
+        /// Remove a token from the accepted list.
+        /// Note: Does not affect existing tasks using this token — they can still be
+        /// released, cancelled, or expired. Only prevents NEW task creation with this token.
         pub fn remove_accepted_token(&mut self, resource: ResourceAddress) {
             assert!(self.accepted_tokens.get(&resource).is_some(), "Token not in accepted list");
             self.accepted_tokens.remove(&resource);
@@ -440,7 +443,8 @@ mod task_escrow_v3 {
         }
 
         pub fn withdraw_fees(&mut self, resource: ResourceAddress) -> Bucket {
-            let mut vault = self.fee_vaults.get_mut(&resource).expect("No fees collected for this token");
+            let mut vault = self.fee_vaults.get_mut(&resource)
+                .expect("No fees collected for this token. Fees are only created when tasks are released.");
             vault.take_all()
         }
 

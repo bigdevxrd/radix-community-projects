@@ -374,7 +374,7 @@ mod conviction_voting {
                 assert!(proposal.status == "active", "Proposal is not active");
                 proposal.status = "cancelled".to_string();
             }
-            self.return_all_stakes(proposal_id);
+            self.clear_staker_list(proposal_id);
         }
 
         /// Fund the shared XRD pool.
@@ -436,42 +436,18 @@ mod conviction_voting {
             beneficiary_account.try_deposit_or_abort(funds, None);
 
             self.total_executed += 1;
-            self.return_all_stakes(proposal_id);
+            self.clear_staker_list(proposal_id);
 
             Runtime::emit_event(ProposalExecutedEvent {
                 proposal_id, amount: requested_amount, beneficiary,
             });
         }
 
-        fn return_all_stakes(&mut self, proposal_id: u64) {
-            let staker_ids: Vec<NonFungibleLocalId>;
-            {
-                let staker_list = self.proposal_staker_lists.get(&proposal_id).unwrap();
-                staker_ids = staker_list.clone();
-            }
-
-            if staker_ids.is_empty() { return; }
-
-            let stake_kvs = self.stakes.get_mut(&proposal_id).unwrap();
-            let mut vault = self.stake_vaults.get_mut(&proposal_id).unwrap();
-
-            for badge_id in &staker_ids {
-                if let Some(stake) = stake_kvs.get(badge_id) {
-                    let amount = stake.amount;
-                    drop(stake);
-                    stake_kvs.remove(badge_id);
-
-                    if vault.amount() >= amount {
-                        let xrd = vault.take(amount);
-                        // Return stakes — deposit back to staker accounts
-                        // Note: We don't have staker account addresses in stake records,
-                        // so stakes accumulate in the vault for manual withdrawal.
-                        // Stakers call remove_stake() to get their XRD back.
-                        vault.put(xrd);
-                    }
-                }
-            }
-            // Clear staker list
+        /// Note: Stakes remain in vault after execution/cancellation.
+        /// Stakers must call remove_stake() to withdraw their XRD.
+        /// We don't store staker account addresses, so automatic return isn't possible.
+        /// This is by design — stakers are always in control of their withdrawal.
+        fn clear_staker_list(&mut self, proposal_id: u64) {
             let mut staker_list = self.proposal_staker_lists.get_mut(&proposal_id).unwrap();
             staker_list.clear();
         }

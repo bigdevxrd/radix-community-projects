@@ -30,7 +30,7 @@ Idea --> Vote --> Decision --> Fund --> Build --> Verify --> Reward
 | **Dashboard Writes** | Create proposals + bounties from dashboard (badge-gated) | Live |
 | **Profile Tabs** | Tabbed profile: Overview, Tasks, Votes, Groups, Trust Score | Live |
 | **REST API** | 44 endpoints including /api/health + /api/profile + /api/trust | Live |
-| **Pipeline Tests** | 75 automated tests (API, dashboard, gateway, escrow, CV2) | Passing |
+| **Pipeline Tests** | 148 automated tests (API, lifecycle, dashboard, gateway, escrow, CV2/CV3, decisions) | Passing |
 
 ## Quick Start (5 minutes)
 
