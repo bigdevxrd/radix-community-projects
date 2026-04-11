@@ -624,6 +624,9 @@ function ProposalsContent() {
               Stake XRD on proposals you believe in. Conviction grows over time — when threshold is met, funds auto-release.
               Badge tier multipliers: Member 1x, Contributor 1.5x, Builder+ 2x.
             </p>
+            <div className="bg-yellow-500/10 rounded px-2.5 py-1.5">
+              <p className="text-[10px] text-yellow-500 font-semibold">Testing Mode — On-chain staking disabled. Mechanics are live in the database for testing. The community will vote to activate on-chain staking when ready.</p>
+            </div>
 
             <div className="grid grid-cols-3 gap-3">
               <div className="bg-muted rounded-lg px-3 py-2">
@@ -684,8 +687,8 @@ function ProposalsContent() {
                                 onClick={() => { setStakingId(null); setStakeAmount(""); }}>Cancel</Button>
                             </div>
                           ) : (
-                            <Button size="sm" variant="outline" className="h-7 text-xs mt-1"
-                              onClick={() => setStakingId(p.id)}>Stake XRD</Button>
+                            <Button size="sm" variant="outline" className="h-7 text-xs mt-1" disabled>
+                              Staking Coming Soon</Button>
                           )}
                         </div>
                       )}
@@ -703,8 +706,8 @@ function ProposalsContent() {
             {connected && (
               <div>
                 {!showCreateCv3 && (
-                  <Button variant="default" size="sm" onClick={() => setShowCreateCv3(true)} className="w-full">
-                    Create Conviction Proposal
+                  <Button variant="default" size="sm" onClick={() => setShowCreateCv3(true)} className="w-full" disabled>
+                    Create Conviction Proposal (Coming Soon)
                   </Button>
                 )}
                 {showCreateCv3 && (

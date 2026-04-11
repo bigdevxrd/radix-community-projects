@@ -1641,16 +1641,12 @@ bot.command("cv3", async (ctx) => {
 
   if (sub === "create") {
     return ctx.reply(
-      "Create a CV3 Conviction Proposal\n\n" +
-      "CV3 proposals are on-chain transactions — you need a Radix Wallet to create one.\n\n" +
-      "Open the dashboard, scroll to Conviction Voting, and click \"Create Conviction Proposal\":\n" +
-      PORTAL + "/proposals\n\n" +
-      "You'll need:\n" +
-      "- A guild badge\n" +
-      "- Title + description\n" +
-      "- Requested XRD amount\n" +
-      "- Beneficiary address (defaults to your wallet)\n\n" +
-      "Once created, community members stake XRD to build conviction. Threshold = 10x requested amount."
+      "CV3 Conviction Voting — Testing Mode\n\n" +
+      "On-chain staking is currently disabled while the community reviews the mechanics.\n\n" +
+      "The conviction system is deployed on mainnet and the mechanics work in the database. " +
+      "The community will vote to activate on-chain staking when ready.\n\n" +
+      "View the system: " + PORTAL + "/proposals\n" +
+      "Learn how it works: " + PORTAL + "/docs"
     );
   }
 
