@@ -445,7 +445,7 @@ async function main() {
 
   await test("All proposals have valid type", async () => {
     const data = await fetchJson(API + "/proposals");
-    const validTypes = ["yesno", "poll", "temp"];
+    const validTypes = ["yesno", "poll", "temp", "multi"];
     data.data.forEach(p => {
       assert(validTypes.includes(p.type), "invalid type '" + p.type + "' on #" + p.id);
     });
