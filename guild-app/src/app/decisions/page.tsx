@@ -100,7 +100,7 @@ function DecisionsContent() {
           Shape the DAO. Each decision unlocks the next. Vote on what matters to you.
         </p>
         <div className="bg-yellow-500/10 rounded px-2.5 py-1.5 mt-2">
-          <p className="text-[10px] text-yellow-500 font-semibold">DRAFT — These decisions are placeholders showing the platform&apos;s capacity. The community will finalize the actual questions and options together.</p>
+          <p className="text-[10px] text-yellow-500 font-semibold">TEMP CHECKS — All votes are non-binding pulse checks. Results inform formal proposals. Flow: Temp Check → Review → Formal Proposal → Binding On-Chain Vote.</p>
         </div>
       </div>
 
@@ -238,7 +238,9 @@ function DecisionCard({ decision: d, onVote, voting, connected }: {
             {resolved && <Badge variant="default" className="text-[8px]">Resolved</Badge>}
             {active && <Badge variant="secondary" className="text-[8px]">{timeLeft}</Badge>}
             {locked && <Badge variant="outline" className="text-[8px]">Locked</Badge>}
-            {p && <Badge variant="outline" className="text-[8px]">{p.type === "yesno" ? "Yes/No" : "Poll"}</Badge>}
+            {p?.type === "temp" && <Badge variant="outline" className="text-[8px] text-yellow-500 border-yellow-500">Temp Check</Badge>}
+            {p?.type === "yesno" && <Badge variant="outline" className="text-[8px]">Yes/No</Badge>}
+            {p?.type === "poll" && <Badge variant="outline" className="text-[8px]">Poll</Badge>}
           </div>
         </div>
 
