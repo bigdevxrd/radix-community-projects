@@ -8,6 +8,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import Link from "next/link";
 import { Input } from "@/components/ui/input";
 import { useWallet } from "@/hooks/useWallet";
+import { InfoTip } from "@/components/InfoTip";
 import { API_URL, TG_BOT_URL } from "@/lib/constants";
 
 interface Bounty {
@@ -132,7 +133,10 @@ function BountiesContent() {
   return (
     <div className="space-y-5">
       <div>
-        <h1 className="text-xl font-bold">Bounty Board</h1>
+        <div className="flex items-center gap-1">
+          <h1 className="text-xl font-bold">Bounty Board</h1>
+          <InfoTip text="Task marketplace with on-chain escrow. Create tasks, fund them with XRD (or xUSDC/xUSDT via V3), workers deliver and get paid. 2.5% platform fee on release." link="/docs" />
+        </div>
         <p className="text-muted-foreground text-sm mt-1">Earn XRD and XP by completing tasks for the community.</p>
       </div>
 
@@ -346,9 +350,12 @@ function BountiesContent() {
                   <div className="flex items-center gap-2 shrink-0">
                     <span className="font-mono text-sm font-bold text-primary">{b.reward_xrd} XRD</span>
                     {b.status === "open" && (
-                      <Badge variant={b.funded ? "default" : "outline"} className={`text-[9px] ${b.funded ? "" : "text-muted-foreground"}`}>
-                        {b.funded ? "Funded" : "Seeking Sponsor"}
-                      </Badge>
+                      <span className="flex items-center">
+                        <Badge variant={b.funded ? "default" : "outline"} className={`text-[9px] ${b.funded ? "" : "text-muted-foreground"}`}>
+                          {b.funded ? "Funded" : "Seeking Sponsor"}
+                        </Badge>
+                        <InfoTip text={b.funded ? "XRD locked in on-chain escrow vault. No admin custody. Released on verified delivery." : "Task created but not funded. Deposit XRD to activate it for workers."} />
+                      </span>
                     )}
                     <Badge variant={STATUS_COLORS[b.status] || "secondary"}>{b.status}</Badge>
                   </div>

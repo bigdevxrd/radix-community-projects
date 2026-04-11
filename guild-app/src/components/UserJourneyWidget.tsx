@@ -48,6 +48,7 @@ const STAGE_META: StageConfig[] = [
   { id: 4, title: "Badge & XP", subtitle: "5 tiers \u00b7 XP thresholds \u00b7 game progression", color: "#f59e0b" },
   { id: 5, title: "Charter Map", subtitle: "3 phases with dependency unlocking", color: "#f472b6" },
   { id: 6, title: "Architecture", subtitle: "TG Bot \u2194 Dashboard \u2194 Scrypto \u2194 CV2", color: "#00e49f" },
+  { id: 7, title: "Conviction (CV3)", subtitle: "Stake \u2192 Wait \u2192 Threshold \u2192 Auto-Execute", color: "#f97316" },
 ];
 
 /* ── Stage 1: Quick Start Flow ── */
@@ -350,9 +351,9 @@ function CharterStage() {
 const ARCH_BLOCKS = [
   { icon: MessageSquare, label: "Telegram Bot", desc: "Grammy \u00b7 36 commands", color: "#4ea8de" },
   { icon: LayoutDashboard, label: "Dashboard", desc: "Next.js 16 \u00b7 14 pages", color: "#2dd4bf" },
-  { icon: Server, label: "API / SQLite", desc: "34 endpoints \u00b7 75 tests", color: "#f59e0b" },
-  { icon: Box, label: "Scrypto", desc: "Badges \u00b7 Escrow", color: "#a78bfa" },
-  { icon: Layers, label: "CV2", desc: "On-chain governance", color: "#f472b6" },
+  { icon: Server, label: "API / SQLite", desc: "42 endpoints \u00b7 75 tests", color: "#f59e0b" },
+  { icon: Box, label: "Scrypto", desc: "Badges \u00b7 Escrow V2/V3", color: "#a78bfa" },
+  { icon: Layers, label: "CV2 + CV3", desc: "Voting + Conviction", color: "#f472b6" },
   { icon: Users, label: "Gateway API", desc: "Radix mainnet", color: "#00e49f" },
 ];
 
@@ -383,6 +384,43 @@ function ArchitectureStage() {
         <span>API \u2194 Scrypto \u2194 Gateway</span>
         <span className="text-muted-foreground/30">|</span>
         <span>Dashboard \u2194 CV2</span>
+      </div>
+    </div>
+  );
+}
+
+/* ── Stage 7: Conviction Voting (CV3) ── */
+
+const CV3_STEPS = [
+  { label: "Create Proposal", desc: "Request XRD from the shared pool for a task or initiative", icon: "1" },
+  { label: "Stake XRD", desc: "Community members lock XRD on proposals they support", icon: "2" },
+  { label: "Conviction Grows", desc: "Score compounds hourly: y(t+1) = 0.9904 * y(t) + stake", icon: "3" },
+  { label: "Threshold Met", desc: "When conviction reaches 10x requested amount", icon: "4" },
+  { label: "Auto-Execute", desc: "Funds release from pool. Stakes returned. No admin step.", icon: "5" },
+];
+
+function ConvictionStage() {
+  return (
+    <div className="px-4 pb-4 sm:px-5 space-y-3">
+      <div className="space-y-1.5">
+        {CV3_STEPS.map((step, i) => (
+          <div key={i} className="flex items-start gap-2.5 journey-fade-in" style={{ animationDelay: `${i * 100}ms` }}>
+            <div className="w-5 h-5 rounded-full bg-[#f97316]/20 text-[#f97316] flex items-center justify-center text-[10px] font-bold shrink-0 mt-0.5">{step.icon}</div>
+            <div>
+              <div className="text-[11px] font-semibold">{step.label}</div>
+              <div className="text-[9px] text-muted-foreground">{step.desc}</div>
+            </div>
+          </div>
+        ))}
+      </div>
+      <div className="bg-muted rounded-lg p-2.5 space-y-1.5">
+        <div className="text-[10px] font-semibold text-[#f97316]">BETA Parameters</div>
+        <div className="grid grid-cols-2 gap-1 text-[9px] text-muted-foreground">
+          <span>Decay: 0.9904 (3-day half-life)</span>
+          <span>Threshold: 10x requested</span>
+          <span>Tiers: 1x / 1.5x / 2x</span>
+          <span>Updates: every hour</span>
+        </div>
       </div>
     </div>
   );
@@ -435,6 +473,7 @@ export function UserJourneyWidget() {
       case 3: return <BadgeXPStage />;
       case 4: return <CharterStage />;
       case 5: return <ArchitectureStage />;
+      case 6: return <ConvictionStage />;
       default: return null;
     }
   };

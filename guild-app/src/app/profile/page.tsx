@@ -12,6 +12,7 @@ import { useWallet } from "@/hooks/useWallet";
 import { lookupAllBadges } from "@/lib/gateway";
 import { API_URL, TG_BOT_URL } from "@/lib/constants";
 import Link from "next/link";
+import { InfoTip } from "@/components/InfoTip";
 import type { BadgeInfo } from "@/lib/types";
 
 interface GameState {
@@ -102,7 +103,7 @@ function ProfileContent() {
     { key: "votes", label: `Votes (${myVotes.length})` },
     { key: "groups", label: `Groups (${myGroups.length})` },
     { key: "trust", label: "Trust" },
-  ];
+  ] as const;
 
   const TASKS_PER_PAGE = 10;
   const VOTES_PER_PAGE = 15;
@@ -409,7 +410,10 @@ function ProfileContent() {
       {tab === "trust" && (
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm uppercase tracking-wide text-muted-foreground">Trust Score</CardTitle>
+            <div className="flex items-center gap-1">
+              <CardTitle className="text-sm uppercase tracking-wide text-muted-foreground">Trust Score</CardTitle>
+              <InfoTip text="Calculated from: account age, votes cast, proposals created, tasks completed, groups joined, feedback. Tiers: Bronze (0+), Silver (50+), Gold (200+). Higher tiers amplify your CV3 conviction weight." link="/docs" />
+            </div>
           </CardHeader>
           <CardContent className="space-y-4">
             {trustScore ? (

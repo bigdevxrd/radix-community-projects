@@ -13,6 +13,7 @@ import { API_URL, CV2_COMPONENT, TG_BOT_URL } from "@/lib/constants";
 import { useWallet } from "@/hooks/useWallet";
 import { makeTemperatureCheckManifest, voteOnTemperatureCheckManifest, stakeOnCv3ProposalManifest, createCv3ProposalManifest } from "@/lib/manifests";
 import { CV3_COMPONENT, BADGE_NFT } from "@/lib/constants";
+import { InfoTip } from "@/components/InfoTip";
 
 interface Proposal {
   id: number; title: string; type: string; status: string;
@@ -68,10 +69,10 @@ function classifyProposal(p: Proposal): ProposalClass {
   return "community_vote";
 }
 
-const CLASS_CONFIG: Record<ProposalClass, { label: string; badge: "default" | "secondary" | "outline"; cta: string; border: string }> = {
-  charter_vote: { label: "Binding Decision", badge: "default", cta: "Vote now — this shapes the DAO", border: "border-l-4 border-l-primary" },
-  community_vote: { label: "Community Vote", badge: "secondary", cta: "Have your say", border: "border-l-4 border-l-muted-foreground/30" },
-  temp_check: { label: "Gauging Interest", badge: "outline", cta: "Quick pulse check — non-binding", border: "border-l-4 border-l-muted-foreground/15" },
+const CLASS_CONFIG: Record<ProposalClass, { label: string; badge: "default" | "secondary" | "outline"; cta: string; border: string; tip: string }> = {
+  charter_vote: { label: "Binding Decision", badge: "default", cta: "Vote now — this shapes the DAO", border: "border-l-4 border-l-primary", tip: "Charter votes that shape the DAO. Results are enforced on-chain." },
+  community_vote: { label: "Community Vote", badge: "secondary", cta: "Have your say", border: "border-l-4 border-l-muted-foreground/30", tip: "Formal but non-binding. Signals community preference on a topic." },
+  temp_check: { label: "Gauging Interest", badge: "outline", cta: "Quick pulse check — non-binding", border: "border-l-4 border-l-muted-foreground/15", tip: "24h quick pulse check. Non-binding temperature read." },
 };
 
 // Sort: charter votes first, then community, then temp checks
@@ -317,6 +318,7 @@ function ProposalsContent() {
                       <div className="text-sm font-semibold leading-tight">{p.title}</div>
                       <div className="flex items-center gap-2 mt-1">
                         <Badge variant={cfg.badge} className="text-[9px]">{cfg.label}</Badge>
+                        <InfoTip text={cfg.tip} link="/docs" />
                         {p.charter_param && <Badge variant="outline" className="text-[8px] font-mono">{p.charter_param}</Badge>}
                         <span className="text-[11px] text-muted-foreground">{p.total_votes} vote{p.total_votes !== 1 ? "s" : ""}</span>
                       </div>
@@ -610,6 +612,7 @@ function ProposalsContent() {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <CardTitle className="text-sm uppercase tracking-wide text-muted-foreground">Conviction Voting</CardTitle>
+                <InfoTip text="Time-weighted governance. Stake XRD on proposals — conviction grows hourly. When threshold (10x requested) is met, funds auto-release. Badge tier multipliers: Member 1x, Contributor 1.5x, Builder+ 2x." link="/docs" />
                 <Badge variant="outline" className="text-[8px] text-yellow-500 border-yellow-500">BETA</Badge>
                 <Badge variant="secondary" className="text-[8px]">CV3</Badge>
               </div>
