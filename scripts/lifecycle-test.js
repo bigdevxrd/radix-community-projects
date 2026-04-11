@@ -12,10 +12,10 @@
 const API = process.env.API_URL || "https://radixguild.com/api";
 const GUILD = process.env.GUILD_URL || "https://radixguild.com";
 
-// Test addresses (valid format but non-existent on ledger)
-const USER_ALPHA = "account_rdx1test_alpha_" + "a".repeat(40);
-const USER_BETA = "account_rdx1test_beta_" + "b".repeat(41);
-const USER_GAMMA = "account_rdx1test_gamma_" + "c".repeat(40);
+// Test addresses (valid format, non-existent on ledger, matches account_rdx1[a-z0-9]{40,65})
+const USER_ALPHA = "account_rdx1testalpha" + "a".repeat(40);
+const USER_BETA = "account_rdx1testbeta0" + "b".repeat(41);
+const USER_GAMMA = "account_rdx1testgamma" + "c".repeat(40);
 const REAL_ACCOUNT = "account_rdx12yh4fwevmvnqgd3ppzau66cm9xu874srmrt9g2cye3fa8j8y78z9sq";
 
 let passed = 0;
