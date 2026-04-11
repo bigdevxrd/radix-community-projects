@@ -324,6 +324,11 @@ function init() {
   try { db.exec("ALTER TABLE working_groups ADD COLUMN sunset_date INTEGER"); } catch(e) {}
   // status column already exists in CREATE TABLE but migration ensures it for older DBs
   try { db.exec("ALTER TABLE working_groups ADD COLUMN status TEXT DEFAULT 'active'"); } catch(e) {}
+  // P6: sunset alert tracking
+  try { db.exec("ALTER TABLE working_groups ADD COLUMN sunset_alert_sent INTEGER DEFAULT 0"); } catch(e) {}
+  // P6: report status + period type
+  try { db.exec("ALTER TABLE wg_reports ADD COLUMN status TEXT DEFAULT 'submitted'"); } catch(e) {}
+  try { db.exec("ALTER TABLE wg_reports ADD COLUMN period_type TEXT DEFAULT 'biweekly'"); } catch(e) {}
 
   // WG reports table
   db.exec(`
@@ -1462,4 +1467,51 @@ module.exports.linkBountyToCv3 = function(bountyId, proposalId) {
 
 module.exports.getBountyByCv3Proposal = function(proposalId) {
   return db.prepare("SELECT * FROM bounties WHERE cv3_proposal_id = ?").get(proposalId) || null;
+};
+
+// ── P6: Working Group Infrastructure ──
+
+module.exports.getCurrentPeriod = function() {
+  const now = new Date();
+  const jan1 = new Date(now.getFullYear(), 0, 1);
+  const days = Math.floor((now.getTime() - jan1.getTime()) / 86400000);
+  const week = Math.ceil((days + jan1.getDay() + 1) / 7);
+  const biweek = Math.ceil(week / 2);
+  return now.getFullYear() + "-BW" + String(biweek).padStart(2, "0");
+};
+
+module.exports.getOverdueReports = function() {
+  const period = module.exports.getCurrentPeriod();
+  return db.prepare(`
+    SELECT wg.* FROM working_groups wg
+    WHERE wg.status = 'active'
+    AND wg.id NOT IN (
+      SELECT DISTINCT group_id FROM wg_reports WHERE period = ?
+    )
+    ORDER BY wg.name
+  `).all(period);
+};
+
+module.exports.getGroupsSunsetSoon = function(days = 30) {
+  const cutoff = Math.floor(Date.now() / 1000) + (days * 86400);
+  const now = Math.floor(Date.now() / 1000);
+  return db.prepare(`
+    SELECT *, (sunset_date - ?) as days_remaining
+    FROM working_groups
+    WHERE status = 'active' AND sunset_date IS NOT NULL AND sunset_date > 0
+    AND sunset_date <= ? AND sunset_date > ?
+    ORDER BY sunset_date ASC
+  `).all(now, cutoff, now);
+};
+
+module.exports.updateSunsetDate = function(groupId, unixTimestamp) {
+  db.prepare("UPDATE working_groups SET sunset_date = ?, sunset_alert_sent = 0 WHERE id = ?").run(unixTimestamp, groupId);
+};
+
+module.exports.renewCharter = function(groupId, newSunsetDate) {
+  db.prepare("UPDATE working_groups SET sunset_date = ?, sunset_alert_sent = 0 WHERE id = ?").run(newSunsetDate, groupId);
+};
+
+module.exports.markSunsetAlertSent = function(groupId) {
+  db.prepare("UPDATE working_groups SET sunset_alert_sent = ? WHERE id = ?").run(Math.floor(Date.now() / 1000), groupId);
 };

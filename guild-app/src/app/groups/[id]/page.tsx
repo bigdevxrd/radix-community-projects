@@ -10,6 +10,7 @@ import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import { API_URL, TG_BOT_URL } from "@/lib/constants";
 import { useWallet } from "@/hooks/useWallet";
+import { InfoTip } from "@/components/InfoTip";
 
 interface GroupMember { id: number; radix_address: string; role: string; joined_at: number; }
 interface GroupBounty { id: number; title: string; reward_xrd: number; status: string; category: string; funded: number; }
@@ -89,9 +90,35 @@ function GroupDetailContent() {
   const inProgress = tasks.filter(t => t.status === "assigned" || t.status === "submitted").length;
   const completed = tasks.filter(t => t.status === "paid" || t.status === "verified").length;
 
+  // Sunset warning
+  const sunsetDaysLeft = group.sunset_date ? Math.round((group.sunset_date - Date.now() / 1000) / 86400) : null;
+  const sunsetUrgent = sunsetDaysLeft !== null && sunsetDaysLeft <= 7 && sunsetDaysLeft > 0;
+  const sunsetWarning = sunsetDaysLeft !== null && sunsetDaysLeft <= 30 && sunsetDaysLeft > 7;
+  const sunsetExpired = sunsetDaysLeft !== null && sunsetDaysLeft <= 0;
+
   return (
     <div className="space-y-4">
       <Link href="/groups" className="text-sm text-muted-foreground hover:text-foreground no-underline">&larr; Back to Groups</Link>
+
+      {/* Sunset Warning Banner */}
+      {sunsetExpired && (
+        <div className="bg-red-500/10 border border-red-500/30 rounded-lg px-4 py-3">
+          <p className="text-sm font-semibold text-red-400">Charter Expired</p>
+          <p className="text-xs text-muted-foreground">This group&apos;s charter expired {Math.abs(sunsetDaysLeft!)} day(s) ago. Contact the lead to renew: <code className="bg-muted px-1 rounded">/wg renew {group.name} 6</code></p>
+        </div>
+      )}
+      {sunsetUrgent && (
+        <div className="bg-red-500/10 border border-red-500/30 rounded-lg px-4 py-3">
+          <p className="text-sm font-semibold text-red-400">Charter Expiring in {sunsetDaysLeft} day(s)</p>
+          <p className="text-xs text-muted-foreground">This group&apos;s charter expires on {new Date(group.sunset_date! * 1000).toLocaleDateString()}. Renew with <code className="bg-muted px-1 rounded">/wg renew {group.name} 6</code></p>
+        </div>
+      )}
+      {sunsetWarning && (
+        <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg px-4 py-3">
+          <p className="text-sm font-semibold text-yellow-500">Charter expires in {sunsetDaysLeft} days</p>
+          <p className="text-xs text-muted-foreground">Sunset: {new Date(group.sunset_date! * 1000).toLocaleDateString()}. Plan renewal or closure.</p>
+        </div>
+      )}
 
       {/* Header */}
       <Card>
@@ -208,10 +235,18 @@ function GroupDetailContent() {
                     <span>${budget.remaining.toLocaleString()} remaining</span>
                   </div>
                 </div>
-                {group.sunset_date && (
-                  <div className="flex items-center justify-between text-xs bg-muted rounded-lg px-3 py-2">
-                    <span className="text-muted-foreground">Charter expires</span>
-                    <span className="font-mono">{new Date(group.sunset_date * 1000).toLocaleDateString()}</span>
+                {group.sunset_date && group.sunset_date > 0 && (
+                  <div className={`flex items-center justify-between text-xs rounded-lg px-3 py-2 ${
+                    sunsetExpired ? "bg-red-500/10" : sunsetUrgent ? "bg-red-500/10" : sunsetWarning ? "bg-yellow-500/10" : "bg-muted"
+                  }`}>
+                    <span className="flex items-center gap-1">
+                      <span className="text-muted-foreground">Charter {sunsetExpired ? "expired" : "expires"}</span>
+                      <InfoTip text="Every WG charter has a sunset date. When it expires, the group must renew or wind down. This prevents perpetual groups." />
+                    </span>
+                    <span className={`font-mono ${sunsetExpired ? "text-red-400" : sunsetUrgent ? "text-red-400" : ""}`}>
+                      {new Date(group.sunset_date * 1000).toLocaleDateString()}
+                      {sunsetDaysLeft !== null && !sunsetExpired && ` (${sunsetDaysLeft}d)`}
+                    </span>
                   </div>
                 )}
               </>

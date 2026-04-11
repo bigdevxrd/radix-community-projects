@@ -413,6 +413,24 @@ function startApi() {
       return res.end(JSON.stringify({ ok: true, data: db.getGroups() }));
     }
 
+    // GET /api/groups/overdue — groups with no report this period
+    if (url.pathname === "/api/groups/overdue") {
+      const overdue = db.getOverdueReports();
+      const period = db.getCurrentPeriod();
+      res.writeHead(200);
+      return res.end(JSON.stringify({ ok: true, data: { period, groups: overdue } }));
+    }
+
+    // GET /api/groups/expiring — groups with sunset in next 30 days
+    if (url.pathname === "/api/groups/expiring") {
+      const days = parseInt(url.searchParams.get("days") || "30");
+      const expiring = db.getGroupsSunsetSoon(days);
+      res.writeHead(200);
+      return res.end(JSON.stringify({ ok: true, data: expiring.map(g => ({
+        ...g, days_remaining: Math.round(g.days_remaining / 86400),
+      })) }));
+    }
+
     // GET /api/groups/:id/tasks — tasks linked to a working group
     const groupTasksMatch = url.pathname.match(/^\/api\/groups\/(\d+)\/tasks$/);
     if (groupTasksMatch) {

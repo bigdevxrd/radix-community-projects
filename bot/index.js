@@ -170,7 +170,10 @@ bot.command("help", (ctx) => {
     "/group <name> — View group details\n" +
     "/wg report <group> — File a WG report\n" +
     "/wg assign <id> <group> — Link task to group\n" +
-    "/wg budget <group> — View budget status\n\n" +
+    "/wg budget <group> — View budget status\n" +
+    "/wg sunset <group> <date> — Set charter expiry\n" +
+    "/wg renew <group> <months> — Extend charter\n" +
+    "/wg overdue — Groups with no report this period\n\n" +
 
     "Game:\n" +
     "/game — Your dice roll stats\n" +
@@ -1069,12 +1072,60 @@ bot.command("wg", async (ctx) => {
     );
   }
 
+  // /wg sunset <group> <YYYY-MM-DD> — set charter expiry
+  if (sub === "sunset") {
+    const dateStr = args[args.length - 1]; // last arg is date
+    const name = args.slice(1, -1).join(" ");
+    if (!name || !dateStr) return ctx.reply("Usage: /wg sunset <group name> <YYYY-MM-DD>");
+    const group = db.getGroupByName(name);
+    if (!group) return ctx.reply("Group not found: " + name);
+    const ts = Math.floor(new Date(dateStr + "T00:00:00Z").getTime() / 1000);
+    if (isNaN(ts) || ts < Math.floor(Date.now() / 1000)) return ctx.reply("Invalid or past date. Use YYYY-MM-DD format.");
+    db.updateSunsetDate(group.id, ts);
+    const daysLeft = Math.round((ts - Date.now() / 1000) / 86400);
+    return ctx.reply("Charter sunset set for " + group.name + ": " + dateStr + " (" + daysLeft + " days from now)");
+  }
+
+  // /wg renew <group> <months> — extend charter
+  if (sub === "renew") {
+    const months = parseInt(args[args.length - 1]) || 6;
+    const name = args.slice(1, -1).join(" ");
+    if (!name) return ctx.reply("Usage: /wg renew <group name> <months>");
+    const group = db.getGroupByName(name);
+    if (!group) return ctx.reply("Group not found: " + name);
+    const base = group.sunset_date && group.sunset_date > Date.now() / 1000
+      ? group.sunset_date
+      : Math.floor(Date.now() / 1000);
+    const newSunset = base + (months * 30 * 86400);
+    db.renewCharter(group.id, newSunset);
+    const newDate = new Date(newSunset * 1000).toISOString().slice(0, 10);
+    return ctx.reply("Charter renewed for " + group.name + ". New sunset: " + newDate + " (+" + months + " months)");
+  }
+
+  // /wg overdue — list groups with no report this period
+  if (sub === "overdue") {
+    const overdue = db.getOverdueReports();
+    const period = db.getCurrentPeriod();
+    if (overdue.length === 0) return ctx.reply("All groups have filed reports for " + period + ".");
+    let msg = "Overdue Reports (" + period + ")\n\n";
+    for (const g of overdue) {
+      msg += "  " + (g.icon || "") + " " + g.name;
+      if (g.lead_tg_id) msg += " (lead: " + g.lead_tg_id + ")";
+      msg += "\n";
+    }
+    msg += "\nFile a report: /wg report <group name>";
+    return ctx.reply(msg);
+  }
+
   // Default: show usage
   ctx.reply(
     "Working Group Commands\n\n" +
-    "/wg report <group> — File a WG report\n" +
+    "/wg report <group> — File a biweekly WG report\n" +
     "/wg assign <task_id> <group> — Link task to group\n" +
-    "/wg budget <group> — View budget status\n\n" +
+    "/wg budget <group> — View budget status\n" +
+    "/wg sunset <group> <YYYY-MM-DD> — Set charter expiry\n" +
+    "/wg renew <group> <months> — Extend charter\n" +
+    "/wg overdue — Groups with no report this period\n\n" +
     "See /groups for all working groups."
   );
 });
@@ -2004,7 +2055,29 @@ setInterval(async () => {
   }
 }, 5 * 60 * 1000);
 
-// ── Start ───────────────────────────────────────────────
+// ── WG Sunset & Overdue Checker (every 6 hours) ─────────
+
+setInterval(() => {
+  try {
+    // Check for charters expiring within 30 days
+    const expiring = db.getGroupsSunsetSoon(30);
+    for (const g of expiring) {
+      const daysLeft = Math.round(g.days_remaining / 86400);
+      // Only alert at 30, 14, 7, 1 day marks (avoid spam)
+      if ([30, 14, 7, 1].includes(daysLeft) && (!g.sunset_alert_sent || g.sunset_alert_sent < Date.now() / 1000 - 86400)) {
+        console.log("[WGWatcher] Charter expiring: " + g.name + " in " + daysLeft + " days");
+        db.markSunsetAlertSent(g.id);
+      }
+    }
+    // Check overdue reports
+    const overdue = db.getOverdueReports();
+    if (overdue.length > 0) {
+      console.log("[WGWatcher] Overdue reports: " + overdue.map(g => g.name).join(", "));
+    }
+  } catch (e) {
+    console.error("[WGWatcher] Check failed:", e.message);
+  }
+}, 6 * 60 * 60 * 1000);
 
 // ── Start bot + API ─────────────────────────────────────
 
