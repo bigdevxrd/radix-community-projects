@@ -307,6 +307,8 @@ function init() {
 
   // Seed decisions — full 47-item decision tree
   try { db.exec("ALTER TABLE decisions ADD COLUMN category TEXT DEFAULT 'charter'"); } catch(e) {}
+  // Governance stage: temp_check → proposal → binding
+  try { db.exec("ALTER TABLE decisions ADD COLUMN gov_stage TEXT DEFAULT 'temp_check'"); } catch(e) {}
   const decCount = db.prepare("SELECT COUNT(*) as c FROM decisions").get();
   if (decCount.c < 20) {
     // Clear and re-seed for consistency
