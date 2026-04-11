@@ -22,7 +22,7 @@ interface Decision {
   depends_on: number[]; radixtalk_topic_id: number | null;
   radixtalk_url: string | null; summary: string; title: string;
   status: string; sort_order: number; proposal: Proposal | null;
-  unlocked: boolean;
+  unlocked: boolean; category: string;
 }
 interface RadixTalkTopic {
   id: number; title: string; posts_count: number;
@@ -73,8 +73,16 @@ function DecisionsContent() {
   }
 
   const activeCount = decisions.filter(d => d.unlocked && d.proposal?.status === "active").length;
-  const phase1 = decisions.filter(d => d.phase === 1);
-  const phase2 = decisions.filter(d => d.phase === 2);
+  const totalCount = decisions.length;
+
+  type Category = { key: string; label: string; badge: string; items: Decision[] };
+  const categories: Category[] = [
+    { key: "charter-1", label: "Phase 1: Foundation", badge: "Must resolve first", items: decisions.filter(d => d.phase === 1) },
+    { key: "charter-2", label: "Phase 2: Configuration", badge: "Unlocks after Phase 1", items: decisions.filter(d => d.phase === 2) },
+    { key: "charter-3", label: "Phase 3: Operations", badge: "Unlocks after Phase 2", items: decisions.filter(d => d.phase === 3) },
+    { key: "structural", label: "Structural Decisions", badge: "Parallel track", items: decisions.filter(d => d.category === "structural") },
+    { key: "p3", label: "P3 Service Transitions", badge: "Foundation handover", items: decisions.filter(d => d.category === "p3_services") },
+  ].filter(c => c.items.length > 0);
 
   // RadixTalk topics not already linked to a decision
   const linkedTopicIds = new Set(decisions.filter(d => d.radixtalk_topic_id).map(d => d.radixtalk_topic_id));
@@ -86,13 +94,14 @@ function DecisionsContent() {
         <div className="flex items-center gap-2">
           <h1 className="text-xl font-bold">Decisions</h1>
           <InfoTip text="Real governance decisions happening now. Vote on temp checks to signal your preference. Binding votes happen on-chain via CV2." link="/docs" />
-          {activeCount > 0 && (
-            <Badge variant="default" className="text-[10px]">{activeCount} need input</Badge>
-          )}
+          <Badge variant="default" className="text-[10px]">{totalCount} decisions mapped</Badge>
         </div>
         <p className="text-muted-foreground text-sm mt-1">
           Shape the DAO. Each decision unlocks the next. Vote on what matters to you.
         </p>
+        <div className="bg-yellow-500/10 rounded px-2.5 py-1.5 mt-2">
+          <p className="text-[10px] text-yellow-500 font-semibold">DRAFT — These decisions are placeholders showing the platform&apos;s capacity. The community will finalize the actual questions and options together.</p>
+        </div>
       </div>
 
       {loading ? (
@@ -125,29 +134,19 @@ function DecisionsContent() {
             </CardContent>
           </Card>
 
-          {/* Phase 1: Foundation */}
-          <div>
-            <div className="flex items-center gap-2 mb-3">
-              <h2 className="text-sm font-bold uppercase tracking-wide text-muted-foreground">Phase 1: Foundation</h2>
-              <Badge variant="secondary" className="text-[9px]">{phase1.length} decisions</Badge>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {phase1.map(d => <DecisionCard key={d.id} decision={d} onVote={handleVote} voting={voting} connected={connected} />)}
-            </div>
-          </div>
-
-          {/* Phase 2: Structure */}
-          {phase2.length > 0 && (
-            <div>
+          {/* All Categories */}
+          {categories.map(cat => (
+            <div key={cat.key}>
               <div className="flex items-center gap-2 mb-3">
-                <h2 className="text-sm font-bold uppercase tracking-wide text-muted-foreground">Phase 2: Structure</h2>
-                <Badge variant="outline" className="text-[9px]">Unlocks after Phase 1</Badge>
+                <h2 className="text-sm font-bold uppercase tracking-wide text-muted-foreground">{cat.label}</h2>
+                <Badge variant={cat.key === "charter-1" ? "secondary" : "outline"} className="text-[9px]">{cat.items.length}</Badge>
+                <span className="text-[9px] text-muted-foreground">{cat.badge}</span>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {phase2.map(d => <DecisionCard key={d.id} decision={d} onVote={handleVote} voting={voting} connected={connected} />)}
+                {cat.items.map(d => <DecisionCard key={d.id} decision={d} onVote={handleVote} voting={voting} connected={connected} />)}
               </div>
             </div>
-          )}
+          ))}
 
           {/* Alerts */}
           {(voteSuccess || voteError) && (

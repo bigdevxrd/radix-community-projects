@@ -305,17 +305,71 @@ function init() {
     CREATE INDEX IF NOT EXISTS idx_decisions_phase ON decisions(phase, sort_order);
   `);
 
-  // Seed decisions if empty
+  // Seed decisions — full 47-item decision tree
+  try { db.exec("ALTER TABLE decisions ADD COLUMN category TEXT DEFAULT 'charter'"); } catch(e) {}
   const decCount = db.prepare("SELECT COUNT(*) as c FROM decisions").get();
-  if (decCount.c === 0) {
-    const ins = db.prepare("INSERT INTO decisions (proposal_id, phase, depends_on, radixtalk_topic_id, radixtalk_url, summary, title, sort_order) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
-    ins.run(1, 1, "[]", 2269, "https://radixtalk.com/t/rfc-dao-documents-round1-the-charter/2269", "Should the guild adopt the Radix DAO Charter as its founding governance document?", "Adopt the Charter", 1);
-    ins.run(2, 1, "[1]", null, null, "How many seats should the Radix Accountability Council have? (3, 5, 7, or 9)", "RAC Seat Count", 2);
-    ins.run(3, 1, "[1]", null, null, "What minimum number of votes should a standard proposal need to be valid?", "Standard Quorum", 3);
-    ins.run(4, 1, "[1]", null, null, "How long should the default voting period be for standard proposals?", "Voting Period", 4);
-    ins.run(5, 1, "[1]", null, null, "What approval percentage should proposals need to pass?", "Approval Threshold", 5);
-    ins.run(null, 2, "[1,2,3,4,5]", 2270, "https://radixtalk.com/t/rfc-draft-formation-documents-for-marshall-islands-dao-llc/2270", "Should the community form a Marshall Islands DAO LLC (MIDAO) as its legal structure?", "MIDAO LLC Formation", 6);
-    ins.run(25, 2, "[1]", 2272, "https://radixtalk.com/t/rfc-working-group-coordination-infrastructure/2272", "Should we adopt a formal Working Group Framework for organizing community work?", "WG Framework", 7);
+  if (decCount.c < 20) {
+    // Clear and re-seed for consistency
+    db.exec("DELETE FROM decisions");
+    const ins = db.prepare("INSERT INTO decisions (proposal_id, phase, depends_on, radixtalk_topic_id, radixtalk_url, summary, title, sort_order, category) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
+
+    // Phase 1: Foundation (6)
+    ins.run(1, 1, "[]", 2269, "https://radixtalk.com/t/2269", "Should the community adopt the Radix DAO Charter as its founding governance document?", "Adopt the Charter", 1, "charter");
+    ins.run(2, 1, "[1]", null, null, "How many seats should the Radix Accountability Council have?", "RAC Seat Count", 2, "charter");
+    ins.run(3, 1, "[1]", null, null, "What minimum number of votes should a standard proposal need?", "Standard Quorum", 3, "charter");
+    ins.run(4, 1, "[1]", null, null, "How long should the default voting period be?", "Default Voting Period", 4, "charter");
+    ins.run(5, 1, "[1]", null, null, "What approval percentage should standard proposals need?", "Approval Threshold", 5, "charter");
+    ins.run(6, 1, "[1]", null, null, "What approval percentage should charter amendments need?", "Amendment Threshold", 6, "charter");
+
+    // Phase 2: Configuration (20) — depends on Phase 1 (#1)
+    const p1 = "[1]";
+    ins.run(7,  2, p1, null, null, "What multi-sig threshold should the RAC use?", "RAC Multi-sig", 10, "charter");
+    ins.run(8,  2, p1, null, null, "How often should the RAC meet?", "RAC Meetings", 11, "charter");
+    ins.run(9,  2, p1, null, null, "After how many missed meetings should a RAC member face review?", "RAC Inactivity", 12, "charter");
+    ins.run(null, 2, p1, null, null, "Should RAC members receive compensation? How much?", "RAC Compensation", 13, "charter");
+    ins.run(10, 2, p1, null, null, "How long should charter amendment votes last?", "Amendment Vote Period", 14, "charter");
+    ins.run(11, 2, p1, null, null, "How long should emergency votes last?", "Emergency Vote Period", 15, "charter");
+    ins.run(null, 2, p1, null, null, "How long should election votes last?", "Election Vote Period", 16, "charter");
+    ins.run(null, 2, p1, null, null, "What quorum should amendment votes require?", "Amendment Quorum", 17, "charter");
+    ins.run(null, 2, p1, null, null, "What quorum should emergency votes require?", "Emergency Quorum", 18, "charter");
+    ins.run(null, 2, p1, null, null, "What quorum should elections require?", "Election Quorum", 19, "charter");
+    ins.run(12, 2, p1, null, null, "What is the minimum forum discussion before a vote starts?", "Forum Discussion Period", 20, "charter");
+    ins.run(13, 2, p1, null, null, "How long should the execution delay be after approval?", "Execution Delay", 21, "charter");
+    ins.run(14, 2, p1, null, null, "How long before a failed proposal can be resubmitted?", "Resubmission Cooldown", 22, "charter");
+    ins.run(15, 2, p1, null, null, "What should be the maximum single grant amount?", "Max Grant Amount", 23, "charter");
+    ins.run(16, 2, p1, null, null, "What should be the maximum single bounty payout?", "Max Bounty Payout", 24, "charter");
+    ins.run(17, 2, p1, null, null, "What should be the monthly operational spending limit?", "Monthly Ops Limit", 25, "charter");
+    ins.run(null, 2, p1, null, null, "What should the emergency spending cap be?", "Emergency Spending Cap", 26, "charter");
+    ins.run(18, 2, p1, null, null, "Should proposals require a stake/deposit to submit?", "Proposal Stake", 27, "charter");
+    ins.run(19, 2, p1, null, null, "Should XP/reputation decay over time if members are inactive?", "XP Decay", 28, "charter");
+    ins.run(20, 2, p1, null, null, "What should be the default suspension duration for violations?", "Suspension Duration", 29, "charter");
+
+    // Phase 3: Operations (6) — depends on Phase 1
+    ins.run(null, 3, p1, null, null, "How long should the RAC nomination period be?", "Nomination Period", 30, "charter");
+    ins.run(null, 3, p1, null, null, "How long for candidate discussion before elections?", "Candidate Discussion", 31, "charter");
+    ins.run(null, 3, p1, null, null, "What minimum governance activity should RAC candidates have?", "RAC Eligibility", 32, "charter");
+    ins.run(null, 3, p1, null, null, "Launch the first RAC election", "First RAC Election", 33, "charter");
+    ins.run(null, 3, p1, null, null, "Establish the first community bounty fund", "First Bounty Fund", 34, "charter");
+    ins.run(null, 3, p1, null, null, "Approve infrastructure hosting arrangement", "Hosting Approval", 35, "charter");
+
+    // Structural Decisions (10) — parallel track, no charter dependency
+    ins.run(null, 0, "[]", 2270, "https://radixtalk.com/t/2270", "Should the community form a Marshall Islands DAO LLC?", "MIDAO LLC Formation", 40, "structural");
+    ins.run(null, 0, "[]", 2150, "https://radixtalk.com/t/2150", "Where should the DAO be legally incorporated?", "DAO Location", 41, "structural");
+    ins.run(null, 0, "[]", 2266, "https://radixtalk.com/t/2266", "Should we create a Strategic Council alongside the RAC?", "Strategic Council", 42, "structural");
+    ins.run(25, 0, "[]", 2272, "https://radixtalk.com/t/2272", "Should we adopt a Working Group Framework for organizing community work?", "WG Framework", 43, "structural");
+    ins.run(null, 0, "[]", 2268, "https://radixtalk.com/t/2268", "Should we maintain a shared governance framework repo?", "Governance Repo", 44, "structural");
+    ins.run(null, 0, "[]", 2265, "https://radixtalk.com/t/2265", "Should the RAC mandate be revised and re-election held?", "RAC Mandate Revision", 45, "structural");
+    ins.run(null, 0, "[]", 2164, "https://radixtalk.com/t/2164", "What multi-sig wallet approach should the DAO use?", "Multi-sig Wallet", 46, "structural");
+    ins.run(null, 0, "[]", 2242, "https://radixtalk.com/t/2242", "Where should the DAO store its XRD treasury?", "Treasury Storage", 47, "structural");
+    ins.run(null, 0, "[]", 2273, "https://radixtalk.com/t/2273", "Should we adopt a formal Proposal + Voting Framework?", "Voting Framework", 48, "structural");
+    ins.run(null, 0, "[]", 2255, "https://radixtalk.com/t/2255", "Should the community take stewardship of official Radix social accounts?", "Social Accounts", 49, "structural");
+
+    // P3 Foundation Service Transitions (5)
+    ins.run(null, 0, "[]", 2202, "https://radixtalk.com/t/2202", "Who should operate the Babylon Gateway after Foundation handover?", "Babylon Gateway", 50, "p3_services");
+    ins.run(null, 0, "[]", 2254, "https://radixtalk.com/t/2254", "Who should maintain the Dev Console and Dashboard?", "Dev Console", 51, "p3_services");
+    ins.run(null, 0, "[]", 2203, "https://radixtalk.com/t/2203", "Who should operate the Connect Relay?", "Connect Relay", 52, "p3_services");
+    ins.run(null, 0, "[]", 2204, "https://radixtalk.com/t/2204", "Who should operate the Signalling Server?", "Signalling Server", 53, "p3_services");
+    ins.run(null, 0, "[]", 2246, "https://radixtalk.com/t/2246", "How should Stokenet be maintained?", "Stokenet", 54, "p3_services");
   }
 
   // ── Working Groups ──
