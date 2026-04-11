@@ -42,6 +42,24 @@ export const ESCROW_PACKAGE =
   process.env.NEXT_PUBLIC_ESCROW_PACKAGE ||
   "package_rdx1p5m3z284wgnck2cwqs3nayh74c4qkghjrra76mq0azphxmsnhhcvtl";
 
+// TaskEscrow V3 (multi-token) — accepts XRD, xUSDC, xUSDT
+export const ESCROW_V3_COMPONENT =
+  process.env.NEXT_PUBLIC_ESCROW_V3_COMPONENT ||
+  "component_rdx1cpdkaf87pdpfct4v0y85ddpylpfscq9n0ysfusfwe2k3phzsfejm5a";
+
+export const ESCROW_V3_PACKAGE =
+  process.env.NEXT_PUBLIC_ESCROW_V3_PACKAGE ||
+  "package_rdx1pkaw78wcf36838s69rzmdfq030yethlyydea0uq0p8dg60uufej3f4";
+
+// ConvictionVoting (CV3) — time-weighted fund allocation
+export const CV3_COMPONENT =
+  process.env.NEXT_PUBLIC_CV3_COMPONENT ||
+  "component_rdx1cz97d534phmngxhal9l87a2p63c97n6tr6q3j6l290ckjnlhya0cvf";
+
+export const CV3_PACKAGE =
+  process.env.NEXT_PUBLIC_CV3_PACKAGE ||
+  "package_rdx1phayeasgc8qujp4l380hsnqn9jrcppltp8se2g8nac32njl3029lcy";
+
 // ── Schemas ──
 
 export interface SchemaConfig {

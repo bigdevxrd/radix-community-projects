@@ -84,6 +84,10 @@ Proposals are classified visually:
 | TaskEscrow | `component_rdx1cp8mwwe2pkrrtm05p7txgygf9y9uuwx6p87djkda8stk8nuwpyg56r` |
 | TaskEscrow Package | `package_rdx1p5m3z284wgnck2cwqs3nayh74c4qkghjrra76mq0azphxmsnhhcvtl` |
 | Escrow Receipt NFT | `resource_rdx1thyxus6dhqnd0zs0rvswlxrde3j9rcj8f79f0qsw9vcwf2zxgv6j2r` |
+| TaskEscrow V3 | `component_rdx1cpdkaf87pdpfct4v0y85ddpylpfscq9n0ysfusfwe2k3phzsfejm5a` |
+| TaskEscrow V3 Package | `package_rdx1pkaw78wcf36838s69rzmdfq030yethlyydea0uq0p8dg60uufej3f4` |
+| ConvictionVoting (CV3) | `component_rdx1cz97d534phmngxhal9l87a2p63c97n6tr6q3j6l290ckjnlhya0cvf` |
+| CV3 Package | `package_rdx1phayeasgc8qujp4l380hsnqn9jrcppltp8se2g8nac32njl3029lcy` |
 
 ## Dashboard Pages
 
