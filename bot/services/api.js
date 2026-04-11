@@ -103,7 +103,7 @@ function startApi() {
     }
 
     // GET /api/proposals — proposals with vote counts (paginated)
-    if (url.pathname === "/api/proposals") {
+    if (url.pathname === "/api/proposals" && req.method === "GET") {
       // Don't close here — let the bot's checkExpiredProposals() handle results properly
       const status = url.searchParams.get("status") || "all";
       const page = Math.max(1, parseInt(url.searchParams.get("page") || "1"));
