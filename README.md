@@ -28,7 +28,7 @@ Idea --> Vote --> Decision --> Fund --> Build --> Verify --> Reward
 | **Dice Game** | Every governance action = dice roll = bonus XP | Live |
 | **Dashboard Writes** | Create proposals + bounties from dashboard (badge-gated) | Live |
 | **Profile Tabs** | Tabbed profile: Overview, Tasks, Votes, Groups, Trust Score | Live |
-| **REST API** | 37 endpoints including /api/health + /api/profile + /api/trust | Live |
+| **REST API** | 42 endpoints including /api/health + /api/profile + /api/trust | Live |
 | **Pipeline Tests** | 75 automated tests (API, dashboard, gateway, escrow, CV2) | Passing |
 
 ## Quick Start (5 minutes)
@@ -127,7 +127,7 @@ radixguild.com (Caddy, auto-TLS)
   |     +-- github.js (PR merge detection for auto-verify)
   |     +-- consultation.js (CV2 sync)
   |     +-- gateway.js (badge + escrow reads)
-  |     +-- REST API (37 endpoints)
+  |     +-- REST API (42 endpoints)
   |
   +-- guild-app (Next.js 16, port 3002)
   |     +-- shadcn/ui + Radix dApp Toolkit 2.2.1
@@ -147,7 +147,7 @@ radixguild.com (Caddy, auto-TLS)
 - Run: `node scripts/pipeline-test.js`
 
 ### API
-See [docs/API-REFERENCE.md](./docs/API-REFERENCE.md) for all 37 endpoints.
+See [docs/API-REFERENCE.md](./docs/API-REFERENCE.md) for all 42 endpoints.
 
 ### Bot Commands
 See [docs/BOT-COMMANDS.md](./docs/BOT-COMMANDS.md) for all commands.

@@ -18,6 +18,7 @@ This document covers every command, wizard flow, and callback interaction suppor
 7. [Bounty System](#bounty-system)
 8. [Working Groups](#working-groups)
 9. [Feedback and Support](#feedback-and-support)
+10. [Conviction Voting (CV3)](#conviction-voting-cv3)
 10. [Game and Leaderboard](#game-and-leaderboard)
 11. [Charter](#charter)
 12. [Help and Resources](#help-and-resources)
@@ -1158,3 +1159,52 @@ Every 5 minutes, the bot checks submitted bounties with `approval_type = 'pr_mer
 ### Trust Score Recalculation
 
 Trust scores are calculated on-demand from: account age, votes cast, proposals created, tasks completed, groups joined, feedback submitted. Tiers: Bronze (0+), Silver (50+), Gold (200+). Check with `/trust`.
+
+---
+
+## Conviction Voting (CV3)
+
+> **BETA / Experimental.** Parameters subject to community charter vote. Deployed on Radix mainnet.
+
+Conviction voting lets the community stake XRD on proposals to signal which work should be funded. Conviction grows over time — when threshold is met, funds auto-release from a shared pool.
+
+### Commands
+
+| Command | Description |
+|---------|-------------|
+| `/cv3` | List active conviction proposals with conviction bars |
+| `/cv3 <id>` | Proposal detail — conviction %, stakers, threshold progress |
+| `/cv3 status` | Sync health, pool balance, component address |
+| `/cv3 pool` | Shared funding pool balance + active proposal count |
+
+### How It Works
+
+1. A proposal is created on-chain (requesting X XRD from the shared pool)
+2. Community members stake XRD on proposals they support
+3. Conviction score grows each hour: `y(t+1) = 0.9904 * y(t) + weighted_stake`
+4. Badge tier multipliers amplify your stake: Member 1x, Contributor 1.5x, Builder+ 2x
+5. When conviction exceeds `requested_amount * 10`, funds auto-release to the beneficiary
+6. Stakes are returned after execution
+
+### Beta Parameters
+
+| Parameter | Value | Reasoning |
+|-----------|-------|-----------|
+| Alpha (decay) | 0.9904 | 3-day half-life — conviction fades if stake removed |
+| Threshold | 10x requested | Prevents lone-wolf proposals, rewards group support |
+| Time step | 1 hour | Responsive but not spammy |
+| Tier multipliers | 1x / 1.5x / 2x | Earned trust > wealth |
+
+### Task Integration
+
+Conviction proposals can be linked to bounties. When a linked proposal executes, the bounty is auto-funded from the pool. This means the community decides which tasks get funded — not individual sponsors.
+
+### CV3 Watcher
+
+The bot polls the Radix Gateway every 60 seconds for ConvictionVoting events: ProposalCreated, StakeAdded, StakeRemoved, ConvictionUpdated, ProposalExecuted, PoolFunded. All state is cached in SQLite for fast API reads.
+
+### Dashboard
+
+Conviction proposals appear on the [Proposals page](https://radixguild.com/proposals) with conviction progress bars, staker counts, and inline stake forms. Full explanation at [radixguild.com/docs](https://radixguild.com/docs).
+
+**Component:** `component_rdx1cz97d534phmngxhal9l87a2p63c97n6tr6q3j6l290ckjnlhya0cvf`

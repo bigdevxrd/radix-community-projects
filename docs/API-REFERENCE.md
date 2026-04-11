@@ -1,6 +1,6 @@
 # API Reference
 
-REST API for the Radix Guild governance system. 37 endpoints covering proposals, badges, bounties, escrow, charter, gamification, trust scores, working groups, feedback, profiles, and CV2 on-chain governance.
+REST API for the Radix Guild governance system. 42 endpoints covering proposals, badges, bounties, escrow, charter, gamification, trust scores, working groups, feedback, profiles, CV2 on-chain governance, and CV3 conviction voting.
 
 ## Base URL
 
@@ -296,6 +296,37 @@ Types: `yesno` (default), `multi` (requires `options` array), `temp`
 ### GET /api/xp-queue
 
 Pending XP rewards awaiting on-ledger settlement.
+
+---
+
+## CV3 Conviction Voting (BETA)
+
+> **Experimental.** Beta parameters subject to community charter vote. All values tuneable by contract owner.
+
+### GET /api/cv3/status
+
+Sync health, pool balance, polling state. Returns:
+- `enabled`, `component`, `proposalCount`, `poolBalance`, `lastSync`, `errors`, `polling`
+
+### GET /api/cv3/stats
+
+Aggregate counts: `proposal_count`, `active_proposals`, `executed_proposals`, `pool_balance`
+
+### GET /api/cv3/proposals
+
+List all conviction proposals, ordered by conviction score descending. Optional `?status=active|executed|cancelled` filter.
+
+Returns array of: `{ id, title, requested_amount, conviction, threshold, total_staked, weighted_staked, staker_count, status, task_bounty_id }`
+
+### GET /api/cv3/proposals/:id
+
+Single proposal detail with `stakes` array: `[{ staker_badge_id, amount, weighted_amount, tier_multiplier }]`
+
+### GET /api/cv3/proposals/:id/stakes
+
+Staker breakdown for a proposal. Same stakes array as above.
+
+**On-chain component:** `component_rdx1cz97d534phmngxhal9l87a2p63c97n6tr6q3j6l290ckjnlhya0cvf`
 
 ---
 
