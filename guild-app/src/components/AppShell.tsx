@@ -12,6 +12,7 @@ import { Sun, Moon } from "lucide-react";
 
 const NAV = [
   { path: "/", label: "Dashboard" },
+  { path: "/decisions", label: "Decisions" },
   { path: "/mint", label: "Mint" },
   { path: "/proposals", label: "Proposals" },
   { path: "/groups", label: "Groups" },

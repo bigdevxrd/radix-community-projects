@@ -118,6 +118,21 @@ function Dashboard() {
             </CardContent>
           </Card>
 
+          {/* Decisions Banner */}
+          <Link href="/decisions" className="block no-underline text-foreground">
+            <Card className="border-primary/30 hover:bg-primary/5 transition-colors">
+              <CardContent className="pt-4 pb-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="text-sm font-bold">Governance Decisions</div>
+                    <div className="text-xs text-muted-foreground">Real decisions happening now — vote on what matters to you</div>
+                  </div>
+                  <Badge variant="default" className="text-xs">Vote Now</Badge>
+                </div>
+              </CardContent>
+            </Card>
+          </Link>
+
           {/* Interactive User Journey */}
           <UserJourneyWidget />
 

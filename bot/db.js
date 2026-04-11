@@ -287,6 +287,37 @@ function init() {
   // CV3 migration on bounties
   try { db.exec("ALTER TABLE bounties ADD COLUMN cv3_proposal_id INTEGER"); } catch(e) {}
 
+  // ── Decisions (governance decision tree) ──
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS decisions (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      proposal_id INTEGER,
+      phase INTEGER DEFAULT 1,
+      depends_on TEXT DEFAULT '[]',
+      radixtalk_topic_id INTEGER,
+      radixtalk_url TEXT,
+      summary TEXT,
+      title TEXT,
+      status TEXT DEFAULT 'active',
+      sort_order INTEGER DEFAULT 0,
+      FOREIGN KEY (proposal_id) REFERENCES proposals(id)
+    );
+    CREATE INDEX IF NOT EXISTS idx_decisions_phase ON decisions(phase, sort_order);
+  `);
+
+  // Seed decisions if empty
+  const decCount = db.prepare("SELECT COUNT(*) as c FROM decisions").get();
+  if (decCount.c === 0) {
+    const ins = db.prepare("INSERT INTO decisions (proposal_id, phase, depends_on, radixtalk_topic_id, radixtalk_url, summary, title, sort_order) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+    ins.run(1, 1, "[]", 2269, "https://radixtalk.com/t/rfc-dao-documents-round1-the-charter/2269", "Should the guild adopt the Radix DAO Charter as its founding governance document?", "Adopt the Charter", 1);
+    ins.run(2, 1, "[1]", null, null, "How many seats should the Radix Accountability Council have? (3, 5, 7, or 9)", "RAC Seat Count", 2);
+    ins.run(3, 1, "[1]", null, null, "What minimum number of votes should a standard proposal need to be valid?", "Standard Quorum", 3);
+    ins.run(4, 1, "[1]", null, null, "How long should the default voting period be for standard proposals?", "Voting Period", 4);
+    ins.run(5, 1, "[1]", null, null, "What approval percentage should proposals need to pass?", "Approval Threshold", 5);
+    ins.run(null, 2, "[1,2,3,4,5]", 2270, "https://radixtalk.com/t/rfc-draft-formation-documents-for-marshall-islands-dao-llc/2270", "Should the community form a Marshall Islands DAO LLC (MIDAO) as its legal structure?", "MIDAO LLC Formation", 6);
+    ins.run(25, 2, "[1]", 2272, "https://radixtalk.com/t/rfc-working-group-coordination-infrastructure/2272", "Should we adopt a formal Working Group Framework for organizing community work?", "WG Framework", 7);
+  }
+
   // ── Working Groups ──
   db.exec(`
     CREATE TABLE IF NOT EXISTS working_groups (
@@ -1467,6 +1498,41 @@ module.exports.linkBountyToCv3 = function(bountyId, proposalId) {
 
 module.exports.getBountyByCv3Proposal = function(proposalId) {
   return db.prepare("SELECT * FROM bounties WHERE cv3_proposal_id = ?").get(proposalId) || null;
+};
+
+// ── Decisions ──
+
+module.exports.getDecisions = function() {
+  const decisions = db.prepare("SELECT * FROM decisions ORDER BY sort_order ASC").all();
+  return decisions.map(d => {
+    const deps = JSON.parse(d.depends_on || "[]");
+    let proposal = null;
+    if (d.proposal_id) {
+      proposal = db.prepare("SELECT * FROM proposals WHERE id = ?").get(d.proposal_id);
+      if (proposal && proposal.options) proposal.options = JSON.parse(proposal.options);
+      if (proposal) {
+        const counts = db.prepare("SELECT vote, COUNT(*) as c FROM votes WHERE proposal_id = ? GROUP BY vote").all(d.proposal_id);
+        proposal.counts = {};
+        let total = 0;
+        for (const r of counts) { proposal.counts[r.vote] = r.c; total += r.c; }
+        proposal.total_votes = total;
+      }
+    }
+    // Check if dependencies are resolved
+    let unlocked = true;
+    for (const depId of deps) {
+      const dep = db.prepare("SELECT d.*, p.status as proposal_status FROM decisions d LEFT JOIN proposals p ON d.proposal_id = p.id WHERE d.id = ?").get(depId);
+      if (!dep || !dep.proposal_status || (dep.proposal_status !== "passed" && dep.proposal_status !== "completed")) {
+        unlocked = false;
+        break;
+      }
+    }
+    return { ...d, depends_on: deps, proposal, unlocked };
+  });
+};
+
+module.exports.getDecision = function(id) {
+  return db.prepare("SELECT * FROM decisions WHERE id = ?").get(id) || null;
 };
 
 // ── P6: Working Group Infrastructure ──

@@ -722,6 +722,37 @@ function startApi() {
       return res.end(JSON.stringify({ ok: true, data: proposal }));
     }
 
+    // ── Decisions Endpoints ────
+
+    // GET /api/decisions — all decisions with dependencies + status
+    if (url.pathname === "/api/decisions") {
+      const decisions = db.getDecisions();
+      res.writeHead(200);
+      return res.end(JSON.stringify({ ok: true, data: decisions }));
+    }
+
+    // GET /api/decisions/radixtalk — proxy RadixTalk governance topics (cached 5min)
+    if (url.pathname === "/api/decisions/radixtalk") {
+      try {
+        // Simple in-memory cache
+        const now = Date.now();
+        if (!global._rtCache || now - global._rtCache.at > 300000) {
+          const resp = await fetch("https://radixtalk.com/c/governance/46.json");
+          const data = await resp.json();
+          const topics = (data.topic_list?.topics || []).map(t => ({
+            id: t.id, title: t.title, posts_count: t.posts_count,
+            views: t.views, created_at: t.created_at, url: "https://radixtalk.com/t/" + t.slug + "/" + t.id,
+          }));
+          global._rtCache = { at: now, topics };
+        }
+        res.writeHead(200);
+        return res.end(JSON.stringify({ ok: true, data: global._rtCache.topics }));
+      } catch (e) {
+        res.writeHead(200);
+        return res.end(JSON.stringify({ ok: true, data: [], error: "radixtalk_unavailable" }));
+      }
+    }
+
     // ── CV3 Conviction Voting Endpoints ────
 
     // GET /api/cv3/status — sync health + pool balance
