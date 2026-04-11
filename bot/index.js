@@ -8,6 +8,7 @@ const { setupGuidedWizards, wizardStates } = require("./wizards");
 const cv2 = require("./services/consultation");
 const { checkContent } = require("./services/content-filter");
 const escrowWatcher = require("./services/escrow-watcher");
+const cv3Watcher = require("./services/conviction-watcher");
 
 const TOKEN = process.env.TG_BOT_TOKEN;
 if (!TOKEN) { console.error("Set TG_BOT_TOKEN in .env"); process.exit(1); }
@@ -176,8 +177,11 @@ bot.command("help", (ctx) => {
     "/leaderboard — Top players by bonus XP\n\n" +
 
     "Network Governance:\n" +
-    "/cv2 — On-chain consultations (when live)\n" +
-    "/cv2 status — CV2 sync health\n\n" +
+    "/cv2 — On-chain consultations (CV2)\n" +
+    "/cv2 status — CV2 sync health\n" +
+    "/cv3 — Conviction voting proposals (CV3)\n" +
+    "/cv3 status — CV3 sync + pool balance\n" +
+    "/cv3 pool — Shared funding pool\n\n" +
 
     "Help + Resources:\n" +
     "/faq — Frequently asked questions\n" +
@@ -1619,6 +1623,94 @@ bot.command("cv2", async (ctx) => {
   return ctx.reply(msg);
 });
 
+// ── /cv3 — Conviction Voting ────────────────────────────
+
+bot.command("cv3", async (ctx) => {
+  if (!cv3Watcher.isEnabled()) {
+    return ctx.reply(
+      "Conviction Voting (CV3) is not yet enabled.\n\n" +
+      "When active, community members stake XRD on proposals. " +
+      "Conviction builds over time — when threshold is met, funds auto-release from the shared pool.\n\n" +
+      "Badge tier multipliers: Member 1x, Contributor 1.5x, Builder+ 2x\n" +
+      "Dashboard: " + PORTAL + "/docs (see CV3 section)"
+    );
+  }
+
+  const args = (ctx.message?.text || "").split(/\s+/).slice(1);
+  const sub = args[0]?.toLowerCase();
+
+  if (sub === "status") {
+    const status = cv3Watcher.getSyncStatus();
+    return ctx.reply(
+      "CV3 Conviction Voting\n\n" +
+      "Enabled: " + status.enabled + "\n" +
+      "Component: " + (status.component?.slice(0, 25) || "—") + "...\n" +
+      "Proposals: " + status.proposalCount + "\n" +
+      "Pool Balance: " + (status.poolBalance || 0) + " XRD\n" +
+      "Last Sync: " + (status.lastSync ? new Date(status.lastSync * 1000).toISOString().slice(0, 19) : "never") + "\n" +
+      "Errors: " + status.errors + "\n\n" +
+      "Params (BETA): alpha=0.9904, threshold=10x, half-life=3 days"
+    );
+  }
+
+  if (sub === "pool") {
+    const status = cv3Watcher.getSyncStatus();
+    return ctx.reply(
+      "CV3 Shared Pool\n\n" +
+      "Balance: " + (status.poolBalance || 0) + " XRD\n" +
+      "Active Proposals: " + status.proposalCount + "\n\n" +
+      "Proposals compete for pool funds. Highest conviction wins first.\n" +
+      "Fund the pool on-chain to enable community task funding."
+    );
+  }
+
+  // /cv3 <id> — detail
+  if (sub && sub !== "list") {
+    const id = parseInt(sub);
+    if (isNaN(id)) return ctx.reply("Usage: /cv3 <proposal_id>");
+    const proposal = cv3Watcher.getProposal(id);
+    if (!proposal) return ctx.reply("CV3 proposal #" + id + " not found.");
+    const stakes = cv3Watcher.getStakes(id);
+    const pct = proposal.threshold > 0 ? Math.round((proposal.conviction / proposal.threshold) * 100) : 0;
+    const bar = "\u2588".repeat(Math.min(10, Math.floor(pct / 10))) + "\u2591".repeat(10 - Math.min(10, Math.floor(pct / 10)));
+    let msg = "CV3 Proposal #" + proposal.id + "\n\n" +
+      "Title: " + proposal.title + "\n" +
+      "Requested: " + proposal.requested_amount + " XRD\n" +
+      "Status: " + proposal.status + "\n\n" +
+      "Conviction: [" + bar + "] " + pct + "%\n" +
+      "  Score: " + Math.round(proposal.conviction) + " / " + Math.round(proposal.threshold) + "\n\n" +
+      "Stakers: " + stakes.length + "\n" +
+      "Total Staked: " + proposal.total_staked + " XRD\n" +
+      "Weighted: " + proposal.weighted_staked + " XRD\n";
+    if (proposal.task_bounty_id) msg += "Linked Bounty: #" + proposal.task_bounty_id + "\n";
+    msg += "\nStake XRD on this proposal to increase conviction.\nDashboard: " + PORTAL + "/proposals";
+    return ctx.reply(msg);
+  }
+
+  // /cv3 — list active
+  const proposals = cv3Watcher.getActiveProposals();
+  if (proposals.length === 0) {
+    return ctx.reply(
+      "No active conviction proposals.\n\n" +
+      "Create proposals on-chain and stake XRD to signal which tasks the community should fund.\n\n" +
+      "Use /cv3 status to check sync health.\n" +
+      "Docs: " + PORTAL + "/docs"
+    );
+  }
+
+  let msg = "CV3 Conviction Voting\n\n";
+  for (const p of proposals.slice(0, 10)) {
+    const pct = p.threshold > 0 ? Math.round((p.conviction / p.threshold) * 100) : 0;
+    const bar = "\u2588".repeat(Math.min(5, Math.floor(pct / 20))) + "\u2591".repeat(5 - Math.min(5, Math.floor(pct / 20)));
+    msg += "#" + p.id + " " + (p.title || "Untitled") + "\n" +
+      "  [" + bar + "] " + pct + "% | " + p.staker_count + " stakers | " + p.requested_amount + " XRD\n";
+    if (p.task_bounty_id) msg += "  Linked: bounty #" + p.task_bounty_id + "\n";
+    msg += "\n";
+  }
+  msg += "Use /cv3 <id> for details";
+  return ctx.reply(msg);
+});
+
 // ── Welcome new members ────────────────────────────────
 
 bot.on("message:new_chat_members", async (ctx) => {
@@ -1910,6 +2002,7 @@ startApi();
 
 // Start escrow event watcher (auto-detects on-chain events)
 try { escrowWatcher.init(dbInstance, bot); } catch (e) { console.error("[Init] Escrow watcher failed (non-fatal):", e.message); }
+try { cv3Watcher.init(dbInstance, bot); } catch (e) { console.error("[Init] CV3 watcher failed (non-fatal):", e.message); }
 
 bot.start();
 console.log("Radix Guild Bot v5 running! (proposals, polls, auto-close, escrow-watcher, API ready)");

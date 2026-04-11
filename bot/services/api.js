@@ -3,6 +3,7 @@ const http = require("http");
 const db = require("../db");
 const { hasBadge, getBadgeData } = require("./gateway");
 const cv2 = require("./consultation");
+const cv3 = require("./conviction-watcher");
 const { checkContent } = require("./content-filter");
 
 const API_PORT = parseInt(process.env.API_PORT || "3003");
@@ -701,6 +702,48 @@ function startApi() {
       }
       res.writeHead(200);
       return res.end(JSON.stringify({ ok: true, data: proposal }));
+    }
+
+    // ── CV3 Conviction Voting Endpoints ────
+
+    // GET /api/cv3/status — sync health + pool balance
+    if (url.pathname === "/api/cv3/status") {
+      res.writeHead(200);
+      return res.end(JSON.stringify({ ok: true, data: cv3.getSyncStatus() }));
+    }
+
+    // GET /api/cv3/stats — counts
+    if (url.pathname === "/api/cv3/stats") {
+      res.writeHead(200);
+      return res.end(JSON.stringify({ ok: true, data: cv3.getStats() }));
+    }
+
+    // GET /api/cv3/proposals — list with conviction scores
+    if (url.pathname === "/api/cv3/proposals") {
+      const status = url.searchParams.get("status");
+      res.writeHead(200);
+      return res.end(JSON.stringify({ ok: true, data: cv3.getProposals(status) }));
+    }
+
+    // GET /api/cv3/proposals/:id — detail with stakes
+    const cv3Match = url.pathname.match(/^\/api\/cv3\/proposals\/(\d+)$/);
+    if (cv3Match) {
+      const proposal = cv3.getProposal(parseInt(cv3Match[1]));
+      if (!proposal) {
+        res.writeHead(404);
+        return res.end(JSON.stringify({ ok: false, error: "not_found" }));
+      }
+      const stakes = cv3.getStakes(proposal.id);
+      res.writeHead(200);
+      return res.end(JSON.stringify({ ok: true, data: { ...proposal, stakes } }));
+    }
+
+    // GET /api/cv3/proposals/:id/stakes — staker breakdown
+    const cv3StakesMatch = url.pathname.match(/^\/api\/cv3\/proposals\/(\d+)\/stakes$/);
+    if (cv3StakesMatch) {
+      const stakes = cv3.getStakes(parseInt(cv3StakesMatch[1]));
+      res.writeHead(200);
+      return res.end(JSON.stringify({ ok: true, data: stakes }));
     }
 
     res.writeHead(404);

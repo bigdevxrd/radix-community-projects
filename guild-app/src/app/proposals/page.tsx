@@ -11,7 +11,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { API_URL, CV2_COMPONENT, TG_BOT_URL } from "@/lib/constants";
 import { useWallet } from "@/hooks/useWallet";
-import { makeTemperatureCheckManifest, voteOnTemperatureCheckManifest } from "@/lib/manifests";
+import { makeTemperatureCheckManifest, voteOnTemperatureCheckManifest, stakeOnCv3ProposalManifest } from "@/lib/manifests";
+import { CV3_COMPONENT, BADGE_NFT } from "@/lib/constants";
 
 interface Proposal {
   id: number; title: string; type: string; status: string;
@@ -28,6 +29,17 @@ interface CV2Proposal {
   id: string; type: string; title: string; short_description: string;
   vote_count: number; revote_count: number; quorum: string;
   vote_options: string; hidden: number;
+}
+interface CV3Status {
+  enabled: boolean; component: string;
+  proposalCount: number; poolBalance: number;
+  lastSync: number | null; errors: number;
+}
+interface CV3Proposal {
+  id: number; title: string; description: string | null;
+  requested_amount: number; conviction: number; threshold: number;
+  total_staked: number; weighted_staked: number; staker_count: number;
+  status: string; task_bounty_id: number | null;
 }
 interface Stats {
   total_proposals: number; total_voters: number;
@@ -107,6 +119,13 @@ function ProposalsContent() {
   const [showArchived, setShowArchived] = useState(false);
   const [showHowItWorks, setShowHowItWorks] = useState(false);
   const [cv2Status, setCv2Status] = useState<CV2Status | null>(null);
+  const [cv3Status, setCv3Status] = useState<CV3Status | null>(null);
+  const [cv3Proposals, setCv3Proposals] = useState<CV3Proposal[]>([]);
+  const [stakingId, setStakingId] = useState<number | null>(null);
+  const [stakeAmount, setStakeAmount] = useState("");
+  const [stakeSubmitting, setStakeSubmitting] = useState(false);
+  const [stakeResult, setStakeResult] = useState("");
+  const [stakeError, setStakeError] = useState("");
   const [cv2Proposals, setCv2Proposals] = useState<CV2Proposal[]>([]);
   const [showCreateTC, setShowCreateTC] = useState(false);
   const [tcTitle, setTcTitle] = useState("");
@@ -186,6 +205,21 @@ function ProposalsContent() {
     } catch (e) { console.error("Vote failed:", e); }
   }
 
+  async function handleStake(proposalId: number) {
+    if (!rdt || !account || !stakeAmount) return;
+    setStakeSubmitting(true); setStakeResult(""); setStakeError("");
+    try {
+      const manifest = stakeOnCv3ProposalManifest(CV3_COMPONENT, BADGE_NFT, account, proposalId, stakeAmount);
+      const result = await rdt.walletApi.sendTransaction({ transactionManifest: manifest, version: 1 });
+      if (result.isOk()) {
+        setStakeResult("Staked " + stakeAmount + " XRD on proposal #" + proposalId);
+        setStakeAmount(""); setStakingId(null);
+        setTimeout(() => fetchData(), 5000);
+      } else { setStakeError(JSON.stringify(result.error)); }
+    } catch (e: unknown) { setStakeError(e instanceof Error ? e.message : "Transaction failed"); }
+    setStakeSubmitting(false);
+  }
+
   const fetchData = () => {
     setLoading(true); setError(false);
     Promise.all([
@@ -194,12 +228,16 @@ function ProposalsContent() {
       fetch(API_URL + "/charter").then((r) => r.json()),
       fetch(API_URL + "/cv2/status").then((r) => r.json()).catch(() => null),
       fetch(API_URL + "/cv2/proposals").then((r) => r.json()).catch(() => null),
-    ]).then(([p, s, c, cv2s, cv2p]) => {
+      fetch(API_URL + "/cv3/status").then((r) => r.json()).catch(() => null),
+      fetch(API_URL + "/cv3/proposals").then((r) => r.json()).catch(() => null),
+    ]).then(([p, s, c, cv2s, cv2p, cv3s, cv3p]) => {
       setProposals(p.data || []);
       setStats(s.data || null);
       setCharter(c?.data || null);
       setCv2Status(cv2s?.data || null);
       setCv2Proposals(cv2p?.data || []);
+      setCv3Status(cv3s?.data || null);
+      setCv3Proposals(cv3p?.data || []);
       setLoading(false);
     }).catch(() => { setError(true); setLoading(false); });
   };
@@ -529,6 +567,113 @@ function ProposalsContent() {
 
             <div className="text-[10px] text-muted-foreground">
               Component: <a href={`https://dashboard.radixdlt.com/component/${cv2Status.component}`} target="_blank" className="font-mono text-primary hover:underline">{cv2Status.component.slice(0, 20)}...</a>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* ═══ CV3 CONVICTION VOTING ═══ */}
+      {cv3Status && cv3Status.enabled && (
+        <Card className="border-l-4 border-l-primary">
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <CardTitle className="text-sm uppercase tracking-wide text-muted-foreground">Conviction Voting</CardTitle>
+                <Badge variant="outline" className="text-[8px] text-yellow-500 border-yellow-500">BETA</Badge>
+                <Badge variant="secondary" className="text-[8px]">CV3</Badge>
+              </div>
+              <Badge variant="secondary" className="text-[9px]">{cv3Status.poolBalance || 0} XRD pool</Badge>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <p className="text-xs text-muted-foreground">
+              Stake XRD on proposals you believe in. Conviction grows over time — when threshold is met, funds auto-release.
+              Badge tier multipliers: Member 1x, Contributor 1.5x, Builder+ 2x.
+            </p>
+
+            <div className="grid grid-cols-3 gap-3">
+              <div className="bg-muted rounded-lg px-3 py-2">
+                <div className="text-[10px] text-muted-foreground uppercase">Proposals</div>
+                <div className="text-lg font-bold font-mono text-primary">{cv3Status.proposalCount}</div>
+              </div>
+              <div className="bg-muted rounded-lg px-3 py-2">
+                <div className="text-[10px] text-muted-foreground uppercase">Pool</div>
+                <div className="text-lg font-bold font-mono">{cv3Status.poolBalance || 0} XRD</div>
+              </div>
+              <div className="bg-muted rounded-lg px-3 py-2">
+                <div className="text-[10px] text-muted-foreground uppercase">Synced</div>
+                <div className="text-sm font-mono text-muted-foreground">
+                  {cv3Status.lastSync ? new Date(cv3Status.lastSync * 1000).toLocaleTimeString() : "—"}
+                </div>
+              </div>
+            </div>
+
+            {cv3Proposals.length > 0 ? (
+              <div className="space-y-2">
+                {cv3Proposals.map(p => {
+                  const pct = p.threshold > 0 ? Math.min(100, Math.round((p.conviction / p.threshold) * 100)) : 0;
+                  return (
+                    <div key={p.id} className="bg-muted rounded-lg p-3 space-y-2">
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <div className="text-sm font-semibold">{p.title || "Proposal #" + p.id}</div>
+                          <div className="text-xs text-muted-foreground">{p.requested_amount} XRD requested</div>
+                        </div>
+                        <Badge variant={p.status === "executed" ? "default" : "secondary"} className="text-[9px]">{p.status}</Badge>
+                      </div>
+                      <div>
+                        <div className="flex items-center justify-between text-[10px] text-muted-foreground mb-1">
+                          <span>Conviction: {pct}%</span>
+                          <span>{Math.round(p.conviction)} / {Math.round(p.threshold)}</span>
+                        </div>
+                        <Progress value={pct} className="h-2" />
+                      </div>
+                      <div className="flex items-center gap-3 text-[10px] text-muted-foreground">
+                        <span>{p.staker_count} stakers</span>
+                        <span>{p.total_staked} XRD staked</span>
+                        <span>{p.weighted_staked} weighted</span>
+                        {p.task_bounty_id && (
+                          <Link href={`/bounties/${p.task_bounty_id}`} className="text-primary hover:underline">Bounty #{p.task_bounty_id}</Link>
+                        )}
+                      </div>
+                      {p.status === "active" && connected && (
+                        <div>
+                          {stakingId === p.id ? (
+                            <div className="flex items-center gap-2 mt-1">
+                              <Input type="number" placeholder="XRD" min="1" value={stakeAmount}
+                                onChange={e => setStakeAmount(e.target.value)} className="text-sm w-24 h-7" />
+                              <Button size="sm" className="h-7 text-xs" disabled={stakeSubmitting || !stakeAmount}
+                                onClick={() => handleStake(p.id)}>
+                                {stakeSubmitting ? "..." : "Stake"}
+                              </Button>
+                              <Button size="sm" variant="ghost" className="h-7 text-xs"
+                                onClick={() => { setStakingId(null); setStakeAmount(""); }}>Cancel</Button>
+                            </div>
+                          ) : (
+                            <Button size="sm" variant="outline" className="h-7 text-xs mt-1"
+                              onClick={() => setStakingId(p.id)}>Stake XRD</Button>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="text-center py-3">
+                <p className="text-muted-foreground text-xs">No conviction proposals yet. Create proposals on-chain to start community-driven funding.</p>
+              </div>
+            )}
+
+            {(stakeResult || stakeError) && (
+              <Alert variant={stakeError ? "destructive" : "default"}>
+                <AlertDescription>{stakeError || stakeResult}</AlertDescription>
+              </Alert>
+            )}
+
+            <div className="text-[10px] text-muted-foreground">
+              Component: <a href={`https://dashboard.radixdlt.com/component/${cv3Status.component}`} target="_blank" className="font-mono text-primary hover:underline">{cv3Status.component.slice(0, 20)}...</a>
+              {" | "}<Link href="/docs" className="text-primary hover:underline">How conviction voting works</Link>
             </div>
           </CardContent>
         </Card>

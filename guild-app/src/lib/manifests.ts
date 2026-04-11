@@ -325,3 +325,98 @@ CALL_METHOD
   "${sanitize(extraData)}"
 ;`;
 }
+
+// ── CV3 Conviction Voting Manifests ──
+
+const XRD_ADDR = "resource_rdx1tknxxxxxxxxxradxrdxxxxxxxxx009923554798xxxxxxxxxradxrd";
+
+export function stakeOnCv3ProposalManifest(
+  cv3Component: string, badgeNft: string, account: string, proposalId: number, amountXrd: string
+): string {
+  const c = validateAddress(cv3Component, "component_rdx");
+  const a = validateAddress(account, "account_rdx");
+  const b = validateAddress(badgeNft, "resource_rdx");
+  const amt = sanitize(amountXrd);
+  return `CALL_METHOD
+  Address("${a}")
+  "withdraw"
+  Address("${XRD_ADDR}")
+  Decimal("${amt}")
+;
+TAKE_ALL_FROM_WORKTOP
+  Address("${XRD_ADDR}")
+  Bucket("stake_xrd")
+;
+CALL_METHOD
+  Address("${a}")
+  "create_proof_of_non_fungibles"
+  Address("${b}")
+  Array<NonFungibleLocalId>()
+;
+POP_FROM_AUTH_ZONE
+  Proof("badge_proof")
+;
+CALL_METHOD
+  Address("${c}")
+  "add_stake"
+  ${proposalId}u64
+  Bucket("stake_xrd")
+  Proof("badge_proof")
+;
+CALL_METHOD
+  Address("${a}")
+  "deposit_batch"
+  Expression("ENTIRE_WORKTOP")
+;`;
+}
+
+export function unstakeFromCv3ProposalManifest(
+  cv3Component: string, badgeNft: string, account: string, proposalId: number
+): string {
+  const c = validateAddress(cv3Component, "component_rdx");
+  const a = validateAddress(account, "account_rdx");
+  const b = validateAddress(badgeNft, "resource_rdx");
+  return `CALL_METHOD
+  Address("${a}")
+  "create_proof_of_non_fungibles"
+  Address("${b}")
+  Array<NonFungibleLocalId>()
+;
+POP_FROM_AUTH_ZONE
+  Proof("badge_proof")
+;
+CALL_METHOD
+  Address("${c}")
+  "remove_stake"
+  ${proposalId}u64
+  Proof("badge_proof")
+;
+CALL_METHOD
+  Address("${a}")
+  "deposit_batch"
+  Expression("ENTIRE_WORKTOP")
+;`;
+}
+
+export function fundCv3PoolManifest(
+  cv3Component: string, account: string, amountXrd: string
+): string {
+  const c = validateAddress(cv3Component, "component_rdx");
+  const a = validateAddress(account, "account_rdx");
+  const amt = sanitize(amountXrd);
+  return `CALL_METHOD
+  Address("${a}")
+  "withdraw"
+  Address("${XRD_ADDR}")
+  Decimal("${amt}")
+;
+TAKE_ALL_FROM_WORKTOP
+  Address("${XRD_ADDR}")
+  Bucket("pool_xrd")
+;
+CALL_METHOD
+  Address("${c}")
+  "fund_pool"
+  Bucket("pool_xrd")
+;`;
+}

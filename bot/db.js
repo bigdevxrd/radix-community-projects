@@ -242,6 +242,51 @@ function init() {
     seedCfg.run("require_application_above_xrd", "100");
   }
 
+  // ── Conviction Voting (CV3) ──
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS cv3_proposals (
+      id INTEGER PRIMARY KEY,
+      task_bounty_id INTEGER,
+      title TEXT,
+      description TEXT,
+      requested_amount REAL DEFAULT 0,
+      beneficiary TEXT,
+      conviction REAL DEFAULT 0,
+      threshold REAL DEFAULT 0,
+      total_staked REAL DEFAULT 0,
+      weighted_staked REAL DEFAULT 0,
+      staker_count INTEGER DEFAULT 0,
+      status TEXT DEFAULT 'active',
+      executed_amount REAL,
+      created_at INTEGER,
+      last_updated INTEGER DEFAULT (strftime('%s','now')),
+      FOREIGN KEY (task_bounty_id) REFERENCES bounties(id)
+    );
+    CREATE TABLE IF NOT EXISTS cv3_stakes (
+      proposal_id INTEGER NOT NULL,
+      staker_badge_id TEXT NOT NULL,
+      amount REAL DEFAULT 0,
+      weighted_amount REAL DEFAULT 0,
+      tier_multiplier REAL DEFAULT 1,
+      staked_at INTEGER DEFAULT (strftime('%s','now')),
+      PRIMARY KEY (proposal_id, staker_badge_id),
+      FOREIGN KEY (proposal_id) REFERENCES cv3_proposals(id)
+    );
+    CREATE TABLE IF NOT EXISTS cv3_sync_state (
+      id INTEGER PRIMARY KEY CHECK (id = 1),
+      last_sync INTEGER,
+      proposal_count INTEGER DEFAULT 0,
+      pool_balance REAL DEFAULT 0,
+      errors INTEGER DEFAULT 0
+    );
+    CREATE INDEX IF NOT EXISTS idx_cv3_proposals_status ON cv3_proposals(status);
+    CREATE INDEX IF NOT EXISTS idx_cv3_stakes_proposal ON cv3_stakes(proposal_id);
+  `);
+  db.prepare("INSERT OR IGNORE INTO cv3_sync_state (id) VALUES (1)").run();
+
+  // CV3 migration on bounties
+  try { db.exec("ALTER TABLE bounties ADD COLUMN cv3_proposal_id INTEGER"); } catch(e) {}
+
   // ── Working Groups ──
   db.exec(`
     CREATE TABLE IF NOT EXISTS working_groups (
@@ -1376,3 +1421,45 @@ function meetsTrustTier(tgId, requiredTier) {
 module.exports.getTrustScore = getTrustScore;
 module.exports.getTrustTier = getTrustTier;
 module.exports.meetsTrustTier = meetsTrustTier;
+
+// ── CV3 Conviction Voting Accessors ──
+
+module.exports.getCv3Proposal = function(id) {
+  return db.prepare("SELECT * FROM cv3_proposals WHERE id = ?").get(id) || null;
+};
+
+module.exports.getCv3Proposals = function(status) {
+  if (status) return db.prepare("SELECT * FROM cv3_proposals WHERE status = ? ORDER BY conviction DESC").all(status);
+  return db.prepare("SELECT * FROM cv3_proposals ORDER BY conviction DESC").all();
+};
+
+module.exports.getCv3ActiveProposals = function() {
+  return db.prepare("SELECT * FROM cv3_proposals WHERE status = 'active' ORDER BY conviction DESC").all();
+};
+
+module.exports.getCv3Stakes = function(proposalId) {
+  return db.prepare("SELECT * FROM cv3_stakes WHERE proposal_id = ? ORDER BY weighted_amount DESC").all(proposalId);
+};
+
+module.exports.getCv3Stats = function() {
+  const sync = db.prepare("SELECT * FROM cv3_sync_state WHERE id = 1").get() || {};
+  const active = db.prepare("SELECT COUNT(*) as c FROM cv3_proposals WHERE status = 'active'").get();
+  const executed = db.prepare("SELECT COUNT(*) as c FROM cv3_proposals WHERE status = 'executed'").get();
+  return {
+    proposal_count: sync.proposal_count || 0,
+    active_proposals: active.c || 0,
+    executed_proposals: executed.c || 0,
+    pool_balance: sync.pool_balance || 0,
+    last_sync: sync.last_sync,
+    errors: sync.errors || 0,
+  };
+};
+
+module.exports.linkBountyToCv3 = function(bountyId, proposalId) {
+  db.prepare("UPDATE bounties SET cv3_proposal_id = ? WHERE id = ?").run(proposalId, bountyId);
+  db.prepare("UPDATE cv3_proposals SET task_bounty_id = ? WHERE id = ?").run(bountyId, proposalId);
+};
+
+module.exports.getBountyByCv3Proposal = function(proposalId) {
+  return db.prepare("SELECT * FROM bounties WHERE cv3_proposal_id = ?").get(proposalId) || null;
+};
