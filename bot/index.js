@@ -571,9 +571,13 @@ bot.command("vote", async (ctx) => {
   const roundLabel = proposal.parent_id ? " (R" + proposal.round + " of #" + proposal.parent_id + ")" : "";
   const type = proposal.type === "poll" ? "Poll" : proposal.type === "temp" ? "Temp" : "Vote";
 
+  // Look up linked decision for summary context
+  const decision = db.prepare("SELECT summary FROM decisions WHERE proposal_id = ?").get(id);
+  const summary = decision ? "\n" + decision.summary + "\n" : "";
+
   const msg = await ctx.reply(
     "[" + type + "] Proposal #" + id + roundLabel + "\n\n" +
-    proposal.title + "\n\n" +
+    proposal.title + "\n" + summary + "\n" +
     "Ends: " + endsDate,
     { reply_markup: keyboard }
   );
