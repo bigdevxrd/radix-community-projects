@@ -330,6 +330,39 @@ CALL_METHOD
 
 const XRD_ADDR = "resource_rdx1tknxxxxxxxxxradxrdxxxxxxxxx009923554798xxxxxxxxxradxrd";
 
+export function createCv3ProposalManifest(
+  cv3Component: string, badgeNft: string, account: string,
+  title: string, description: string, requestedAmount: string, beneficiary: string
+): string {
+  const c = validateAddress(cv3Component, "component_rdx");
+  const a = validateAddress(account, "account_rdx");
+  const b = validateAddress(badgeNft, "resource_rdx");
+  const ben = validateAddress(beneficiary, "component_rdx").startsWith("component_") ? beneficiary : validateAddress(beneficiary, "account_rdx");
+  return `CALL_METHOD
+  Address("${a}")
+  "create_proof_of_non_fungibles"
+  Address("${b}")
+  Array<NonFungibleLocalId>()
+;
+POP_FROM_AUTH_ZONE
+  Proof("badge_proof")
+;
+CALL_METHOD
+  Address("${c}")
+  "create_proposal"
+  "${sanitize(title)}"
+  "${sanitize(description)}"
+  Decimal("${sanitize(requestedAmount)}")
+  Address("${sanitize(ben)}")
+  Proof("badge_proof")
+;
+CALL_METHOD
+  Address("${a}")
+  "deposit_batch"
+  Expression("ENTIRE_WORKTOP")
+;`;
+}
+
 export function stakeOnCv3ProposalManifest(
   cv3Component: string, badgeNft: string, account: string, proposalId: number, amountXrd: string
 ): string {

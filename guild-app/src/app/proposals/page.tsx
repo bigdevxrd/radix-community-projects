@@ -11,7 +11,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { API_URL, CV2_COMPONENT, TG_BOT_URL } from "@/lib/constants";
 import { useWallet } from "@/hooks/useWallet";
-import { makeTemperatureCheckManifest, voteOnTemperatureCheckManifest, stakeOnCv3ProposalManifest } from "@/lib/manifests";
+import { makeTemperatureCheckManifest, voteOnTemperatureCheckManifest, stakeOnCv3ProposalManifest, createCv3ProposalManifest } from "@/lib/manifests";
 import { CV3_COMPONENT, BADGE_NFT } from "@/lib/constants";
 
 interface Proposal {
@@ -126,6 +126,16 @@ function ProposalsContent() {
   const [stakeSubmitting, setStakeSubmitting] = useState(false);
   const [stakeResult, setStakeResult] = useState("");
   const [stakeError, setStakeError] = useState("");
+
+  // CV3 proposal creation
+  const [showCreateCv3, setShowCreateCv3] = useState(false);
+  const [cv3Title, setCv3Title] = useState("");
+  const [cv3Desc, setCv3Desc] = useState("");
+  const [cv3Amount, setCv3Amount] = useState("");
+  const [cv3Beneficiary, setCv3Beneficiary] = useState("");
+  const [cv3Creating, setCv3Creating] = useState(false);
+  const [cv3CreateResult, setCv3CreateResult] = useState("");
+  const [cv3CreateError, setCv3CreateError] = useState("");
   const [cv2Proposals, setCv2Proposals] = useState<CV2Proposal[]>([]);
   const [showCreateTC, setShowCreateTC] = useState(false);
   const [tcTitle, setTcTitle] = useState("");
@@ -218,6 +228,27 @@ function ProposalsContent() {
       } else { setStakeError(JSON.stringify(result.error)); }
     } catch (e: unknown) { setStakeError(e instanceof Error ? e.message : "Transaction failed"); }
     setStakeSubmitting(false);
+  }
+
+  async function handleCreateCv3() {
+    if (!rdt || !account || !cv3Title.trim() || !cv3Amount) return;
+    setCv3Creating(true); setCv3CreateResult(""); setCv3CreateError("");
+    try {
+      const beneficiary = cv3Beneficiary.trim() || account;
+      const manifest = createCv3ProposalManifest(
+        CV3_COMPONENT, BADGE_NFT, account,
+        cv3Title.trim(), cv3Desc.trim() || cv3Title.trim(),
+        cv3Amount, beneficiary
+      );
+      const result = await rdt.walletApi.sendTransaction({ transactionManifest: manifest, version: 1 });
+      if (result.isOk()) {
+        setCv3CreateResult("CV3 proposal created on-chain! The watcher will pick it up within 60s.");
+        setCv3Title(""); setCv3Desc(""); setCv3Amount(""); setCv3Beneficiary("");
+        setShowCreateCv3(false);
+        setTimeout(() => fetchData(), 10000);
+      } else { setCv3CreateError(JSON.stringify(result.error)); }
+    } catch (e: unknown) { setCv3CreateError(e instanceof Error ? e.message : "Transaction failed"); }
+    setCv3Creating(false);
   }
 
   const fetchData = () => {
@@ -661,13 +692,59 @@ function ProposalsContent() {
               </div>
             ) : (
               <div className="text-center py-3">
-                <p className="text-muted-foreground text-xs">No conviction proposals yet. Create proposals on-chain to start community-driven funding.</p>
+                <p className="text-muted-foreground text-xs">No conviction proposals yet. Create one below to start community-driven funding.</p>
               </div>
             )}
 
-            {(stakeResult || stakeError) && (
-              <Alert variant={stakeError ? "destructive" : "default"}>
-                <AlertDescription>{stakeError || stakeResult}</AlertDescription>
+            {/* Create CV3 Proposal */}
+            {connected && (
+              <div>
+                {!showCreateCv3 && (
+                  <Button variant="default" size="sm" onClick={() => setShowCreateCv3(true)} className="w-full">
+                    Create Conviction Proposal
+                  </Button>
+                )}
+                {showCreateCv3 && (
+                  <div className="space-y-3 bg-background border rounded-lg p-4">
+                    <div className="flex items-center justify-between">
+                      <div className="text-sm font-semibold">New CV3 Proposal</div>
+                      <Badge variant="outline" className="text-[8px] text-yellow-500 border-yellow-500">BETA</Badge>
+                    </div>
+                    <p className="text-[10px] text-muted-foreground">
+                      Create a funding proposal. Community members stake XRD — when conviction reaches threshold ({cv3Amount ? Math.round(parseFloat(cv3Amount) * 10) + " conviction needed" : "10x requested amount"}), funds auto-release from the pool.
+                    </p>
+                    <Input placeholder="Proposal title *" value={cv3Title}
+                      onChange={e => setCv3Title(e.target.value)} className="text-sm" maxLength={200} />
+                    <textarea placeholder="Description (what should be funded and why)" value={cv3Desc}
+                      onChange={e => setCv3Desc(e.target.value)} maxLength={500}
+                      className="w-full min-h-[60px] rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring" />
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <div className="text-[10px] text-muted-foreground uppercase mb-1">Requested XRD *</div>
+                        <Input type="number" placeholder="Amount" min="1" value={cv3Amount}
+                          onChange={e => setCv3Amount(e.target.value)} className="text-sm" />
+                      </div>
+                      <div>
+                        <div className="text-[10px] text-muted-foreground uppercase mb-1">Beneficiary</div>
+                        <Input placeholder="account_rdx1... (default: you)" value={cv3Beneficiary}
+                          onChange={e => setCv3Beneficiary(e.target.value)} className="text-sm text-[11px]" />
+                      </div>
+                    </div>
+                    {cv3CreateError && <p className="text-destructive text-xs">{cv3CreateError}</p>}
+                    <div className="flex gap-2">
+                      <Button size="sm" onClick={handleCreateCv3} disabled={cv3Creating || !cv3Title.trim() || !cv3Amount}>
+                        {cv3Creating ? "Submitting..." : "Create On-Chain"}
+                      </Button>
+                      <Button size="sm" variant="ghost" onClick={() => setShowCreateCv3(false)}>Cancel</Button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {(stakeResult || stakeError || cv3CreateResult || cv3CreateError) && !showCreateCv3 && (
+              <Alert variant={(stakeError || cv3CreateError) ? "destructive" : "default"}>
+                <AlertDescription>{stakeError || cv3CreateError || stakeResult || cv3CreateResult}</AlertDescription>
               </Alert>
             )}
 

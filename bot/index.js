@@ -1639,6 +1639,21 @@ bot.command("cv3", async (ctx) => {
   const args = (ctx.message?.text || "").split(/\s+/).slice(1);
   const sub = args[0]?.toLowerCase();
 
+  if (sub === "create") {
+    return ctx.reply(
+      "Create a CV3 Conviction Proposal\n\n" +
+      "CV3 proposals are on-chain transactions — you need a Radix Wallet to create one.\n\n" +
+      "Open the dashboard, scroll to Conviction Voting, and click \"Create Conviction Proposal\":\n" +
+      PORTAL + "/proposals\n\n" +
+      "You'll need:\n" +
+      "- A guild badge\n" +
+      "- Title + description\n" +
+      "- Requested XRD amount\n" +
+      "- Beneficiary address (defaults to your wallet)\n\n" +
+      "Once created, community members stake XRD to build conviction. Threshold = 10x requested amount."
+    );
+  }
+
   if (sub === "status") {
     const status = cv3Watcher.getSyncStatus();
     return ctx.reply(
