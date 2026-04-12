@@ -1,6 +1,6 @@
 # Complete Decision Tree — Radix Governance
 
-> 32 charter parameters + 15 structural decisions + 10 RadixTalk RFCs = ~57 total issues
+> 32 charter parameters + 10 structural decisions + 5 P3 services = 47 total decisions
 > Status: 0 resolved, 6 Phase 1 voting, 20 Phase 2 pending, 6 Phase 3 pending, 15 structural
 
 ---

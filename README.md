@@ -23,14 +23,14 @@ Idea --> Vote --> Decision --> Fund --> Build --> Verify --> Reward
 | **PR Auto-Verify** | GitHub PR merged = task auto-verified, escrow release queued | Live |
 | **Charter Tracking** | 32 governance decisions with dependency tree | Live |
 | **Task Marketplace** | Create, fund (on-chain), claim, submit, verify, pay | Live |
-| **Dashboard** | 14 pages with fund button (wallet TX), trust scores, groups | Live |
+| **Dashboard** | 15 pages with fund button (wallet TX), trust scores, groups | Live |
 | **Gateway Watcher** | Auto-detects escrow events on-chain every 60s | Live |
 | **Dice Game** | Every governance action = dice roll = bonus XP | Live |
 | **Decisions Page** | 47 governance decisions with dependency tree + RadixTalk integration | Live |
 | **Dashboard Writes** | Create proposals + bounties from dashboard (badge-gated) | Live |
 | **Profile Tabs** | Tabbed profile: Overview, Tasks, Votes, Groups, Trust Score | Live |
 | **REST API** | 44 endpoints including /api/health + /api/profile + /api/trust | Live |
-| **Pipeline Tests** | 148 automated tests (API, lifecycle, dashboard, gateway, escrow, CV2/CV3, decisions) | Passing |
+| **Pipeline Tests** | 148 automated tests — 87 smoke + 61 lifecycle (API, dashboard, gateway, escrow, CV2/CV3, decisions) | Passing |
 
 ## Quick Start (5 minutes)
 
@@ -133,7 +133,7 @@ radixguild.com (Caddy, auto-TLS)
   |
   +-- guild-app (Next.js 16, port 3002)
   |     +-- shadcn/ui + Radix dApp Toolkit 2.2.1
-  |     +-- 14 pages, create proposals/bounties, fund (wallet TX), trust scores
+  |     +-- 15 pages, create proposals/bounties, fund (wallet TX), trust scores
   |
   +-- Caddy (reverse proxy, auto-TLS)
         /api/* --> bot (3003)
