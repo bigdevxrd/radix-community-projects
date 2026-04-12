@@ -18,6 +18,7 @@ const NAV = [
   { path: "/groups", label: "Groups" },
   { path: "/bounties", label: "Bounties" },
   { path: "/game", label: "Game" },
+  { path: "/profile", label: "Profile" },
   { path: "/docs", label: "Docs" },
   { path: "/feedback", label: "Feedback" },
   { path: "/about", label: "About" },
