@@ -118,14 +118,14 @@ function Dashboard() {
             </CardContent>
           </Card>
 
-          {/* Decisions Banner */}
-          <Link href="/decisions" className="block no-underline text-foreground">
+          {/* Governance Banner */}
+          <Link href="/proposals?view=decisions" className="block no-underline text-foreground">
             <Card className="border-primary/30 hover:bg-primary/5 transition-colors">
               <CardContent className="pt-4 pb-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <div className="text-sm font-bold">Governance Decisions</div>
-                    <div className="text-xs text-muted-foreground">Real decisions happening now — vote on what matters to you</div>
+                    <div className="text-sm font-bold">47 Governance Decisions</div>
+                    <div className="text-xs text-muted-foreground">Shape the DAO — vote on charter, structure, and P3 services</div>
                   </div>
                   <Badge variant="default" className="text-xs">Vote Now</Badge>
                 </div>

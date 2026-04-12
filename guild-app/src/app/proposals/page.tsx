@@ -1,7 +1,9 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { AppShell } from "@/components/AppShell";
+import { DecisionsView } from "@/components/DecisionsView";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -898,5 +900,38 @@ function ProposalsContent() {
 }
 
 export default function ProposalsPage() {
-  return <AppShell><ProposalsContent /></AppShell>;
+  return (
+    <AppShell>
+      <Suspense fallback={<div className="py-8 text-center text-muted-foreground text-sm">Loading...</div>}>
+        <GovernPage />
+      </Suspense>
+    </AppShell>
+  );
+}
+
+function GovernPage() {
+  const searchParams = useSearchParams();
+  const initialView = searchParams?.get("view") === "decisions" ? "decisions" : "proposals";
+  const [view, setView] = useState(initialView);
+
+  return (
+    <div className="space-y-4">
+      {/* Tab Bar */}
+      <div className="flex items-center gap-1 border-b pb-0">
+        {([["decisions", "Decisions (47)"], ["proposals", "Proposals"], ["onchain", "On-Chain"]] as const).map(([key, label]) => (
+          <button key={key} onClick={() => setView(key)}
+            className={`px-3 py-2 text-[13px] font-medium border-b-2 transition-colors ${
+              view === key ? "text-primary border-primary" : "text-muted-foreground border-transparent hover:text-foreground"
+            }`}>
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {/* Content */}
+      {view === "decisions" && <DecisionsView />}
+      {view === "proposals" && <ProposalsContent />}
+      {view === "onchain" && <ProposalsContent />}
+    </div>
+  );
 }

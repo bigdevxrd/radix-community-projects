@@ -11,15 +11,17 @@ import { Separator } from "@/components/ui/separator";
 import { Sun, Moon } from "lucide-react";
 
 const NAV = [
-  { path: "/", label: "Dashboard" },
-  { path: "/decisions", label: "Decisions" },
-  { path: "/mint", label: "Mint" },
-  { path: "/proposals", label: "Proposals" },
-  { path: "/groups", label: "Groups" },
+  { path: "/", label: "Home" },
+  { path: "/proposals", label: "Govern" },
   { path: "/bounties", label: "Bounties" },
-  { path: "/game", label: "Game" },
+  { path: "/groups", label: "Groups" },
   { path: "/profile", label: "Profile" },
+  { path: "/game", label: "Game" },
+];
+
+const SECONDARY_NAV = [
   { path: "/docs", label: "Docs" },
+  { path: "/mint", label: "Mint Badge" },
   { path: "/feedback", label: "Feedback" },
   { path: "/about", label: "About" },
   { path: "/admin", label: "Admin" },
@@ -66,16 +68,33 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </div>
       </header>
 
-      {/* Nav */}
+      {/* Primary Nav */}
       <nav className="max-w-4xl mx-auto px-4 sm:px-6 flex gap-0.5 sm:gap-1 border-b overflow-x-auto">
-        {NAV.map((n) => (
+        {NAV.map((n) => {
+          const isActive = n.path === "/" ? pathname === "/" : pathname.startsWith(n.path) || (n.path === "/proposals" && pathname === "/decisions");
+          return (
+            <Link
+              key={n.path}
+              href={n.path}
+              className={`px-3 sm:px-4 py-3 text-[13px] font-medium no-underline whitespace-nowrap border-b-2 transition-colors ${
+                isActive
+                  ? "text-primary border-primary"
+                  : "text-muted-foreground border-transparent hover:text-foreground"
+              }`}
+            >
+              {n.label}
+            </Link>
+          );
+        })}
+        <div className="flex-1" />
+        {SECONDARY_NAV.map((n) => (
           <Link
             key={n.path}
             href={n.path}
-            className={`px-3 sm:px-4 py-3 text-[13px] font-medium no-underline whitespace-nowrap border-b-2 transition-colors ${
+            className={`px-2 py-3 text-[11px] no-underline whitespace-nowrap border-b-2 transition-colors ${
               pathname === n.path
                 ? "text-primary border-primary"
-                : "text-muted-foreground border-transparent hover:text-foreground"
+                : "text-muted-foreground/60 border-transparent hover:text-muted-foreground"
             }`}
           >
             {n.label}
