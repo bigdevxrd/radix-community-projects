@@ -572,7 +572,7 @@ bot.command("vote", async (ctx) => {
   const type = proposal.type === "poll" ? "Poll" : proposal.type === "temp" ? "Temp" : "Vote";
 
   // Look up linked decision for summary context
-  const decision = db.prepare("SELECT summary FROM decisions WHERE proposal_id = ?").get(id);
+  const decision = db.getDecisionByProposal ? db.getDecisionByProposal(id) : null;
   const summary = decision ? "\n" + decision.summary + "\n" : "";
 
   const msg = await ctx.reply(

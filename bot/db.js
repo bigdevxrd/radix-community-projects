@@ -1591,6 +1591,10 @@ module.exports.getDecision = function(id) {
   return db.prepare("SELECT * FROM decisions WHERE id = ?").get(id) || null;
 };
 
+module.exports.getDecisionByProposal = function(proposalId) {
+  return db.prepare("SELECT * FROM decisions WHERE proposal_id = ?").get(proposalId) || null;
+};
+
 // ── P6: Working Group Infrastructure ──
 
 module.exports.getCurrentPeriod = function() {

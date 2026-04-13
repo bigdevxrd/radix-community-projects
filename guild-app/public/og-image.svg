@@ -55,7 +55,7 @@
   </g>
 
   <!-- URL -->
-  <text x="80" y="500" class="aog" font-size="20" font-family="Inter, system-ui" font-weight="500">radix-guild.org</text>
+  <text x="80" y="500" class="aog" font-size="20" font-family="Inter, system-ui" font-weight="500">radixguild.com</text>
   <text x="80" y="530" class="sog" font-size="16">Open Source (MIT) • Built on Radix</text>
 
   <!-- Corner decorations -->

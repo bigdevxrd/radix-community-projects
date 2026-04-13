@@ -15,7 +15,7 @@ export const metadata: Metadata = {
     description: "Free on-chain badges, two-tier voting, bounties, and XP. The open source DAO toolkit for the Radix community.",
     url: "https://radixguild.com",
     siteName: "Radix Guild",
-    images: ["/og-image.svg"],
+    images: ["/opengraph-image"],
     type: "website",
   },
   twitter: {
