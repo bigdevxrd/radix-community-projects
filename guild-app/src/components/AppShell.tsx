@@ -20,8 +20,9 @@ const NAV = [
 ];
 
 const SECONDARY_NAV = [
+  { path: "/guide", label: "Guide" },
   { path: "/docs", label: "Docs" },
-  { path: "/mint", label: "Mint Badge" },
+  { path: "/mint", label: "Mint" },
   { path: "/feedback", label: "Feedback" },
   { path: "/about", label: "About" },
   { path: "/admin", label: "Admin" },
