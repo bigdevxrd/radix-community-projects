@@ -13,6 +13,9 @@ const cv3Watcher = require("./services/conviction-watcher");
 const TOKEN = process.env.TG_BOT_TOKEN;
 if (!TOKEN) { console.error("Set TG_BOT_TOKEN in .env"); process.exit(1); }
 
+const ADMIN_IDS = (process.env.ADMIN_TG_IDS || "6102618406").split(",").map(Number);
+const BOT_USERNAME = process.env.BOT_USERNAME || "@rad_gov";
+
 const dbInstance = db.init();
 try { cv2.init(dbInstance); } catch (e) { console.error("[Init] CV2 init failed (non-fatal):", e.message); }
 const bot = new Bot(TOKEN);
@@ -127,7 +130,7 @@ bot.command("start", (ctx) => {
     // Simple text in groups
     ctx.reply(
       "Radix Governance\n\n" +
-      "DM me to get started: @rad_gov\n" +
+      "DM me to get started: " + BOT_USERNAME + "\n" +
       "Or: /register <account_rdx1...> then /proposals\n\n" +
       "/help for commands | /faq for questions"
     );
@@ -538,9 +541,10 @@ bot.command("temps", (ctx) => {
 // ── /decisions — link to dashboard decisions page ────────
 
 bot.command("decisions", (ctx) => {
+  const decisionCount = db.getDecisions().length;
   ctx.reply(
     "Governance Decisions\n\n" +
-    "47 decisions mapped across charter, structural, and P3 service categories.\n" +
+    decisionCount + " decisions mapped across charter, structural, and P3 service categories.\n" +
     "All currently running as non-binding temp checks.\n\n" +
     "Vote on the dashboard: " + PORTAL + "/decisions\n" +
     "Or view temp checks here: /temps"
@@ -764,7 +768,7 @@ bot.command("bounty", async (ctx) => {
       "3. Run: /bounty fund " + id + " <tx_hash>\n\n" +
       "The bot verifies your TX on-chain before marking it funded.\n" +
       "Escrow: component_rdx1cp8m...pyg56r\n" +
-      "Min deposit: 200 XRD (~$5)\n\n" +
+      "Min deposit: " + (db.getPlatformConfig().min_bounty_xrd || 5) + " XRD\n\n" +
       "View: " + PORTAL + "/bounties/" + id
     );
     return;
@@ -811,19 +815,24 @@ bot.command("bounty", async (ctx) => {
   }
 
   if (sub === "verify") {
-    // Admin only — requires badge
-    const user = await requireBadge(ctx);
-    if (!user) return;
+    // Admin only — prevents self-verification
+    if (!ADMIN_IDS.includes(ctx.from.id)) return ctx.reply("Admin only.");
     const id = parseInt(args[1]);
     if (!id) return ctx.reply("Usage: /bounty verify <id>");
+    const bounty = db.getBounty(id);
+    if (!bounty) return ctx.reply("Bounty #" + id + " not found.");
+    if (bounty.assignee_tg_id && ADMIN_IDS.length > 0 && bounty.assignee_tg_id === ctx.from.id) {
+      return ctx.reply("Cannot verify a bounty you are assigned to.");
+    }
     const result = db.verifyBounty(id);
     if (result.changes === 0) return ctx.reply("Bounty not found or not submitted.");
-    const bounty = db.getBounty(id);
-    ctx.reply("Bounty #" + id + " verified! Ready for payment: " + bounty.reward_xrd + " XRD\nAdmin: /bounty pay " + id + " <tx_hash>");
+    const updated = db.getBounty(id);
+    ctx.reply("Bounty #" + id + " verified! Ready for payment: " + updated.reward_xrd + " XRD\nAdmin: /bounty pay " + id + " <tx_hash>");
     return;
   }
 
   if (sub === "pay") {
+    if (!ADMIN_IDS.includes(ctx.from.id)) return ctx.reply("Admin only.");
     const id = parseInt(args[1]);
     const txHash = args[2];
     if (!id || !txHash) return ctx.reply("Usage: /bounty pay <id> <tx_hash>");
@@ -866,6 +875,13 @@ bot.command("bounty", async (ctx) => {
   if (sub === "approve") {
     const appId = parseInt(args[1]);
     if (!appId) return ctx.reply("Usage: /bounty approve <application_id>");
+    const application = db.getApplication(appId);
+    if (!application) return ctx.reply("Application #" + appId + " not found.");
+    const bounty = db.getBounty(application.bounty_id);
+    if (!bounty) return ctx.reply("Bounty not found.");
+    if (bounty.creator_tg_id !== ctx.from.id && !ADMIN_IDS.includes(ctx.from.id)) {
+      return ctx.reply("Only the bounty creator can approve applications.");
+    }
     const result = db.approveApplication(appId);
     if (!result.ok) return ctx.reply("Error: " + result.error);
     ctx.reply("Application #" + appId + " approved! Bounty #" + result.bountyId + " assigned.");
@@ -1116,6 +1132,7 @@ bot.command("wg", async (ctx) => {
 
   // /wg sunset <group> <YYYY-MM-DD> — set charter expiry
   if (sub === "sunset") {
+    if (!ADMIN_IDS.includes(ctx.from.id)) return ctx.reply("Admin only.");
     const dateStr = args[args.length - 1]; // last arg is date
     const name = args.slice(1, -1).join(" ");
     if (!name || !dateStr) return ctx.reply("Usage: /wg sunset <group name> <YYYY-MM-DD>");
@@ -1130,15 +1147,17 @@ bot.command("wg", async (ctx) => {
 
   // /wg renew <group> <months> — extend charter
   if (sub === "renew") {
+    if (!ADMIN_IDS.includes(ctx.from.id)) return ctx.reply("Admin only.");
     const months = parseInt(args[args.length - 1]) || 6;
     const name = args.slice(1, -1).join(" ");
     if (!name) return ctx.reply("Usage: /wg renew <group name> <months>");
     const group = db.getGroupByName(name);
     if (!group) return ctx.reply("Group not found: " + name);
-    const base = group.sunset_date && group.sunset_date > Date.now() / 1000
-      ? group.sunset_date
-      : Math.floor(Date.now() / 1000);
-    const newSunset = base + (months * 30 * 86400);
+    const baseDate = group.sunset_date && group.sunset_date > Date.now() / 1000
+      ? new Date(group.sunset_date * 1000)
+      : new Date();
+    baseDate.setMonth(baseDate.getMonth() + months);
+    const newSunset = Math.floor(baseDate.getTime() / 1000);
     db.renewCharter(group.id, newSunset);
     const newDate = new Date(newSunset * 1000).toISOString().slice(0, 10);
     return ctx.reply("Charter renewed for " + group.name + ". New sunset: " + newDate + " (+" + months + " months)");
@@ -1586,7 +1605,6 @@ bot.command("mystatus", (ctx) => {
 
 bot.command("adminfeedback", async (ctx) => {
   // Simple admin check — only creator can manage feedback
-  const ADMIN_IDS = [6102618406]; // bigdev's TG ID
   if (!ADMIN_IDS.includes(ctx.from.id)) return ctx.reply("Admin only.");
 
   const args = ctx.message.text.split(/\s+/).slice(1);
@@ -1670,6 +1688,7 @@ bot.command("cv2", async (ctx) => {
 
   // /cv2 sync — force refresh (admin)
   if (sub === "sync") {
+    if (!ADMIN_IDS.includes(ctx.from.id)) return ctx.reply("Admin only.");
     try {
       await cv2.syncFromChain();
       return ctx.reply("CV2 sync completed successfully.");

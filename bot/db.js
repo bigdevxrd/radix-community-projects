@@ -873,6 +873,10 @@ function createApplication(bountyId, tgId, address, pitch, estimatedHours) {
   return stmt.run(bountyId, tgId, address, pitch, estimatedHours).lastInsertRowid;
 }
 
+function getApplication(applicationId) {
+  return db.prepare("SELECT * FROM bounty_applications WHERE id = ?").get(applicationId);
+}
+
 function approveApplication(applicationId) {
   const app = db.prepare("SELECT * FROM bounty_applications WHERE id = ?").get(applicationId);
   if (!app) return { ok: false, error: "not_found" };
@@ -1401,6 +1405,7 @@ module.exports.getCategories = getCategories;
 module.exports.getPlatformConfig = getPlatformConfig;
 module.exports.getBountyDetail = getBountyDetail;
 module.exports.createApplication = createApplication;
+module.exports.getApplication = getApplication;
 module.exports.approveApplication = approveApplication;
 module.exports.cancelBounty = cancelBounty;
 module.exports.getFilteredBounties = getFilteredBounties;

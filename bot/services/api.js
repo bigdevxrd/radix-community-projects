@@ -8,6 +8,10 @@ const { checkContent } = require("./content-filter");
 
 const API_PORT = parseInt(process.env.API_PORT || "3003");
 const ALLOWED_ORIGINS = (process.env.CORS_ORIGINS || "").split(",").filter(Boolean);
+if (ALLOWED_ORIGINS.length === 0) {
+  console.warn("[API] WARNING: CORS_ORIGINS not set — defaulting to wildcard (*). Set CORS_ORIGINS=https://radixguild.com in production.");
+}
+const ADMIN_TG_IDS = (process.env.ADMIN_TG_IDS || "6102618406").split(",").map(Number);
 
 // Simple in-memory rate limiter
 const rateBuckets = new Map();
@@ -66,9 +70,12 @@ function startApi() {
       return res.end(JSON.stringify({ ok: false, error: "method_not_allowed" }));
     }
 
-    // Rate limiting (stricter for POST: 10/min)
-    const clientIp = req.headers["x-forwarded-for"]?.split(",")[0]?.trim() || req.socket.remoteAddress;
-    if (!rateLimit(clientIp, isGamePost ? 10 : 200)) {
+    // Rate limiting — use last X-Forwarded-For hop (Caddy appends trusted IP last)
+    const forwardedFor = req.headers["x-forwarded-for"];
+    const forwardedIps = forwardedFor ? forwardedFor.split(",").map(s => s.trim()) : [];
+    const clientIp = forwardedIps[forwardedIps.length - 1] || req.socket.remoteAddress;
+    const isWritePost = isBountyPost || isVotePost || isProposalPost;
+    if (!rateLimit(clientIp, isGamePost ? 10 : isWritePost ? 20 : 200)) {
       res.writeHead(429);
       return res.end(JSON.stringify({ ok: false, error: "rate_limit_exceeded" }));
     }
@@ -141,6 +148,11 @@ function startApi() {
           res.writeHead(400);
           return res.end(JSON.stringify({ ok: false, error: "address_required" }));
         }
+        const hasBadgeResult = await hasBadge(body.address);
+        if (!hasBadgeResult) {
+          res.writeHead(403);
+          return res.end(JSON.stringify({ ok: false, error: "badge_required" }));
+        }
         const text = body.title + " " + (body.description || "");
         const filterCheck = checkContent(text);
         if (filterCheck.blocked) {
@@ -173,7 +185,7 @@ function startApi() {
     function readBody(req) {
       return new Promise((resolve, reject) => {
         let body = "";
-        req.on("data", chunk => { body += chunk; if (body.length > 1024) { reject(new Error("too_large")); req.destroy(); } });
+        req.on("data", chunk => { body += chunk; if (body.length > 8192) { reject(new Error("too_large")); req.destroy(); } });
         req.on("end", () => { try { resolve(JSON.parse(body || "{}")); } catch { resolve({}); } });
         req.on("error", reject);
       });
@@ -246,9 +258,19 @@ function startApi() {
     if (url.pathname === "/api/bounties" && req.method === "POST") {
       try {
         const body = await readBody(req);
-        if (!body.title || !body.reward_xrd) {
+        if (!body.title || !body.reward_xrd || !body.address) {
           res.writeHead(400);
-          return res.end(JSON.stringify({ ok: false, error: "title and reward_xrd required" }));
+          return res.end(JSON.stringify({ ok: false, error: "title, reward_xrd, and address required" }));
+        }
+        const hasBadgeResult = await hasBadge(body.address);
+        if (!hasBadgeResult) {
+          res.writeHead(403);
+          return res.end(JSON.stringify({ ok: false, error: "badge_required" }));
+        }
+        const reward = parseFloat(body.reward_xrd);
+        if (!isFinite(reward) || reward <= 0) {
+          res.writeHead(400);
+          return res.end(JSON.stringify({ ok: false, error: "invalid_reward_xrd" }));
         }
         const filterCheck = checkContent(body.title + " " + (body.description || ""));
         if (filterCheck.blocked) {
@@ -256,9 +278,10 @@ function startApi() {
           return res.end(JSON.stringify({ ok: false, error: "content_not_allowed" }));
         }
         const deadlineSec = body.deadline_days ? Math.floor(Date.now() / 1000) + body.deadline_days * 86400 : null;
-        // Use admin TG ID for web-created tasks (FK constraint requires valid user)
-        const ADMIN_TG_ID = 6102618406;
-        const id = db.createBounty(body.title.slice(0, 500), parseFloat(body.reward_xrd), ADMIN_TG_ID, {
+        // Resolve creator TG ID from address; fall back to admin sentinel for web-only users
+        const creator = db.getUserByAddress(body.address);
+        const creatorTgId = creator ? creator.tg_id : ADMIN_TG_IDS[0];
+        const id = db.createBounty(body.title.slice(0, 500), reward, creatorTgId, {
           description: body.description || null,
           category: body.category || "general",
           difficulty: body.difficulty || "medium",
@@ -590,6 +613,11 @@ function startApi() {
         if (!body.address || !body.vote) {
           res.writeHead(400);
           return res.end(JSON.stringify({ ok: false, error: "address and vote required" }));
+        }
+        const hasBadgeResult = await hasBadge(body.address);
+        if (!hasBadgeResult) {
+          res.writeHead(403);
+          return res.end(JSON.stringify({ ok: false, error: "badge_required" }));
         }
         const proposalId = parseInt(voteMatch[1]);
         const proposal = db.getProposal(proposalId);
