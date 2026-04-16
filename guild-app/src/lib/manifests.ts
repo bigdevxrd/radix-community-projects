@@ -225,7 +225,7 @@ export function claimTaskManifest(
   const e = validateAddress(escrowComponent, "component_rdx");
   const a = validateAddress(account, "account_rdx");
   const b = validateAddress(badgeNft, "resource_rdx");
-  const nftId = badgeLocalId ? sanitize(badgeLocalId) : "#1#";
+  const nftId = badgeLocalId || "<unknown>";
   return `CALL_METHOD
   Address("${a}")
   "create_proof_of_non_fungibles"
@@ -254,7 +254,7 @@ export function submitTaskManifest(
   const e = validateAddress(escrowComponent, "component_rdx");
   const a = validateAddress(account, "account_rdx");
   const b = validateAddress(badgeNft, "resource_rdx");
-  const nftId = badgeLocalId ? sanitize(badgeLocalId) : "#1#";
+  const nftId = badgeLocalId || "<unknown>";
   return `CALL_METHOD
   Address("${a}")
   "create_proof_of_non_fungibles"
