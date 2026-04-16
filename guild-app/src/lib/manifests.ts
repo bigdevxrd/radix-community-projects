@@ -182,23 +182,16 @@ const XRD = "resource_rdx1tknxxxxxxxxxradxrdxxxxxxxxx009923554798xxxxxxxxxradxrd
 
 export function createEscrowTaskManifest(
   escrowComponent: string,
-  badgeNft: string,
+  _badgeNft: string,
   account: string,
   amountXrd: string,
   deadline: number | null,
 ): string {
   const e = validateAddress(escrowComponent, "component_rdx");
   const a = validateAddress(account, "account_rdx");
-  const b = validateAddress(badgeNft, "resource_rdx");
   const amt = sanitize(amountXrd);
   const deadlineArg = deadline ? `Enum<1u8>(${deadline}i64)` : "Enum<0u8>()";
   return `CALL_METHOD
-  Address("${a}")
-  "create_proof_of_non_fungibles"
-  Address("${b}")
-  Array<NonFungibleLocalId>()
-;
-CALL_METHOD
   Address("${a}")
   "withdraw"
   Address("${XRD}")
