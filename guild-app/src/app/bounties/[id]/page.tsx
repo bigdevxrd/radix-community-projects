@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
-import { API_URL, TG_BOT_URL, ESCROW_COMPONENT, ESCROW_RECEIPT, BADGE_NFT } from "@/lib/constants";
+import { API_URL, TG_BOT_URL, ESCROW_COMPONENT, ESCROW_RECEIPT, BADGE_NFT, ESCROW_V3_COMPONENT, ESCROW_V3_RECEIPT } from "@/lib/constants";
 import { useWallet } from "@/hooks/useWallet";
 import { createEscrowTaskManifest, claimTaskManifest, submitTaskManifest, cancelTaskManifest } from "@/lib/manifests";
 
@@ -21,7 +21,7 @@ interface BountyDetail {
   platform_fee_pct: number; fee_collected_xrd: number;
   insurance_fee_xrd: number | null; insurance_fee_pct: number | null; insurance_status: string | null;
   depends_on: string | null; blocks: string | null; is_blocked: number;
-  group_id: number | null;
+  group_id: number | null; escrow_version: number | null;
   creator_tg_id: number; assignee_tg_id: number | null;
   assignee_address: string | null; github_issue: string | null;
   github_pr: string | null; paid_tx: string | null;
@@ -57,12 +57,16 @@ function BountyDetailContent() {
   const [fundStatus, setFundStatus] = useState("");
   const [fundError, setFundError] = useState("");
 
+  // Resolve escrow addresses based on bounty version
+  const escrowComp = bounty?.escrow_version === 3 ? ESCROW_V3_COMPONENT : ESCROW_COMPONENT;
+  const escrowReceipt = bounty?.escrow_version === 3 ? ESCROW_V3_RECEIPT : ESCROW_RECEIPT;
+
   async function handleFund() {
     if (!rdt || !account || !bounty) return;
     setFunding(true); setFundStatus(""); setFundError("");
     try {
       const manifest = createEscrowTaskManifest(
-        ESCROW_COMPONENT, BADGE_NFT, account,
+        escrowComp, BADGE_NFT, account,
         String(bounty.reward_xrd), null
       );
       const result = await rdt.walletApi.sendTransaction({ transactionManifest: manifest, version: 1 });
@@ -93,7 +97,7 @@ function BountyDetailContent() {
     if (!rdt || !account || !bounty) return;
     setActioning(true); setActionStatus(""); setActionError("");
     try {
-      const manifest = claimTaskManifest(ESCROW_COMPONENT, BADGE_NFT, account, bounty.id);
+      const manifest = claimTaskManifest(escrowComp, BADGE_NFT, account, bounty.id);
       const result = await rdt.walletApi.sendTransaction({ transactionManifest: manifest, version: 1 });
       if (result.isOk()) {
         setActionStatus("Claimed! TX: " + result.value.transactionIntentHash.slice(0, 40) + "...");
@@ -107,7 +111,7 @@ function BountyDetailContent() {
     if (!rdt || !account || !bounty) return;
     setActioning(true); setActionStatus(""); setActionError("");
     try {
-      const manifest = submitTaskManifest(ESCROW_COMPONENT, BADGE_NFT, account, bounty.id);
+      const manifest = submitTaskManifest(escrowComp, BADGE_NFT, account, bounty.id);
       const result = await rdt.walletApi.sendTransaction({ transactionManifest: manifest, version: 1 });
       if (result.isOk()) {
         setActionStatus("Submitted! Awaiting verification. TX: " + result.value.transactionIntentHash.slice(0, 40) + "...");
@@ -121,7 +125,7 @@ function BountyDetailContent() {
     if (!rdt || !account || !bounty) return;
     setActioning(true); setActionStatus(""); setActionError("");
     try {
-      const manifest = cancelTaskManifest(ESCROW_COMPONENT, ESCROW_RECEIPT, account, bounty.id);
+      const manifest = cancelTaskManifest(escrowComp, escrowReceipt, account, bounty.id);
       const result = await rdt.walletApi.sendTransaction({ transactionManifest: manifest, version: 1 });
       if (result.isOk()) {
         setActionStatus("Cancelled! XRD refunded. TX: " + result.value.transactionIntentHash.slice(0, 40) + "...");

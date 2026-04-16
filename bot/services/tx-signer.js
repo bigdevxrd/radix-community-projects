@@ -26,6 +26,7 @@ function getSigner() {
 
 // Component addresses (from CLAUDE.md / env)
 const ESCROW_COMPONENT = process.env.ESCROW_COMPONENT || "component_rdx1cp8mwwe2pkrrtm05p7txgygf9y9uuwx6p87djkda8stk8nuwpyg56r";
+const ESCROW_V3_COMPONENT = process.env.ESCROW_V3_COMPONENT || "component_rdx1czcjn322rhzvu4gwkculx6qvguv2erqu38mschwqkjyqtdpvpcex9s";
 const BADGE_MANAGER = process.env.BADGE_MANAGER || "component_rdx1czexylvvm0q4uhwpjaqmlznj9sd3y2jnmmah6qug9lm9sfm3tyrtva";
 const ADMIN_BADGE = process.env.ADMIN_BADGE || "resource_rdx1tkkzwrttvsqrsylyf4nqt2fxq6h27eva4lr4ffwad63x3f2cl43xwe";
 const BADGE_NFT = process.env.BADGE_NFT || "resource_rdx1n22rq94kh6ugwnrvc65m2pwhle3s6ez6j7702vkn2ctkaxemz4ppwl";
@@ -165,6 +166,9 @@ function buildManifest(action, params) {
   if (!ACCOUNT) throw new Error("RADIX_ACCOUNT_ADDRESS not set");
   if (!ALLOWED_ACTIONS.includes(action)) throw new Error("Unknown action: " + action);
 
+  // Resolve escrow component: V3 if specified, else V1 default
+  const escrow = params.escrowComponent || ESCROW_COMPONENT;
+
   switch (action) {
     case "RELEASE_TASK":
       return [
@@ -175,7 +179,7 @@ function buildManifest(action, params) {
         '  Decimal("1")',
         ';',
         'CALL_METHOD',
-        '  Address("' + ESCROW_COMPONENT + '")',
+        '  Address("' + escrow + '")',
         '  "release_task"',
         '  ' + sanitizeU64(params.taskId) + 'u64',
         ';',
@@ -190,7 +194,7 @@ function buildManifest(action, params) {
         '  Decimal("1")',
         ';',
         'CALL_METHOD',
-        '  Address("' + ESCROW_COMPONENT + '")',
+        '  Address("' + escrow + '")',
         '  "force_cancel"',
         '  ' + sanitizeU64(params.taskId) + 'u64',
         ';',
@@ -205,7 +209,7 @@ function buildManifest(action, params) {
         '  Decimal("1")',
         ';',
         'CALL_METHOD',
-        '  Address("' + ESCROW_COMPONENT + '")',
+        '  Address("' + escrow + '")',
         '  "expire_task"',
         '  ' + sanitizeU64(params.taskId) + 'u64',
         ';',
@@ -313,9 +317,20 @@ async function signAndSubmit(action, params, metadata = {}) {
 
 // ── Convenience wrappers ──
 
+function resolveEscrowComponent(bountyId) {
+  // Look up which escrow component a bounty uses (V1 or V3)
+  // If the bounty has escrow_version = 3 or was created on V3, use V3 component
+  const bounty = bountyId ? db.getBounty(bountyId) : null;
+  if (bounty?.escrow_version === 3 || bounty?.escrow_component === ESCROW_V3_COMPONENT) {
+    return ESCROW_V3_COMPONENT;
+  }
+  return ESCROW_COMPONENT; // default V1
+}
+
 async function releaseTask(onchainTaskId, bountyId) {
   const bounty = db.getBounty(bountyId);
-  return signAndSubmit("RELEASE_TASK", { taskId: onchainTaskId }, {
+  const escrowComponent = resolveEscrowComponent(bountyId);
+  return signAndSubmit("RELEASE_TASK", { taskId: onchainTaskId, escrowComponent }, {
     valueXrd: bounty?.reward_xrd || 0,
     triggeredBy: "bounty_verify",
     bountyId,
@@ -324,7 +339,8 @@ async function releaseTask(onchainTaskId, bountyId) {
 
 async function forceCancel(onchainTaskId, bountyId) {
   const bounty = db.getBounty(bountyId);
-  return signAndSubmit("FORCE_CANCEL", { taskId: onchainTaskId }, {
+  const escrowComponent = resolveEscrowComponent(bountyId);
+  return signAndSubmit("FORCE_CANCEL", { taskId: onchainTaskId, escrowComponent }, {
     valueXrd: bounty?.reward_xrd || 0,
     triggeredBy: "bounty_cancel",
     bountyId,
@@ -332,7 +348,8 @@ async function forceCancel(onchainTaskId, bountyId) {
 }
 
 async function expireTask(onchainTaskId, bountyId) {
-  return signAndSubmit("EXPIRE_TASK", { taskId: onchainTaskId }, {
+  const escrowComponent = resolveEscrowComponent(bountyId);
+  return signAndSubmit("EXPIRE_TASK", { taskId: onchainTaskId, escrowComponent }, {
     triggeredBy: "task_expiry",
     bountyId,
   });

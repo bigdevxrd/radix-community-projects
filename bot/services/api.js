@@ -48,7 +48,7 @@ function startApi() {
     } else {
       res.setHeader("Access-Control-Allow-Origin", "*"); // dev fallback
     }
-    res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+    res.setHeader("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS");
     res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
 
     if (req.method === "OPTIONS") {
@@ -85,7 +85,8 @@ function startApi() {
     const forwardedFor = req.headers["x-forwarded-for"];
     const forwardedIps = forwardedFor ? forwardedFor.split(",").map(s => s.trim()) : [];
     const clientIp = forwardedIps[forwardedIps.length - 1] || req.socket.remoteAddress;
-    const isWritePost = isBountyPost || isVotePost || isProposalPost || isMilestoneWrite || isXpPost || isDisputeEvidencePost || isProjectBreakdownPost;
+    const isAgentWrite = isAgentRoute && req.method === "POST";
+    const isWritePost = isBountyPost || isVotePost || isProposalPost || isMilestoneWrite || isXpPost || isDisputeEvidencePost || isProjectBreakdownPost || isAgentWrite;
     if (!rateLimit(clientIp, isGamePost ? 10 : isWritePost ? 20 : 200)) {
       res.writeHead(429);
       return res.end(JSON.stringify({ ok: false, error: "rate_limit_exceeded" }));
@@ -1182,7 +1183,7 @@ function startApi() {
 
     // ── Agent API (/api/agent/*) ─────────────────────────────
     if (isAgentRoute) {
-      const agentPath = url.pathname.replace("/api/agent", "");
+      const agentPath = url.pathname.slice("/api/agent".length);
 
       // Auth: all agent routes require Bearer token
       const auth = agentBridge.authenticateRequest(req);
@@ -1299,7 +1300,16 @@ function startApi() {
           return res.end(JSON.stringify({ ok: false, error: "not_assigned", detail: "Task status: " + bounty.status }));
         }
 
+        // Ownership check: agent must be the one who claimed this task
+        const agentTgId = -(agent.id + 900000);
+        if (bounty.assignee_tg_id !== agentTgId && bounty.claimed_by_agent === 1) {
+          return res.end(JSON.stringify({ ok: false, error: "not_your_task", detail: "You did not claim this task" }));
+        }
+
         const githubPr = body.github_pr || body.url || null;
+        if (!githubPr) {
+          return res.end(JSON.stringify({ ok: false, error: "url_required", detail: "Provide github_pr or url with your submission" }));
+        }
         db.submitBounty(taskId, githubPr);
 
         agentBridge.logActivity(agent.id, "submit_work", { taskId, github_pr: githubPr }, { ok: true });

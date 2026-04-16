@@ -31,7 +31,14 @@ function raw() {
  */
 function createAgentKey(name, scopes, ownerTgId, rateLimitPerHour = 60, dailyBudgetXrd = 100) {
   if (!name || typeof name !== "string") return { error: "name_required" };
+  if (name.length > 64) return { error: "name_too_long", detail: "Max 64 characters" };
   if (!scopes || !Array.isArray(scopes) || scopes.length === 0) return { error: "scopes_required" };
+
+  // Validate numeric params
+  rateLimitPerHour = parseInt(rateLimitPerHour) || 60;
+  if (rateLimitPerHour < 1 || rateLimitPerHour > 10000) rateLimitPerHour = 60;
+  dailyBudgetXrd = parseFloat(dailyBudgetXrd);
+  if (!Number.isFinite(dailyBudgetXrd) || dailyBudgetXrd < 1) dailyBudgetXrd = 100;
 
   const validScopes = ["tasks:read", "tasks:claim", "tasks:submit", "proposals:read", "proposals:create", "projects:read", "projects:breakdown", "admin"];
   for (const s of scopes) {
@@ -80,7 +87,7 @@ function validateKey(rawKey) {
   return {
     id: agent.id,
     name: agent.name,
-    scopes: JSON.parse(agent.scopes || "[]"),
+    scopes: (() => { try { return JSON.parse(agent.scopes || "[]"); } catch { return []; } })(),
     ownerTgId: agent.owner_tg_id,
     rateLimitPerHour: agent.rate_limit_per_hour,
     dailyBudgetXrd: agent.daily_budget_xrd,
@@ -90,9 +97,13 @@ function validateKey(rawKey) {
 /**
  * Revoke (disable) an agent key.
  */
-function revokeKey(keyId) {
+function revokeKey(keyId, revokedBy) {
   const result = raw().prepare("UPDATE agent_keys SET enabled = 0 WHERE id = ?").run(keyId);
-  return result.changes > 0 ? { ok: true } : { error: "not_found" };
+  if (result.changes > 0) {
+    logActivity(keyId, "key_revoked", { revoked_by: revokedBy || "admin" }, { ok: true });
+    return { ok: true };
+  }
+  return { error: "not_found" };
 }
 
 /**
@@ -101,12 +112,13 @@ function revokeKey(keyId) {
 function listKeys() {
   return raw().prepare(
     "SELECT id, name, scopes, owner_tg_id, rate_limit_per_hour, daily_budget_xrd, enabled, created_at, last_used_at FROM agent_keys ORDER BY created_at DESC"
-  ).all().map(k => ({ ...k, scopes: JSON.parse(k.scopes || "[]") }));
+  ).all().map(k => ({ ...k, scopes: (() => { try { return JSON.parse(k.scopes || "[]"); } catch { return []; } })() }));
 }
 
 // ── Scope Check ──
 
 function hasScope(agent, scope) {
+  if (!agent || !agent.scopes) return false;
   return agent.scopes.includes(scope) || agent.scopes.includes("admin");
 }
 
@@ -118,6 +130,8 @@ function checkAgentRateLimit(agentId, maxPerHour) {
   const now = Date.now();
   const bucket = agentBuckets.get(agentId) || { count: 0, reset: now + 3600000 };
   if (now > bucket.reset) { bucket.count = 0; bucket.reset = now + 3600000; }
+  // Check BEFORE increment — rejected requests don't consume slots
+  if (bucket.count >= maxPerHour) { agentBuckets.set(agentId, bucket); return false; }
   bucket.count++;
   agentBuckets.set(agentId, bucket);
   return bucket.count <= maxPerHour;
@@ -173,18 +187,21 @@ function getActivity(agentKeyId, limit = 20) {
  * Returns { agent } or { error, status }.
  */
 function authenticateRequest(req) {
-  const authHeader = req.headers.authorization || req.headers.Authorization || "";
+  const authHeader = req.headers.authorization || "";
   if (!authHeader.startsWith("Bearer ")) {
+    console.warn("[AgentBridge] Auth failed: missing Bearer header from " + (req.socket?.remoteAddress || "unknown"));
     return { error: "missing_auth", status: 401, detail: "Authorization: Bearer <api_key> required" };
   }
 
   const rawKey = authHeader.slice(7).trim();
   const agent = validateKey(rawKey);
   if (!agent) {
+    console.warn("[AgentBridge] Auth failed: invalid key from " + (req.socket?.remoteAddress || "unknown"));
     return { error: "invalid_key", status: 401, detail: "Invalid or revoked API key" };
   }
 
   if (!checkAgentRateLimit(agent.id, agent.rateLimitPerHour)) {
+    logActivity(agent.id, "rate_limited", {}, { error: "rate_limit_exceeded" });
     return { error: "rate_limited", status: 429, detail: "Agent rate limit exceeded (" + agent.rateLimitPerHour + "/hour)" };
   }
 
