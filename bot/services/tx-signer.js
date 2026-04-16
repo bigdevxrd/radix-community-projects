@@ -59,27 +59,25 @@ function checkRateLimits(action, valueXrd) {
   const hourAgo = now - 3600;
   const dayAgo = now - 86400;
 
-  // Per-TX value limit
+  // Per-TX value limit (check for any non-null numeric value)
   const maxPerTx = parseFloat(config.signer_max_xrd_per_tx || "1000");
-  if (valueXrd && valueXrd > maxPerTx) {
+  if (typeof valueXrd === "number" && valueXrd > maxPerTx) {
     return { allowed: false, reason: "tx_value_exceeds_limit", limit: maxPerTx, value: valueXrd };
   }
 
-  // Per-hour release count
-  if (action === "RELEASE_TASK" || action === "FORCE_CANCEL") {
-    const maxPerHour = parseInt(config.signer_max_release_per_hour || "10");
-    const hourCount = d.prepare(
-      "SELECT COUNT(*) as c FROM signer_audit WHERE action IN ('RELEASE_TASK','FORCE_CANCEL') AND status = 'success' AND created_at > ?"
-    ).get(hourAgo).c;
-    if (hourCount >= maxPerHour) {
-      return { allowed: false, reason: "hourly_limit_reached", limit: maxPerHour, current: hourCount };
-    }
+  // Per-hour count — applies to ALL action types
+  const maxPerHour = parseInt(config.signer_max_release_per_hour || "10");
+  const hourCount = d.prepare(
+    "SELECT COUNT(*) as c FROM signer_audit WHERE status = 'success' AND created_at > ?"
+  ).get(hourAgo).c;
+  if (hourCount >= maxPerHour) {
+    return { allowed: false, reason: "hourly_limit_reached", limit: maxPerHour, current: hourCount };
   }
 
-  // Per-day release count
+  // Per-day count — applies to ALL action types
   const maxPerDay = parseInt(config.signer_max_release_per_day || "50");
   const dayCount = d.prepare(
-    "SELECT COUNT(*) as c FROM signer_audit WHERE action IN ('RELEASE_TASK','FORCE_CANCEL') AND status = 'success' AND created_at > ?"
+    "SELECT COUNT(*) as c FROM signer_audit WHERE status = 'success' AND created_at > ?"
   ).get(dayAgo).c;
   if (dayCount >= maxPerDay) {
     return { allowed: false, reason: "daily_limit_reached", limit: maxPerDay, current: dayCount };
@@ -109,28 +107,63 @@ function logAudit(action, params, status, txHash, errorMessage, valueXrd, trigge
 
 // ── Kill switch ──
 
-function disableSigner(reason) {
+function disableSigner(reason, triggeredBy) {
   const d = raw();
   const now = Math.floor(Date.now() / 1000);
   d.prepare("UPDATE platform_config SET value = 'false', updated_at = ? WHERE key = 'signer_enabled'").run(now);
   d.prepare("UPDATE platform_config SET value = ?, updated_at = ? WHERE key = 'signer_last_disabled_at'").run(String(now), now);
-  logAudit("KILL_SWITCH", { reason }, "disabled", null, reason, null, "admin");
-  if (notifyAdmin) notifyAdmin("TX signer DISABLED: " + reason);
+  logAudit("KILL_SWITCH", { reason }, "disabled", null, reason, null, triggeredBy || "admin");
+  if (notifyAdmin) notifyAdmin("TX signer DISABLED by " + (triggeredBy || "admin") + ": " + reason);
   return { ok: true };
 }
 
-function enableSigner() {
+function enableSigner(triggeredBy) {
   const now = Math.floor(Date.now() / 1000);
   raw().prepare("UPDATE platform_config SET value = 'true', updated_at = ? WHERE key = 'signer_enabled'").run(now);
-  logAudit("KILL_SWITCH", {}, "enabled", null, null, null, "admin");
-  if (notifyAdmin) notifyAdmin("TX signer re-enabled");
+  logAudit("KILL_SWITCH", {}, "enabled", null, null, null, triggeredBy || "admin");
+  if (notifyAdmin) notifyAdmin("TX signer re-enabled by " + (triggeredBy || "admin"));
   return { ok: true };
+}
+
+// ── Input sanitization ──
+
+const ALLOWED_ACTIONS = ["RELEASE_TASK", "FORCE_CANCEL", "EXPIRE_TASK", "UPDATE_XP", "TRANSFER_XRD"];
+
+function sanitizeU64(value) {
+  const n = parseInt(value);
+  if (!Number.isInteger(n) || n < 0 || n > Number.MAX_SAFE_INTEGER) {
+    throw new Error("Invalid u64 value: " + value);
+  }
+  return n;
+}
+
+function sanitizeDecimal(value) {
+  const n = parseFloat(value);
+  if (!Number.isFinite(n) || n <= 0) {
+    throw new Error("Invalid Decimal value: " + value);
+  }
+  return n.toString();
+}
+
+function sanitizeAddress(value) {
+  if (typeof value !== "string" || !/^account_rdx1[a-z0-9]{50,}$/.test(value)) {
+    throw new Error("Invalid Radix address: " + String(value).slice(0, 30));
+  }
+  return value;
+}
+
+function sanitizeBadgeId(value) {
+  if (typeof value !== "string" || !/^[a-zA-Z0-9_#:-]{1,100}$/.test(value)) {
+    throw new Error("Invalid badge ID: " + String(value).slice(0, 30));
+  }
+  return value;
 }
 
 // ── Manifest builders ──
 
 function buildManifest(action, params) {
   if (!ACCOUNT) throw new Error("RADIX_ACCOUNT_ADDRESS not set");
+  if (!ALLOWED_ACTIONS.includes(action)) throw new Error("Unknown action: " + action);
 
   switch (action) {
     case "RELEASE_TASK":
@@ -144,7 +177,7 @@ function buildManifest(action, params) {
         'CALL_METHOD',
         '  Address("' + ESCROW_COMPONENT + '")',
         '  "release_task"',
-        '  ' + params.taskId + 'u64',
+        '  ' + sanitizeU64(params.taskId) + 'u64',
         ';',
       ].join("\n");
 
@@ -159,7 +192,7 @@ function buildManifest(action, params) {
         'CALL_METHOD',
         '  Address("' + ESCROW_COMPONENT + '")',
         '  "force_cancel"',
-        '  ' + params.taskId + 'u64',
+        '  ' + sanitizeU64(params.taskId) + 'u64',
         ';',
       ].join("\n");
 
@@ -174,7 +207,7 @@ function buildManifest(action, params) {
         'CALL_METHOD',
         '  Address("' + ESCROW_COMPONENT + '")',
         '  "expire_task"',
-        '  ' + params.taskId + 'u64',
+        '  ' + sanitizeU64(params.taskId) + 'u64',
         ';',
       ].join("\n");
 
@@ -189,8 +222,8 @@ function buildManifest(action, params) {
         'CALL_METHOD',
         '  Address("' + BADGE_MANAGER + '")',
         '  "update_xp"',
-        '  NonFungibleLocalId("' + params.badgeId + '")',
-        '  ' + params.newXp + 'u64',
+        '  NonFungibleLocalId("' + sanitizeBadgeId(params.badgeId) + '")',
+        '  ' + sanitizeU64(params.newXp) + 'u64',
         ';',
       ].join("\n");
 
@@ -200,14 +233,14 @@ function buildManifest(action, params) {
         '  Address("' + ACCOUNT + '")',
         '  "withdraw"',
         '  Address("resource_rdx1tknxxxxxxxxxradxrdxxxxxxxxx009923554798xxxxxxxxxradxrd")',
-        '  Decimal("' + params.amount + '")',
+        '  Decimal("' + sanitizeDecimal(params.amount) + '")',
         ';',
         'TAKE_ALL_FROM_WORKTOP',
         '  Address("resource_rdx1tknxxxxxxxxxradxrdxxxxxxxxx009923554798xxxxxxxxxradxrd")',
         '  Bucket("xrd")',
         ';',
         'CALL_METHOD',
-        '  Address("' + params.recipientAddress + '")',
+        '  Address("' + sanitizeAddress(params.recipientAddress) + '")',
         '  "try_deposit_or_abort"',
         '  Bucket("xrd")',
         '  None',
@@ -222,6 +255,12 @@ function buildManifest(action, params) {
 // ── Core sign + submit ──
 
 async function signAndSubmit(action, params, metadata = {}) {
+  // Guard: action whitelist
+  if (!ALLOWED_ACTIONS.includes(action)) {
+    logAudit(action, params, "rejected_invalid_action", null, "Unknown action", metadata.valueXrd, metadata.triggeredBy, metadata.bountyId, metadata.disputeId);
+    return { error: "invalid_action", detail: "Action not in allowed list: " + action };
+  }
+
   // Guard: kill switch
   if (!isEnabled()) {
     logAudit(action, params, "rejected_kill_switch", null, "Signer disabled", metadata.valueXrd, metadata.triggeredBy, metadata.bountyId, metadata.disputeId);
@@ -378,7 +417,7 @@ async function checkBalance() {
       notifyAdmin("Signer wallet LOW BALANCE: " + balance.toFixed(2) + " XRD (threshold: " + alertThreshold + ")");
     }
     if (balance < 1) {
-      disableSigner("Wallet balance too low: " + balance.toFixed(2) + " XRD");
+      disableSigner("Wallet balance too low: " + balance.toFixed(2) + " XRD", "auto_balance_check");
     }
 
     return { ok: true, balance, alert: balance < alertThreshold };

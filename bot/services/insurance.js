@@ -153,6 +153,9 @@ function releaseToTreasury(bountyId) {
  * Processes ALL held records for the bounty.
  */
 function payArbiter(disputeId, arbiterTgId, bountyId) {
+  if (!disputeId || !arbiterTgId || !bountyId) {
+    return { error: "missing_params", detail: "disputeId, arbiterTgId, and bountyId are all required" };
+  }
   const rawDb = getDb()._raw();
   const now = Math.floor(Date.now() / 1000);
 
@@ -234,65 +237,82 @@ function refundInsurance(bountyId) {
  * Get aggregate pool statistics.
  */
 function getPoolStats() {
-  const rawDb = getDb()._raw();
+  try {
+    const rawDb = getDb()._raw();
 
-  const balance = rawDb.prepare(
-    "SELECT COALESCE(value, '0') as v FROM platform_config WHERE key = 'insurance_pool_balance'"
-  ).get();
+    const balance = rawDb.prepare(
+      "SELECT COALESCE(value, '0') as v FROM platform_config WHERE key = 'insurance_pool_balance'"
+    ).get();
 
-  const collected = rawDb.prepare(
-    "SELECT COALESCE(SUM(fee_amount), 0) as total FROM insurance_pool"
-  ).get();
+    const collected = rawDb.prepare(
+      "SELECT COALESCE(SUM(fee_amount), 0) as total FROM insurance_pool"
+    ).get();
 
-  const released = rawDb.prepare(
-    "SELECT COALESCE(SUM(fee_amount), 0) as total FROM insurance_pool WHERE status = 'released_to_treasury'"
-  ).get();
+    const released = rawDb.prepare(
+      "SELECT COALESCE(SUM(fee_amount), 0) as total FROM insurance_pool WHERE status = 'released_to_treasury'"
+    ).get();
 
-  const paidToArbiters = rawDb.prepare(
-    "SELECT COALESCE(SUM(fee_amount), 0) as total FROM insurance_pool WHERE status = 'paid_to_arbiter'"
-  ).get();
+    const paidToArbiters = rawDb.prepare(
+      "SELECT COALESCE(SUM(fee_amount), 0) as total FROM insurance_pool WHERE status = 'paid_to_arbiter'"
+    ).get();
 
-  const refunded = rawDb.prepare(
-    "SELECT COALESCE(SUM(fee_amount), 0) as total FROM insurance_pool WHERE status = 'refunded'"
-  ).get();
+    const refunded = rawDb.prepare(
+      "SELECT COALESCE(SUM(fee_amount), 0) as total FROM insurance_pool WHERE status = 'refunded'"
+    ).get();
 
-  const held = rawDb.prepare(
-    "SELECT COUNT(*) as count, COALESCE(SUM(fee_amount), 0) as amount FROM insurance_pool WHERE status = 'held'"
-  ).get();
+    const held = rawDb.prepare(
+      "SELECT COUNT(*) as count, COALESCE(SUM(fee_amount), 0) as amount FROM insurance_pool WHERE status = 'held'"
+    ).get();
 
-  return {
-    total_balance: parseFloat(balance?.v || "0"),
-    total_collected: collected.total,
-    total_released_to_treasury: released.total,
-    total_paid_to_arbiters: paidToArbiters.total,
-    total_refunded: refunded.total,
-    active_held_count: held.count,
-    active_held_amount: held.amount,
-  };
+    const bal = parseFloat(balance?.v || "0");
+    return {
+      total_balance: Number.isFinite(bal) ? bal : 0,
+      total_collected: collected.total,
+      total_released_to_treasury: released.total,
+      total_paid_to_arbiters: paidToArbiters.total,
+      total_refunded: refunded.total,
+      active_held_count: held.count,
+      active_held_amount: held.amount,
+    };
+  } catch (e) {
+    console.error("[Insurance] getPoolStats error:", e.message);
+    return { error: "db_error", detail: e.message };
+  }
 }
 
 /**
  * Get pool transaction history.
  */
 function getPoolHistory(limit = 50) {
-  const rawDb = getDb()._raw();
-  return rawDb.prepare(`
-    SELECT ip.*, b.title as bounty_title, b.reward_xrd as bounty_reward
-    FROM insurance_pool ip
-    LEFT JOIN bounties b ON ip.bounty_id = b.id
-    ORDER BY ip.collected_at DESC
-    LIMIT ?
-  `).all(Math.min(limit, 200));
+  try {
+    const rawDb = getDb()._raw();
+    const safeLimit = Math.max(1, Math.min(parseInt(limit) || 50, 200));
+    return rawDb.prepare(`
+      SELECT ip.*, b.title as bounty_title, b.reward_xrd as bounty_reward
+      FROM insurance_pool ip
+      LEFT JOIN bounties b ON ip.bounty_id = b.id
+      ORDER BY ip.collected_at DESC
+      LIMIT ?
+    `).all(safeLimit);
+  } catch (e) {
+    console.error("[Insurance] getPoolHistory error:", e.message);
+    return [];
+  }
 }
 
 /**
  * Get insurance details for a specific bounty.
  */
 function getInsuranceForBounty(bountyId) {
-  const rawDb = getDb()._raw();
-  return rawDb.prepare(
-    "SELECT * FROM insurance_pool WHERE bounty_id = ? ORDER BY collected_at DESC"
-  ).all(bountyId);
+  try {
+    const rawDb = getDb()._raw();
+    return rawDb.prepare(
+      "SELECT * FROM insurance_pool WHERE bounty_id = ? ORDER BY collected_at DESC"
+    ).all(bountyId);
+  } catch (e) {
+    console.error("[Insurance] getInsuranceForBounty error:", e.message);
+    return [];
+  }
 }
 
 module.exports = {

@@ -144,12 +144,14 @@ function deactivateArbiter(tgId) {
 }
 
 /**
- * Update arbiter reputation.
+ * Update arbiter reputation. Clamped to [0, 100].
  */
 function adjustReputation(tgId, delta) {
-  raw().prepare(
-    "UPDATE arbiters SET reputation_score = MAX(0, reputation_score + ?) WHERE tg_id = ?"
+  if (!tgId || typeof delta !== "number" || !Number.isFinite(delta)) return { error: "invalid_params" };
+  const result = raw().prepare(
+    "UPDATE arbiters SET reputation_score = MIN(100, MAX(0, reputation_score + ?)) WHERE tg_id = ?"
   ).run(delta, tgId);
+  return result.changes > 0 ? { ok: true } : { error: "not_found" };
 }
 
 /**

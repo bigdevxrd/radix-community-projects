@@ -111,9 +111,12 @@ function breakdownProject(groupId, tasks) {
       }
     }
 
-    // Update project budget and status
-    d.prepare("UPDATE working_groups SET total_budget_xrd = ?, project_status = 'active' WHERE id = ?")
-      .run(totalBudget, groupId);
+    // Update project budget — only advance to 'active' if currently 'approved'
+    const currentStatus = group.project_status || "idea";
+    const validForActive = VALID_TRANSITIONS[currentStatus] || [];
+    const newStatus = validForActive.includes("active") ? "active" : currentStatus;
+    d.prepare("UPDATE working_groups SET total_budget_xrd = ?, project_status = ? WHERE id = ?")
+      .run(totalBudget, newStatus, groupId);
   });
 
   try {
@@ -214,12 +217,16 @@ function checkProjectCompletion(groupId) {
   const completed = tasks.filter(t => t.status === "paid").length;
   const cancelled = tasks.filter(t => t.status === "cancelled").length;
 
+  // Require at least one paid task — 100% cancelled is not "complete"
+  const isComplete = allDone && completed > 0;
+
   return {
-    complete: allDone,
+    complete: isComplete,
     total: tasks.length,
     completed,
     cancelled,
     remaining: tasks.length - completed - cancelled,
+    reason: allDone && completed === 0 ? "all_cancelled" : undefined,
   };
 }
 
@@ -239,9 +246,16 @@ function shipProject(groupId, outcomeNotes) {
   const group = d.prepare("SELECT * FROM working_groups WHERE id = ?").get(groupId);
   if (!group) return { error: "group_not_found" };
 
+  // Validate stage transition — must be in 'review' or 'active' to ship
+  const current = group.project_status || "idea";
+  const allowed = VALID_TRANSITIONS[current] || [];
+  if (!allowed.includes("shipped") && current !== "active") {
+    return { error: "invalid_stage", detail: "Cannot ship from '" + current + "' stage. Must be in 'review' or 'active'" };
+  }
+
   const completion = checkProjectCompletion(groupId);
   if (!completion.complete) {
-    return { error: "not_complete", detail: completion.remaining + " tasks still in progress" };
+    return { error: "not_complete", detail: completion.remaining + " tasks not yet resolved (paid or cancelled)" };
   }
 
   const tasks = d.prepare("SELECT * FROM bounties WHERE group_id = ?").all(groupId);
@@ -271,8 +285,9 @@ function shipProject(groupId, outcomeNotes) {
 
   const hash = computeDeliverableHash(groupId);
   const now = Math.floor(Date.now() / 1000);
-  const startDate = tasks.reduce((min, t) => Math.min(min, t.created_at || Infinity), Infinity);
-  const actualDays = Math.ceil((now - startDate) / 86400);
+  const createdDates = tasks.map(t => t.created_at).filter(d => typeof d === "number" && d > 0);
+  const startDate = createdDates.length > 0 ? Math.min(...createdDates) : now;
+  const actualDays = Math.max(1, Math.ceil((now - startDate) / 86400));
 
   const doShip = d.transaction(() => {
     // Record ledger entry
@@ -284,7 +299,7 @@ function shipProject(groupId, outcomeNotes) {
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       groupId, group.name, group.description,
-      group.total_budget_xrd || totalSpent, totalSpent, totalInsurance, disputeCount,
+      group.total_budget_xrd ?? totalSpent, totalSpent, totalInsurance, disputeCount,
       Object.keys(contribMap).length, tasks.length, completed.length, cancelled.length,
       startDate, now, actualDays,
       JSON.stringify(deliverables), hash,

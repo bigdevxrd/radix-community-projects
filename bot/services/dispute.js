@@ -16,6 +16,7 @@ let db;
 function init(dbModule) {
   db = dbModule;
   arbiterService.init(dbModule);
+  insurance.init(dbModule);
 }
 
 function raw() {
@@ -106,11 +107,17 @@ function raiseDispute(bountyId, raisedByTgId, reason, desiredOutcome) {
 
 /**
  * Assign an arbiter to a dispute.
+ * Only allowed for open/assigned/reviewing/needs_admin disputes (not decided/appealed/final).
  */
 function assignArbiter(disputeId) {
   const d = raw();
   const dispute = d.prepare("SELECT * FROM disputes WHERE id = ?").get(disputeId);
   if (!dispute) return { error: "dispute_not_found" };
+
+  // Status guard: prevent overwriting arbiters on decided/appealed/final disputes
+  if (!["open", "assigned", "reviewing", "needs_admin"].includes(dispute.status)) {
+    return { error: "invalid_status", detail: "Cannot assign arbiter to " + dispute.status + " dispute" };
+  }
 
   const eligible = arbiterService.getEligibleArbiters(
     dispute.bounty_id, dispute.raised_by_tg_id, dispute.raised_against_tg_id
@@ -128,11 +135,27 @@ function assignArbiter(disputeId) {
   const now = Math.floor(Date.now() / 1000);
   const deadline = now + (deadlineDays * 86400);
 
-  d.prepare(`
-    UPDATE disputes SET arbiter_tg_id = ?, arbiter_assigned_at = ?, arbiter_deadline = ?, status = 'assigned'
-    WHERE id = ?
-  `).run(chosen.tg_id, now, deadline, disputeId);
+  // Free previous arbiter if reassigning
+  const prevArbiter = dispute.arbiter_tg_id;
 
+  // Wrap in transaction to prevent race conditions
+  const doAssign = d.transaction(() => {
+    d.prepare(`
+      UPDATE disputes SET arbiter_tg_id = ?, arbiter_assigned_at = ?, arbiter_deadline = ?, status = 'assigned'
+      WHERE id = ? AND status IN ('open', 'assigned', 'reviewing', 'needs_admin')
+    `).run(chosen.tg_id, now, deadline, disputeId);
+  });
+
+  try {
+    doAssign();
+  } catch (e) {
+    return { error: "db_error", detail: e.message };
+  }
+
+  // Free previous arbiter outside transaction (non-critical)
+  if (prevArbiter && prevArbiter !== chosen.tg_id) {
+    arbiterService.markAvailable(prevArbiter);
+  }
   arbiterService.markBusy(chosen.tg_id);
   addTimelineEvent(disputeId, "assigned", chosen.tg_id, "Arbiter assigned (deadline: " + deadlineDays + " days)");
 
@@ -307,6 +330,9 @@ function fileAppeal(disputeId, appellantTgId) {
   const config = db.getPlatformConfig();
   const windowDays = parseInt(config.dispute_appeal_window_days || "3");
   const now = Math.floor(Date.now() / 1000);
+  if (!dispute.decision_at) {
+    return { error: "no_decision_timestamp", detail: "Dispute has no decision timestamp" };
+  }
   if (now - dispute.decision_at > windowDays * 86400) {
     return { error: "appeal_window_expired", detail: "Appeal window (" + windowDays + " days) has expired" };
   }
@@ -496,17 +522,20 @@ function applyReputationImpact(bountyId, decision) {
 
 /**
  * Adjust trust score for a user. Uses atomic UPDATE where possible.
+ * Clamped to [-100, 100] range.
  */
 function adjustTrustScore(tgId, delta) {
-  if (!tgId) return;
+  if (!tgId || typeof delta !== "number" || !Number.isFinite(delta)) return;
   const d = raw();
   const key = "trust_delta_" + tgId;
-  // Atomic upsert: try update first, insert if key doesn't exist
+  const now = Math.floor(Date.now() / 1000);
+  // Atomic upsert with clamping: MIN(100, MAX(-100, current + delta))
   const updated = d.prepare(
-    "UPDATE platform_config SET value = CAST(CAST(value AS REAL) + ? AS TEXT), updated_at = ? WHERE key = ?"
-  ).run(delta, Math.floor(Date.now() / 1000), key);
+    "UPDATE platform_config SET value = CAST(MIN(100, MAX(-100, CAST(value AS REAL) + ?)) AS TEXT), updated_at = ? WHERE key = ?"
+  ).run(delta, now, key);
   if (updated.changes === 0) {
-    d.prepare("INSERT OR IGNORE INTO platform_config (key, value) VALUES (?, ?)").run(key, String(delta));
+    const clamped = Math.max(-100, Math.min(100, delta));
+    d.prepare("INSERT OR IGNORE INTO platform_config (key, value) VALUES (?, ?)").run(key, String(clamped));
   }
 }
 

@@ -17,6 +17,7 @@ let bot = null;
 let dbModule = null; // reference to the db module for helper functions
 let lastStateVersion = 0;
 let running = false;
+let xpService = null; // lazy-loaded once
 
 function init(dbInstance, botInstance, dbMod) {
   db = dbInstance;
@@ -79,82 +80,100 @@ async function notifyUser(tgId, message) {
 // ── Poll Loop ──────────────────────────────────────────────
 
 async function pollEscrowEvents() {
-  const resp = await fetch(GATEWAY + "/stream/transactions", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      affected_global_entities_filter: [ESCROW_COMPONENT],
-      from_state_version: lastStateVersion > 0 ? lastStateVersion + 1 : undefined,
-      limit_per_page: 50,
-      order: "asc",
-      opt_ins: {
-        receipt_events: true,
-        affected_global_entities: true,
-      },
-    }),
-  });
+  let totalProcessed = 0;
+  let hasMore = true;
 
-  if (!resp.ok) {
-    console.error("[EscrowWatcher] Gateway HTTP", resp.status);
-    return;
-  }
+  // Pagination loop — fetch all pages to prevent sync loss on >50 TX bursts
+  while (hasMore) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 30000); // 30s fetch timeout
 
-  const data = await resp.json();
-  const items = data.items || [];
-
-  if (items.length === 0) return;
-
-  const maxVersion = Math.max(...items.map(t => t.state_version || 0));
-  if (maxVersion <= lastStateVersion) return;
-
-  for (const tx of items) {
-    if (tx.transaction_status !== "CommittedSuccess") continue;
-
-    const stateVersion = tx.state_version || 0;
-    if (stateVersion <= lastStateVersion) continue;
-    const txHash = tx.intent_hash || "";
-    const events = tx.receipt?.events || [];
-
-    for (const event of events) {
-      const emitter = event.emitter?.entity?.entity_address;
-      if (emitter !== ESCROW_COMPONENT) continue;
-
-      const name = event.name;
-      const fields = event.data?.fields || [];
-
-      try {
-        if (name === "TaskCreatedEvent") {
-          await handleTaskCreated(fields, txHash, stateVersion);
-        } else if (name === "TaskClaimedEvent") {
-          await handleTaskClaimed(fields, txHash);
-        } else if (name === "TaskReleasedEvent") {
-          await handleTaskReleased(fields, txHash);
-        } else if (name === "TaskCancelledEvent") {
-          await handleTaskCancelled(fields, txHash);
-        }
-      } catch (e) {
-        console.error("[EscrowWatcher] Error processing " + name + ":", e.message);
-      }
-    }
-
-    if (stateVersion > lastStateVersion) {
-      lastStateVersion = stateVersion;
-      try {
-        db.prepare("INSERT OR REPLACE INTO watcher_state (key, value) VALUES ('escrow_last_version', ?)").run(String(stateVersion));
-      } catch (e) {
-        console.error("[EscrowWatcher] Failed to save state version:", e.message);
-      }
-    }
-  }
-
-  if (maxVersion > lastStateVersion) {
-    lastStateVersion = maxVersion;
+    let resp;
     try {
-      db.prepare("INSERT OR REPLACE INTO watcher_state (key, value) VALUES ('escrow_last_version', ?)").run(String(maxVersion));
+      resp = await fetch(GATEWAY + "/stream/transactions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        signal: controller.signal,
+        body: JSON.stringify({
+          affected_global_entities_filter: [ESCROW_COMPONENT],
+          from_state_version: lastStateVersion > 0 ? lastStateVersion + 1 : undefined,
+          limit_per_page: 50,
+          order: "asc",
+          opt_ins: {
+            receipt_events: true,
+            affected_global_entities: true,
+          },
+        }),
+      });
     } catch (e) {
-      console.error("[EscrowWatcher] Failed to save state version:", e.message);
+      console.error("[EscrowWatcher] Gateway fetch error:", e.message);
+      return;
+    } finally {
+      clearTimeout(timeout);
     }
-    console.log("[EscrowWatcher] Processed " + items.length + " TX(s). State version: " + lastStateVersion);
+
+    if (!resp.ok) {
+      const body = await resp.text().catch(() => "");
+      console.error("[EscrowWatcher] Gateway HTTP", resp.status, body.slice(0, 200));
+      return;
+    }
+
+    const data = await resp.json();
+    const items = data.items || [];
+
+    if (items.length === 0) break;
+
+    for (const tx of items) {
+      if (tx.transaction_status !== "CommittedSuccess") continue;
+
+      const stateVersion = tx.state_version || 0;
+      if (stateVersion <= lastStateVersion) continue;
+      const txHash = tx.intent_hash || "";
+      const events = tx.receipt?.events || [];
+
+      for (const event of events) {
+        const emitter = event.emitter?.entity?.entity_address;
+        if (emitter !== ESCROW_COMPONENT) continue;
+
+        const name = event.name;
+        const fields = event.data?.fields || [];
+
+        try {
+          if (name === "TaskCreatedEvent") {
+            await handleTaskCreated(fields, txHash, stateVersion);
+          } else if (name === "TaskClaimedEvent") {
+            await handleTaskClaimed(fields, txHash);
+          } else if (name === "TaskReleasedEvent") {
+            await handleTaskReleased(fields, txHash);
+          } else if (name === "TaskCancelledEvent") {
+            await handleTaskCancelled(fields, txHash);
+          } else if (name === "TaskSubmittedEvent") {
+            await handleTaskSubmitted(fields, txHash);
+          }
+        } catch (e) {
+          console.error("[EscrowWatcher] Error processing " + name + ":", e.message);
+        }
+      }
+
+      // Save state version after each TX for crash recovery
+      if (stateVersion > lastStateVersion) {
+        lastStateVersion = stateVersion;
+        try {
+          db.prepare("INSERT OR REPLACE INTO watcher_state (key, value) VALUES ('escrow_last_version', ?)").run(String(stateVersion));
+        } catch (e) {
+          console.error("[EscrowWatcher] Failed to save state version:", e.message);
+        }
+      }
+
+      totalProcessed++;
+    }
+
+    // Continue pagination if we got a full page (may have more)
+    hasMore = items.length >= 50;
+  }
+
+  if (totalProcessed > 0) {
+    console.log("[EscrowWatcher] Processed " + totalProcessed + " TX(s). State version: " + lastStateVersion);
   }
 }
 
@@ -163,31 +182,36 @@ async function pollEscrowEvents() {
 async function handleTaskCreated(fields, txHash, stateVersion) {
   const taskId = parseInt(fields[0]?.value) || 0;
   const amount = fields[1]?.value || "0";
-  const creator = fields[2]?.value || "";
+  // V3 field order: task_id, amount, resource, creator (resource at index 2, creator at index 3)
+  const resource = fields[2]?.value || "";
+  const creator = fields[3]?.value || fields[2]?.value || ""; // fallback for V1 (no resource field)
+  const tokenLabel = resource.includes("radxrd") ? "XRD" : resource.includes("usdc") ? "xUSDC" : resource.includes("usdt") ? "xUSDT" : "XRD";
 
-  console.log("[EscrowWatcher] TaskCreated: #" + taskId + " | " + amount + " XRD | creator: " + creator.slice(0, 25) + "...");
+  console.log("[EscrowWatcher] TaskCreated: #" + taskId + " | " + amount + " " + tokenLabel + " | creator: " + creator.slice(0, 25) + "...");
+
+  // Find linked bounty first — use bounty.id (SQLite FK) not taskId (on-chain ID)
+  const bounty = getBountyByOnchainId(taskId);
+  const bountyIdForLog = bounty ? bounty.id : null;
 
   // Log to audit trail
   try {
     db.prepare(
       "INSERT OR IGNORE INTO bounty_transactions (bounty_id, tx_type, amount_xrd, tx_hash, description, verified_onchain, onchain_task_id) VALUES (?, 'deposit', ?, ?, ?, 1, ?)"
-    ).run(taskId, parseFloat(amount), txHash, "Auto-detected by gateway watcher", taskId);
+    ).run(bountyIdForLog, parseFloat(amount), txHash, "Auto-detected by gateway watcher", taskId);
   } catch (e) {
     console.error("[EscrowWatcher] DB log error:", e.message);
   }
 
   // Sync bounty status: mark as funded if we can find the linked bounty
-  const bounty = getBountyByOnchainId(taskId);
   if (bounty && !bounty.funded) {
     try {
-      const now = Math.floor(Date.now() / 1000);
       db.prepare("UPDATE bounties SET funded = 1, escrow_verified = 1 WHERE id = ?").run(bounty.id);
       console.log("[EscrowWatcher] Bounty #" + bounty.id + " auto-marked funded via on-chain event");
 
       // Notify creator
       await notifyUser(bounty.creator_tg_id,
         "✅ <b>Task #" + bounty.id + " funded on-chain</b>\n" +
-        amount + " XRD deposited into escrow.\n" +
+        amount + " " + tokenLabel + " deposited into escrow.\n" +
         "Workers can now claim this task."
       );
     } catch (e) {
@@ -202,16 +226,18 @@ async function handleTaskClaimed(fields, txHash) {
 
   console.log("[EscrowWatcher] TaskClaimed: #" + taskId + " | worker: " + worker.slice(0, 25) + "...");
 
+  const bounty = getBountyByOnchainId(taskId);
+  const bountyIdForLog = bounty ? bounty.id : null;
+
   try {
     db.prepare(
       "INSERT OR IGNORE INTO bounty_transactions (bounty_id, tx_type, amount_xrd, tx_hash, description, verified_onchain, onchain_task_id) VALUES (?, 'claim', 0, ?, ?, 1, ?)"
-    ).run(taskId, txHash, "Task claimed on-chain. Worker: " + worker.slice(0, 30), taskId);
+    ).run(bountyIdForLog, txHash, "Task claimed on-chain. Worker: " + worker.slice(0, 30), taskId);
   } catch (e) {
     console.error("[EscrowWatcher] DB log error:", e.message);
   }
 
   // Sync bounty status to 'assigned'
-  const bounty = getBountyByOnchainId(taskId);
   if (bounty && bounty.status === "open") {
     try {
       const now = Math.floor(Date.now() / 1000);
@@ -247,20 +273,24 @@ async function handleTaskReleased(fields, txHash) {
   const worker = fields[1]?.value || "";
   const payout = fields[2]?.value || "0";
   const fee = fields[3]?.value || "0";
-  // V3 also has resource at index 4, but we don't need it for now
+  // V3 field order: task_id, worker, payout, fee, resource
+  const resource = fields[4]?.value || "";
+  const tokenLabel = resource.includes("usdc") ? "xUSDC" : resource.includes("usdt") ? "xUSDT" : "XRD";
 
-  console.log("[EscrowWatcher] TaskReleased: #" + taskId + " | " + payout + " XRD to " + worker.slice(0, 25) + "... | fee: " + fee);
+  console.log("[EscrowWatcher] TaskReleased: #" + taskId + " | " + payout + " " + tokenLabel + " to " + worker.slice(0, 25) + "... | fee: " + fee);
+
+  const bounty = getBountyByOnchainId(taskId);
+  const bountyIdForLog = bounty ? bounty.id : null;
 
   try {
     db.prepare(
       "INSERT OR IGNORE INTO bounty_transactions (bounty_id, tx_type, amount_xrd, tx_hash, description, verified_onchain, onchain_task_id) VALUES (?, 'release', ?, ?, ?, 1, ?)"
-    ).run(taskId, parseFloat(payout), txHash, "Escrow released on-chain. Fee: " + fee + " XRD", taskId);
+    ).run(bountyIdForLog, parseFloat(payout), txHash, "Escrow released on-chain. Fee: " + fee + " " + tokenLabel, taskId);
   } catch (e) {
     console.error("[EscrowWatcher] DB log error:", e.message);
   }
 
   // Sync bounty status to 'paid' + track fees
-  const bounty = getBountyByOnchainId(taskId);
   if (bounty && bounty.status !== "paid") {
     try {
       const now = Math.floor(Date.now() / 1000);
@@ -279,12 +309,11 @@ async function handleTaskReleased(fields, txHash) {
 
       console.log("[EscrowWatcher] Bounty #" + bounty.id + " auto-marked paid via on-chain release");
 
-      // Queue XP reward for the assignee
-      // Note: requires xp.js to be available — best-effort
+      // Queue XP reward for the assignee (lazy-load xp service once)
       try {
-        const { queueXpReward } = require("./xp.js");
-        if (bounty.assignee_address && queueXpReward) {
-          queueXpReward(bounty.assignee_address, "bounty_complete");
+        if (!xpService) xpService = require("./xp.js");
+        if (bounty.assignee_address && xpService.queueXpReward) {
+          xpService.queueXpReward(bounty.assignee_address, "bounty_complete");
         }
       } catch (_) {
         // XP service may not be loaded yet
@@ -315,22 +344,62 @@ async function handleTaskReleased(fields, txHash) {
   }
 }
 
+async function handleTaskSubmitted(fields, txHash) {
+  const taskId = parseInt(fields[0]?.value) || 0;
+  const worker = fields[1]?.value || "";
+
+  console.log("[EscrowWatcher] TaskSubmitted: #" + taskId + " | worker: " + worker.slice(0, 25) + "...");
+
+  const bounty = getBountyByOnchainId(taskId);
+  const bountyIdForLog = bounty ? bounty.id : null;
+
+  try {
+    db.prepare(
+      "INSERT OR IGNORE INTO bounty_transactions (bounty_id, tx_type, amount_xrd, tx_hash, description, verified_onchain, onchain_task_id) VALUES (?, 'submit', 0, ?, ?, 1, ?)"
+    ).run(bountyIdForLog, txHash, "Work submitted on-chain. Worker: " + worker.slice(0, 30), taskId);
+  } catch (e) {
+    console.error("[EscrowWatcher] DB log error:", e.message);
+  }
+
+  if (bounty && bounty.status === "assigned") {
+    try {
+      const now = Math.floor(Date.now() / 1000);
+      db.prepare("UPDATE bounties SET status = 'submitted', submitted_at = ? WHERE id = ? AND status = 'assigned'")
+        .run(now, bounty.id);
+      console.log("[EscrowWatcher] Bounty #" + bounty.id + " auto-marked submitted via on-chain event");
+
+      await notifyUser(bounty.creator_tg_id,
+        "🔔 <b>Work submitted for Task #" + bounty.id + "</b>\n" +
+        "\"" + (bounty.title || "").slice(0, 60) + "\"\n" +
+        "Review and verify with: /bounty verify " + bounty.id
+      );
+    } catch (e) {
+      console.error("[EscrowWatcher] Bounty submit sync error:", e.message);
+    }
+  }
+}
+
 async function handleTaskCancelled(fields, txHash) {
   const taskId = parseInt(fields[0]?.value) || 0;
   const refunded = fields[1]?.value || "0";
+  // V3: task_id, refunded, resource
+  const resource = fields[2]?.value || "";
+  const tokenLabel = resource.includes("usdc") ? "xUSDC" : resource.includes("usdt") ? "xUSDT" : "XRD";
 
-  console.log("[EscrowWatcher] TaskCancelled: #" + taskId + " | refunded: " + refunded + " XRD");
+  console.log("[EscrowWatcher] TaskCancelled: #" + taskId + " | refunded: " + refunded + " " + tokenLabel);
+
+  const bounty = getBountyByOnchainId(taskId);
+  const bountyIdForLog = bounty ? bounty.id : null;
 
   try {
     db.prepare(
       "INSERT OR IGNORE INTO bounty_transactions (bounty_id, tx_type, amount_xrd, tx_hash, description, verified_onchain, onchain_task_id) VALUES (?, 'cancel', ?, ?, ?, 1, ?)"
-    ).run(taskId, parseFloat(refunded), txHash, "Task cancelled on-chain. Refunded: " + refunded + " XRD", taskId);
+    ).run(bountyIdForLog, parseFloat(refunded), txHash, "Task cancelled on-chain. Refunded: " + refunded + " " + tokenLabel, taskId);
   } catch (e) {
     console.error("[EscrowWatcher] DB log error:", e.message);
   }
 
   // Sync bounty status to 'cancelled'
-  const bounty = getBountyByOnchainId(taskId);
   if (bounty && bounty.status !== "cancelled" && bounty.status !== "paid") {
     try {
       const now = Math.floor(Date.now() / 1000);
