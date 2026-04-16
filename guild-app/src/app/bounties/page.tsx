@@ -97,6 +97,7 @@ function BountiesContent() {
         body: JSON.stringify({
           title: newTitle.trim(),
           reward_xrd: reward,
+          address: account,
           description: newDescription.trim() || null,
           category: newCategory,
           difficulty: newDifficulty,
