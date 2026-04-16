@@ -744,28 +744,59 @@ bot.command("bounty", async (ctx) => {
   if (sub === "create") {
     const user = await requireBadge(ctx);
     if (!user) return;
-    // Parse flags: --approval pr_merged --repo owner/repo --skills "x,y" --criteria "text"
+    // Parse flags: --approval pr_merged --repo owner/repo --skills "x,y" --criteria "text" --depends 5,7 --template name
     const fullText = args.slice(1).join(" ");
     const approvalMatch = fullText.match(/--approval\s+(\S+)/);
     const repoMatch = fullText.match(/--repo\s+(\S+)/);
     const skillsMatch = fullText.match(/--skills\s+"([^"]+)"/);
     const criteriaMatch = fullText.match(/--criteria\s+"([^"]+)"/);
+    const dependsMatch = fullText.match(/--depends\s+(\S+)/);
+    const templateMatch = fullText.match(/--template\s+(\S+)/);
+    const rewardOverride = fullText.match(/--reward\s+(\d+)/);
     // Remove all flags from title
     const cleanTitle = fullText
       .replace(/--approval\s+\S+/g, "")
       .replace(/--repo\s+\S+/g, "")
       .replace(/--skills\s+"[^"]+"/g, "")
       .replace(/--criteria\s+"[^"]+"/g, "")
+      .replace(/--depends\s+\S+/g, "")
+      .replace(/--template\s+\S+/g, "")
+      .replace(/--reward\s+\d+/g, "")
       .trim();
-    const xrd = parseInt(args[1]);
-    const title = cleanTitle.replace(/^\d+\s*/, ""); // remove leading number (the xrd amount)
-    if (!xrd || !title) return ctx.reply("Usage: /bounty create <xrd> <title> [--skills \"x,y\" --criteria \"text\"] [--approval pr_merged --repo owner/repo]");
+
+    // Template support
+    let xrd, title, skills, criteria;
+    if (templateMatch) {
+      const tmpl = db.getTemplate(templateMatch[1]);
+      if (!tmpl) return ctx.reply("Template '" + templateMatch[1] + "' not found. Use /bounty templates to see available templates.");
+      const detail = cleanTitle.replace(/^\d+\s*/, "").trim() || "TBD";
+      title = tmpl.title_template.replace("{detail}", detail);
+      xrd = rewardOverride ? parseInt(rewardOverride[1]) : (parseInt(args[1]) || tmpl.default_reward_xrd);
+      skills = skillsMatch ? skillsMatch[1] : JSON.parse(tmpl.default_skills || "[]").join(",");
+      criteria = criteriaMatch ? criteriaMatch[1] : tmpl.default_criteria;
+    } else {
+      xrd = parseInt(args[1]);
+      title = cleanTitle.replace(/^\d+\s*/, "");
+      skills = skillsMatch ? skillsMatch[1] : null;
+      criteria = criteriaMatch ? criteriaMatch[1] : null;
+    }
+
+    if (!xrd || !title) return ctx.reply("Usage: /bounty create <xrd> <title> [--skills \"x,y\" --criteria \"text\"] [--depends 5,7] [--template name]");
     if (title.length > 500) return ctx.reply("Title too long (max 500)");
     const bountyFilter = checkContent(title);
     if (bountyFilter.blocked) return ctx.reply("Content not allowed. Please rephrase your task title.");
-    const skills = skillsMatch ? skillsMatch[1] : null;
-    const criteria = criteriaMatch ? criteriaMatch[1] : null;
     const id = db.createBounty(title, xrd, ctx.from.id, { skills, criteria });
+
+    // Handle dependencies
+    if (dependsMatch) {
+      const depIds = dependsMatch[1].split(",").map(Number).filter(n => n > 0);
+      for (const depId of depIds) {
+        const depResult = db.addDependency(id, depId);
+        if (depResult.error) {
+          ctx.reply("Warning: dependency on #" + depId + " failed — " + (depResult.detail || depResult.error));
+        }
+      }
+    }
     // Set approval type if specified
     const approvalType = approvalMatch ? approvalMatch[1] : "admin_approved";
     const approvalRepo = repoMatch ? repoMatch[1] : null;
@@ -775,11 +806,13 @@ bot.command("bounty", async (ctx) => {
     // Calculate and store insurance fee
     const insFee = insurance.calculateInsuranceFee(xrd);
     queueXpReward(user.radix_address, "bounty_create");
+    const createdBounty = db.getBounty(id);
     let reply = "Task #" + id + " created: " + xrd + " XRD\n" + title + "\n";
     if (skills) reply += "Skills: " + skills + "\n";
     if (criteria) reply += "Criteria: " + criteria + "\n";
     reply += "Insurance fee: " + insFee.fee_amount + " XRD (" + insFee.fee_pct + "%)\n";
     reply += "Net to worker: " + insFee.net_to_worker + " XRD\n";
+    if (createdBounty && createdBounty.is_blocked) reply += "Status: BLOCKED (waiting on dependencies)\n";
     reply += "\nNext: fund it on-chain so workers can claim it.\n\n" +
       "1. Open the Radix Dashboard and send a transaction:\n" +
       "   Deposit " + xrd + " XRD into the escrow vault\n" +
@@ -873,6 +906,11 @@ bot.command("bounty", async (ctx) => {
     const insRelease = insurance.releaseToTreasury(id);
     let payReply = "Bounty #" + id + " PAID! " + bounty.reward_xrd + " XRD\nTX: " + txHash.slice(0, 30) + "...\nAssignee earned +50 XP.";
     if (insRelease.ok) payReply += "\nInsurance fee (" + insRelease.amount + " XRD) released to treasury pool.";
+    // Auto-unblock dependent tasks
+    const unblocked = db.checkAndUnblock(id);
+    if (unblocked.length > 0) {
+      payReply += "\nUnblocked tasks: " + unblocked.map(u => "#" + u.id + " " + u.title).join(", ");
+    }
     ctx.reply(payReply);
     return;
   }
@@ -996,20 +1034,71 @@ bot.command("bounty", async (ctx) => {
     return;
   }
 
+  if (sub === "deps") {
+    const id = parseInt(args[1]);
+    if (!id) return ctx.reply("Usage: /bounty deps <id>");
+    const info = db.getDependencyInfo(id);
+    if (!info) return ctx.reply("Bounty #" + id + " not found.");
+    let reply = "Dependencies for task #" + id + ":\n";
+    if (info.depends_on.length === 0) {
+      reply += "  No dependencies\n";
+    } else {
+      reply += "  Depends on:\n";
+      info.depends_on.forEach(d => {
+        const icon = d.status === "paid" ? "done" : d.status === "assigned" ? "in progress" : "pending";
+        reply += "    #" + d.id + " " + d.title.slice(0, 40) + " (" + icon + ")\n";
+      });
+    }
+    if (info.blocks.length > 0) {
+      reply += "  Blocks:\n";
+      info.blocks.forEach(b => reply += "    #" + b.id + " " + b.title.slice(0, 40) + "\n");
+    }
+    if (info.is_blocked) reply += "\nStatus: BLOCKED";
+    ctx.reply(reply);
+    return;
+  }
+
+  if (sub === "match") {
+    const userSkills = args.slice(1).join(",").split(",").map(s => s.trim()).filter(Boolean);
+    if (userSkills.length === 0) return ctx.reply("Usage: /bounty match <skills>\nExample: /bounty match scrypto,testing");
+    const results = db.matchBounties(userSkills);
+    const top = results.filter(r => r.match_score > 0).slice(0, 10);
+    if (top.length === 0) return ctx.reply("No matching open tasks for skills: " + userSkills.join(", "));
+    const lines = top.map((r, i) =>
+      (i + 1) + ". #" + r.id + " " + r.title.slice(0, 40) + " — " + r.reward_xrd + " XRD — Match: " +
+      Math.round(r.match_score * 100) + "%" +
+      (r.matched_skills.length > 0 ? " (" + r.matched_skills.join(", ") + ")" : "")
+    );
+    ctx.reply("Matching tasks for [" + userSkills.join(", ") + "]:\n\n" + lines.join("\n"));
+    return;
+  }
+
+  if (sub === "templates") {
+    const templates = db.getTemplates();
+    if (templates.length === 0) return ctx.reply("No templates available.");
+    const lines = templates.map(t =>
+      "  " + t.name + " — " + t.default_reward_xrd + " XRD, " + t.default_difficulty + ", " + t.default_deadline_days + "d"
+    );
+    ctx.reply("Task Templates:\n\n" + lines.join("\n") + "\n\nUsage: /bounty create --template " + templates[0].name + " \"description\"");
+    return;
+  }
+
   ctx.reply(
     "Task commands:\n\n" +
     "/bounty — guided menu\n" +
     "/bounty list — open tasks\n" +
     "/bounty stats — stats + escrow\n" +
     "/bounty create <xrd> <title> — quick create\n" +
+    "/bounty create --template <name> \"detail\" — from template\n" +
     "/bounty claim <id> — claim a task\n" +
     "/bounty apply <id> [pitch] — apply for tasks >100 XRD\n" +
     "/bounty cancel <id> [reason] — cancel your task\n" +
     "/bounty submit <id> <pr_url> — submit work\n" +
-    "/bounty categories — list categories\n" +
+    "/bounty deps <id> — view dependencies\n" +
+    "/bounty match <skills> — find matching tasks\n" +
+    "/bounty templates — list templates\n" +
     "/bounty verify <id> — verify delivery (admin)\n" +
     "/bounty pay <id> <tx_hash> — release payment (admin)\n" +
-    "/bounty approve <app_id> — approve applicant (creator)\n" +
     "/bounty fund <id> <tx_hash> — verify on-chain escrow deposit"
   );
 });
@@ -1207,6 +1296,49 @@ bot.command("arbiter", async (ctx) => {
     "/arbiter available — mark available\n" +
     "/arbiter unavailable — mark unavailable\n" +
     "/arbiter pool — view all arbiters"
+  );
+});
+
+// ── /project ──────────────────────────────────────────
+
+bot.command("project", async (ctx) => {
+  const args = ctx.message.text.split(" ").slice(1);
+  const sub = (args[0] || "").toLowerCase();
+
+  if (sub === "status") {
+    const groupId = parseInt(args[1]);
+    if (!groupId) return ctx.reply("Usage: /project status <group_id>");
+    const group = db.getGroupDetail(groupId);
+    if (!group) return ctx.reply("Group #" + groupId + " not found.");
+    const progress = db.getProjectProgress(groupId);
+    if (!progress) return ctx.reply("No tasks found for group '" + group.name + "'.");
+    ctx.reply(
+      "Project: " + group.name + "\n" +
+      "Progress: " + progress.progress_pct + "% (" + progress.completed + "/" + progress.total_tasks + " tasks)\n" +
+      "  Open: " + progress.open + " | In progress: " + progress.in_progress + " | Blocked: " + progress.blocked + "\n" +
+      "  Completed: " + progress.completed + " | Cancelled: " + progress.cancelled + "\n" +
+      "Budget: " + progress.spent + "/" + progress.total_budget + " XRD spent (" + progress.remaining + " remaining)\n" +
+      "Insurance: " + progress.total_insurance + " XRD collected"
+    );
+    return;
+  }
+
+  if (sub === "tasks") {
+    const groupId = parseInt(args[1]);
+    if (!groupId) return ctx.reply("Usage: /project tasks <group_id>");
+    const tasks = db.getProjectBounties(groupId);
+    if (tasks.length === 0) return ctx.reply("No tasks in this project.");
+    const lines = tasks.map(t => {
+      const icon = t.status === "paid" ? "done" : t.status === "assigned" ? "wip" : t.is_blocked ? "blocked" : "open";
+      return "  #" + t.id + " [" + icon + "] " + t.title.slice(0, 40) + " — " + t.reward_xrd + " XRD";
+    });
+    ctx.reply("Project tasks:\n\n" + lines.join("\n"));
+    return;
+  }
+
+  ctx.reply(
+    "/project status <group_id> — project overview\n" +
+    "/project tasks <group_id> — list project tasks"
   );
 });
 

@@ -566,6 +566,37 @@ function init() {
   seedDis.run("dispute_appeal_min_xrd", "500");
   seedDis.run("dispute_appeal_fee_pct", "5");
 
+  // ── Task Dependencies + Templates (Phase 5) ──
+  try { db.exec("ALTER TABLE bounties ADD COLUMN depends_on TEXT DEFAULT '[]'"); } catch(e) {}
+  try { db.exec("ALTER TABLE bounties ADD COLUMN blocks TEXT DEFAULT '[]'"); } catch(e) {}
+  try { db.exec("ALTER TABLE bounties ADD COLUMN is_blocked INTEGER DEFAULT 0"); } catch(e) {}
+
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS task_templates (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT UNIQUE NOT NULL,
+      title_template TEXT NOT NULL,
+      default_reward_xrd REAL,
+      default_skills TEXT,
+      default_difficulty TEXT,
+      default_deadline_days INTEGER,
+      default_criteria TEXT,
+      description TEXT,
+      created_at INTEGER DEFAULT (strftime('%s','now'))
+    );
+  `);
+
+  // Seed templates
+  const tmplSeed = db.prepare("INSERT OR IGNORE INTO task_templates (name, title_template, default_reward_xrd, default_skills, default_difficulty, default_deadline_days, default_criteria) VALUES (?, ?, ?, ?, ?, ?, ?)");
+  tmplSeed.run("code-review", "Code Review: {detail}", 20, '["code-review"]', "easy", 2, "Thorough review with inline comments, approve or request changes");
+  tmplSeed.run("bug-fix", "Bug Fix: {detail}", 50, '["code","testing"]', "medium", 5, "Bug reproduced, fix implemented, test added, PR passes CI");
+  tmplSeed.run("scrypto-component", "Scrypto: {detail}", 100, '["scrypto"]', "hard", 7, "Component compiles, unit tests pass, security review");
+  tmplSeed.run("documentation", "Docs: {detail}", 30, '["docs"]', "easy", 3, "Clear, accurate, follows existing doc style");
+  tmplSeed.run("research", "Research: {detail}", 40, '["research"]', "medium", 5, "Thorough analysis with sources, actionable recommendations");
+  tmplSeed.run("frontend", "Frontend: {detail}", 80, '["frontend","js"]', "medium", 7, "Component renders correctly, responsive, matches design");
+  tmplSeed.run("testing", "Testing: {detail}", 40, '["testing"]', "medium", 3, "Test coverage > 80%, all tests pass, edge cases covered");
+  tmplSeed.run("deploy", "Deploy: {detail}", 40, '["devops"]', "medium", 2, "Deployed to target environment, verified working, documented");
+
   // Escrow: per-task funding (funded/unfunded)
   try { db.exec("ALTER TABLE bounties ADD COLUMN funded INTEGER DEFAULT 0"); } catch(e) {}
 
@@ -881,7 +912,7 @@ function createBounty(title, rewardXrd, creatorTgId, opts = {}) {
 }
 
 function getBounty(id) { return db.prepare("SELECT * FROM bounties WHERE id = ?").get(id); }
-function getOpenBounties() { return db.prepare("SELECT * FROM bounties WHERE status IN ('open','assigned') ORDER BY created_at DESC").all(); }
+function getOpenBounties() { return db.prepare("SELECT * FROM bounties WHERE status IN ('open','assigned') AND is_blocked = 0 ORDER BY created_at DESC").all(); }
 function getAllBounties() { return db.prepare("SELECT * FROM bounties ORDER BY created_at DESC").all(); }
 
 function assignBounty(id, tgId, radixAddress) {
@@ -1151,6 +1182,197 @@ function cancelBounty(id, reason) {
   const result = db.prepare("UPDATE bounties SET status = 'cancelled', cancelled_at = ?, cancel_reason = ? WHERE id = ? AND status = 'open'")
     .run(now, reason, id);
   return result.changes > 0;
+}
+
+// ── Task Dependencies (Phase 5) ────────────────────────
+
+function detectCircularDependency(bountyId, newDependencyId) {
+  // DFS from newDependencyId following depends_on chains — if we reach bountyId, it's circular
+  const visited = new Set();
+  const stack = [newDependencyId];
+  while (stack.length > 0) {
+    const current = stack.pop();
+    if (current === bountyId) return true;
+    if (visited.has(current)) continue;
+    visited.add(current);
+    const b = db.prepare("SELECT depends_on FROM bounties WHERE id = ?").get(current);
+    if (b && b.depends_on) {
+      try {
+        const deps = JSON.parse(b.depends_on);
+        deps.forEach(d => stack.push(d));
+      } catch (e) { /* malformed JSON, skip */ }
+    }
+  }
+  return false;
+}
+
+function addDependency(bountyId, dependsOnBountyId) {
+  const bounty = getBounty(bountyId);
+  if (!bounty) return { error: "bounty_not_found" };
+  const dep = getBounty(dependsOnBountyId);
+  if (!dep) return { error: "dependency_not_found" };
+  if (bountyId === dependsOnBountyId) return { error: "self_dependency" };
+  if (bounty.status !== "open") return { error: "not_open", detail: "Can only add dependencies to open bounties" };
+
+  if (detectCircularDependency(bountyId, dependsOnBountyId)) {
+    return { error: "circular_dependency", detail: "Adding this dependency would create a cycle" };
+  }
+
+  // Update depends_on on bountyId
+  const currentDeps = JSON.parse(bounty.depends_on || "[]");
+  if (currentDeps.includes(dependsOnBountyId)) return { error: "already_exists" };
+  currentDeps.push(dependsOnBountyId);
+
+  // Update blocks on dependsOnBountyId
+  const currentBlocks = JSON.parse(dep.blocks || "[]");
+  if (!currentBlocks.includes(bountyId)) currentBlocks.push(bountyId);
+
+  // Is the dependency complete? If not, mark bounty as blocked
+  const isBlocked = !["paid", "verified"].includes(dep.status) ? 1 : 0;
+
+  db.prepare("UPDATE bounties SET depends_on = ?, is_blocked = ? WHERE id = ?")
+    .run(JSON.stringify(currentDeps), isBlocked || bounty.is_blocked ? 1 : 0, bountyId);
+  db.prepare("UPDATE bounties SET blocks = ? WHERE id = ?")
+    .run(JSON.stringify(currentBlocks), dependsOnBountyId);
+
+  return { ok: true, depends_on: currentDeps, is_blocked: isBlocked || bounty.is_blocked };
+}
+
+function removeDependency(bountyId, dependsOnBountyId) {
+  const bounty = getBounty(bountyId);
+  if (!bounty) return { error: "bounty_not_found" };
+  const dep = getBounty(dependsOnBountyId);
+  if (!dep) return { error: "dependency_not_found" };
+
+  const currentDeps = JSON.parse(bounty.depends_on || "[]").filter(id => id !== dependsOnBountyId);
+  const currentBlocks = JSON.parse(dep.blocks || "[]").filter(id => id !== bountyId);
+
+  db.prepare("UPDATE bounties SET depends_on = ? WHERE id = ?")
+    .run(JSON.stringify(currentDeps), bountyId);
+  db.prepare("UPDATE bounties SET blocks = ? WHERE id = ?")
+    .run(JSON.stringify(currentBlocks), dependsOnBountyId);
+
+  // Recompute is_blocked
+  recomputeBlocked(bountyId);
+  return { ok: true, depends_on: currentDeps };
+}
+
+function recomputeBlocked(bountyId) {
+  const bounty = getBounty(bountyId);
+  if (!bounty) return;
+  const deps = JSON.parse(bounty.depends_on || "[]");
+  if (deps.length === 0) {
+    db.prepare("UPDATE bounties SET is_blocked = 0 WHERE id = ?").run(bountyId);
+    return;
+  }
+  // Check if ALL dependencies are complete
+  const incomplete = deps.filter(depId => {
+    const d = getBounty(depId);
+    return d && !["paid", "verified"].includes(d.status);
+  });
+  db.prepare("UPDATE bounties SET is_blocked = ? WHERE id = ?")
+    .run(incomplete.length > 0 ? 1 : 0, bountyId);
+}
+
+function checkAndUnblock(completedBountyId) {
+  const completed = getBounty(completedBountyId);
+  if (!completed) return [];
+  const blocksRaw = JSON.parse(completed.blocks || "[]");
+  const unblocked = [];
+  for (const depId of blocksRaw) {
+    recomputeBlocked(depId);
+    const updated = getBounty(depId);
+    if (updated && !updated.is_blocked && updated.status === "open") {
+      unblocked.push({ id: depId, title: updated.title });
+    }
+  }
+  return unblocked;
+}
+
+function getDependencyInfo(bountyId) {
+  const bounty = getBounty(bountyId);
+  if (!bounty) return null;
+  const depsIds = JSON.parse(bounty.depends_on || "[]");
+  const blocksIds = JSON.parse(bounty.blocks || "[]");
+  const deps = depsIds.map(id => {
+    const b = getBounty(id);
+    return b ? { id: b.id, title: b.title, status: b.status } : { id, title: "?", status: "unknown" };
+  });
+  const blocks = blocksIds.map(id => {
+    const b = getBounty(id);
+    return b ? { id: b.id, title: b.title, status: b.status } : { id, title: "?", status: "unknown" };
+  });
+  return { bountyId, is_blocked: !!bounty.is_blocked, depends_on: deps, blocks };
+}
+
+function getBlockedBounties() {
+  return db.prepare("SELECT * FROM bounties WHERE is_blocked = 1 AND status = 'open' ORDER BY id").all();
+}
+
+// ── Skill Matching (Phase 5) ───────────────────────────
+
+function matchBounties(userSkills, opts = {}) {
+  const { maxReward, minReward, difficulty, excludeBlocked = true } = opts;
+  let query = "SELECT * FROM bounties WHERE status = 'open'";
+  const params = [];
+  if (excludeBlocked) query += " AND is_blocked = 0";
+  if (maxReward) { query += " AND reward_xrd <= ?"; params.push(maxReward); }
+  if (minReward) { query += " AND reward_xrd >= ?"; params.push(minReward); }
+  if (difficulty) { query += " AND difficulty = ?"; params.push(difficulty); }
+  query += " ORDER BY reward_xrd DESC";
+  const bounties = db.prepare(query).all(...params);
+
+  if (!userSkills || userSkills.length === 0) {
+    return bounties.map(b => ({ ...b, match_score: 0, matched_skills: [], missing_skills: [] }));
+  }
+
+  const userSkillSet = new Set(userSkills.map(s => s.toLowerCase().trim()));
+
+  return bounties.map(b => {
+    const required = (b.skills_required || "").split(",").map(s => s.trim().toLowerCase()).filter(Boolean);
+    if (required.length === 0) return { ...b, match_score: 0.5, matched_skills: [], missing_skills: [] };
+    const matched = required.filter(s => userSkillSet.has(s));
+    const missing = required.filter(s => !userSkillSet.has(s));
+    const score = matched.length / required.length;
+    return { ...b, match_score: Math.round(score * 100) / 100, matched_skills: matched, missing_skills: missing };
+  }).sort((a, b) => b.match_score - a.match_score || b.reward_xrd - a.reward_xrd);
+}
+
+// ── Project Progress (Phase 5) ─────────────────────────
+
+function getProjectBounties(groupId) {
+  return db.prepare("SELECT * FROM bounties WHERE group_id = ? ORDER BY id").all(groupId);
+}
+
+function getProjectProgress(groupId) {
+  const tasks = getProjectBounties(groupId);
+  if (tasks.length === 0) return null;
+  const total = tasks.length;
+  const completed = tasks.filter(t => t.status === "paid").length;
+  const inProgress = tasks.filter(t => ["assigned", "submitted", "verified"].includes(t.status)).length;
+  const blocked = tasks.filter(t => t.is_blocked && t.status === "open").length;
+  const open = tasks.filter(t => t.status === "open" && !t.is_blocked).length;
+  const cancelled = tasks.filter(t => t.status === "cancelled").length;
+  const disputed = tasks.filter(t => t.status === "disputed").length;
+  const totalBudget = tasks.reduce((sum, t) => sum + (t.reward_xrd || 0), 0);
+  const spent = tasks.filter(t => t.status === "paid").reduce((sum, t) => sum + (t.reward_xrd || 0), 0);
+  const totalInsurance = tasks.reduce((sum, t) => sum + (t.insurance_fee_xrd || 0), 0);
+  return {
+    total_tasks: total, completed, in_progress: inProgress, blocked, open, cancelled, disputed,
+    progress_pct: total > 0 ? Math.round((completed / total) * 100) : 0,
+    total_budget: totalBudget, spent, remaining: totalBudget - spent,
+    total_insurance: totalInsurance,
+  };
+}
+
+// ── Task Templates (Phase 5) ───────────────────────────
+
+function getTemplates() {
+  return db.prepare("SELECT * FROM task_templates ORDER BY name").all();
+}
+
+function getTemplate(name) {
+  return db.prepare("SELECT * FROM task_templates WHERE name = ?").get(name);
 }
 
 function getFilteredBounties({ category, status, difficulty, sort, skills, limit = 50 } = {}) {
@@ -1682,6 +1904,16 @@ module.exports.approveApplication = approveApplication;
 module.exports.cancelBounty = cancelBounty;
 module.exports.getFilteredBounties = getFilteredBounties;
 module.exports.checkExpiredBounties = checkExpiredBounties;
+module.exports.addDependency = addDependency;
+module.exports.removeDependency = removeDependency;
+module.exports.checkAndUnblock = checkAndUnblock;
+module.exports.getDependencyInfo = getDependencyInfo;
+module.exports.getBlockedBounties = getBlockedBounties;
+module.exports.matchBounties = matchBounties;
+module.exports.getProjectBounties = getProjectBounties;
+module.exports.getProjectProgress = getProjectProgress;
+module.exports.getTemplates = getTemplates;
+module.exports.getTemplate = getTemplate;
 module.exports.createFeedback = createFeedback;
 module.exports.getFeedbackByUser = getFeedbackByUser;
 module.exports.getFeedbackByAddress = getFeedbackByAddress;

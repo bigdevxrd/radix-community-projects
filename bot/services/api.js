@@ -1033,6 +1033,55 @@ function startApi() {
       return res.end(JSON.stringify({ ok: true, data: stats }));
     }
 
+    // ── Task Market Endpoints (Phase 5) ──
+
+    // GET /api/bounties/match?skills=scrypto,frontend — skill-based matching
+    if (url.pathname === "/api/bounties/match" && req.method === "GET") {
+      const skillsParam = url.searchParams.get("skills") || "";
+      const userSkills = skillsParam.split(",").map(s => s.trim()).filter(Boolean);
+      const opts = {};
+      if (url.searchParams.get("max_reward")) opts.maxReward = parseFloat(url.searchParams.get("max_reward"));
+      if (url.searchParams.get("min_reward")) opts.minReward = parseFloat(url.searchParams.get("min_reward"));
+      if (url.searchParams.get("difficulty")) opts.difficulty = url.searchParams.get("difficulty");
+      const results = db.matchBounties(userSkills, opts);
+      res.writeHead(200);
+      return res.end(JSON.stringify({ ok: true, data: results }));
+    }
+
+    // GET /api/bounties/blocked — blocked tasks
+    if (url.pathname === "/api/bounties/blocked" && req.method === "GET") {
+      const blocked = db.getBlockedBounties();
+      res.writeHead(200);
+      return res.end(JSON.stringify({ ok: true, data: blocked }));
+    }
+
+    // GET /api/bounties/:id/deps — dependency info
+    const depsMatch = url.pathname.match(/^\/api\/bounties\/(\d+)\/deps$/);
+    if (depsMatch && req.method === "GET") {
+      const info = db.getDependencyInfo(parseInt(depsMatch[1]));
+      if (!info) { res.writeHead(404); return res.end(JSON.stringify({ ok: false, error: "not_found" })); }
+      res.writeHead(200);
+      return res.end(JSON.stringify({ ok: true, data: info }));
+    }
+
+    // GET /api/projects/:id — project progress
+    const projectMatch = url.pathname.match(/^\/api\/projects\/(\d+)$/);
+    if (projectMatch && req.method === "GET") {
+      const groupId = parseInt(projectMatch[1]);
+      const progress = db.getProjectProgress(groupId);
+      const tasks = db.getProjectBounties(groupId);
+      if (!progress) { res.writeHead(404); return res.end(JSON.stringify({ ok: false, error: "no_tasks" })); }
+      res.writeHead(200);
+      return res.end(JSON.stringify({ ok: true, data: { ...progress, tasks } }));
+    }
+
+    // GET /api/templates — task templates
+    if (url.pathname === "/api/templates" && req.method === "GET") {
+      const templates = db.getTemplates();
+      res.writeHead(200);
+      return res.end(JSON.stringify({ ok: true, data: templates }));
+    }
+
     // ── Insurance Pool Endpoints ──
 
     // GET /api/insurance — pool stats
