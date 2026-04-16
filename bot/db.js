@@ -164,6 +164,8 @@ function init() {
   try { db.exec("ALTER TABLE bounties ADD COLUMN auto_released_at INTEGER"); } catch(e) {}
   // Phase 8: Agent integration
   try { db.exec("ALTER TABLE bounties ADD COLUMN claimed_by_agent INTEGER DEFAULT 0"); } catch(e) {}
+  // Phase 9: V3 escrow version tracking (NULL = V1 legacy, 3 = V3 multi-token)
+  try { db.exec("ALTER TABLE bounties ADD COLUMN escrow_version INTEGER"); } catch(e) {}
 
   // Bounty milestones (partial delivery)
   db.exec(`
@@ -993,14 +995,15 @@ function getReadyParams() {
 
 function createBounty(title, rewardXrd, creatorTgId, opts = {}) {
   const result = db.prepare(
-    "INSERT INTO bounties (title, description, reward_xrd, reward_xp, creator_tg_id, github_issue, proposal_id, category, difficulty, deadline, platform_fee_pct, skills_required, acceptance_criteria, tags, priority) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+    "INSERT INTO bounties (title, description, reward_xrd, reward_xp, creator_tg_id, github_issue, proposal_id, category, difficulty, deadline, platform_fee_pct, skills_required, acceptance_criteria, tags, priority, escrow_version) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
   ).run(
     title, opts.description || null, rewardXrd, opts.rewardXp || 0, creatorTgId,
     opts.githubIssue || null, opts.proposalId || null,
     opts.category || "general", opts.difficulty || "medium",
     opts.deadline || null, 2.5,
     opts.skills || null, opts.criteria || null,
-    opts.tags || null, opts.priority || "normal"
+    opts.tags || null, opts.priority || "normal",
+    opts.escrowVersion || 3
   );
   return result.lastInsertRowid;
 }

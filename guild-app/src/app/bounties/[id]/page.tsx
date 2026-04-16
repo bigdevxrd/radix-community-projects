@@ -72,14 +72,27 @@ function BountyDetailContent() {
       const result = await rdt.walletApi.sendTransaction({ transactionManifest: manifest, version: 1 });
       if (result.isOk()) {
         const txHash = result.value.transactionIntentHash;
-        setFundStatus("Funded! TX submitted. Verifying on-chain...");
-        // The gateway watcher will auto-detect the escrow event within 60s.
-        // We can also show the TX hash immediately for transparency.
-        // Refresh bounty data after gateway watcher has time to process
-        setTimeout(() => {
-          fetch(API_URL + "/bounties/" + bounty.id).then(r => r.json()).then(d => { if (d.data) setBounty(d.data); });
-        }, 10000);
-        setFundStatus("Funded on-chain! TX: " + txHash.slice(0, 40) + "...\nThe escrow watcher will verify within 60 seconds.");
+        setFundStatus("Funded! Verifying on-chain...");
+        // Verify TX and link on-chain task ID (wait a few seconds for gateway indexing)
+        setTimeout(async () => {
+          try {
+            const verifyRes = await fetch(API_URL + "/bounties/" + bounty.id + "/verify-fund", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ tx_hash: txHash }),
+            });
+            const verifyData = await verifyRes.json();
+            if (verifyData.ok) {
+              setFundStatus("Funded & verified on-chain! TX: " + txHash.slice(0, 40) + "...");
+            } else {
+              setFundStatus("TX submitted: " + txHash.slice(0, 40) + "...\nVerification pending — the escrow watcher will sync within 60s.");
+            }
+          } catch {
+            setFundStatus("TX submitted: " + txHash.slice(0, 40) + "...\nVerification pending.");
+          }
+          // Refresh bounty data
+          fetch(API_URL + "/bounties/" + bounty.id).then(r => r.json()).then(d => { if (d.data) setBounty(d.data); }).catch(() => {});
+        }, 8000);
       } else {
         setFundError("Transaction rejected or failed.");
       }
@@ -195,6 +208,9 @@ function BountyDetailContent() {
             <Badge variant="outline" className="text-xs capitalize">{bounty.category}</Badge>
             <Badge variant="outline" className={`text-xs capitalize ${DIFFICULTY_COLORS[bounty.difficulty] || ""}`}>{bounty.difficulty}</Badge>
             {bounty.priority !== "normal" && <Badge variant="destructive" className="text-xs capitalize">{bounty.priority}</Badge>}
+            {bounty.escrow_version === 3 && (
+              <Badge variant="outline" className="text-xs text-primary border-primary/30">V3 Escrow</Badge>
+            )}
             {deadlineStr && (
               <Badge variant={deadlineStr === "Expired" ? "destructive" : "secondary"} className="text-xs font-mono">{deadlineStr}</Badge>
             )}
@@ -370,7 +386,10 @@ function BountyDetailContent() {
               </Button>
               {fundStatus && <p className="text-xs text-primary text-center">{fundStatus}</p>}
               {fundError && <p className="text-xs text-red-400 text-center">{fundError}</p>}
-              <p className="text-[10px] text-muted-foreground text-center">XRD goes into a Scrypto smart contract vault. Cancel = full refund.</p>
+              <p className="text-[10px] text-muted-foreground text-center">
+                XRD goes into a Scrypto smart contract vault. Cancel = full refund.
+                {bounty.escrow_version === 3 && <span className="ml-1 text-primary">(Escrow V3 — multi-token)</span>}
+              </p>
             </>
           )}
 

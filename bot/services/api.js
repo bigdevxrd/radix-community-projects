@@ -1,7 +1,7 @@
 // HTTP API for proposal data + badge verification — consumed by portal and external dApps
 const http = require("http");
 const db = require("../db");
-const { hasBadge, getBadgeData } = require("./gateway");
+const { hasBadge, getBadgeData, verifyEscrowTx } = require("./gateway");
 const cv2 = require("./consultation");
 const cv3 = require("./conviction-watcher");
 const { checkContent } = require("./content-filter");
@@ -75,8 +75,9 @@ function startApi() {
     const isXpPost = req.method === "POST" && url.pathname === "/api/xp/mark-applied";
     const isDisputeEvidencePost = req.method === "POST" && url.pathname.match(/^\/api\/disputes\/\d+\/evidence$/);
     const isProjectBreakdownPost = req.method === "POST" && url.pathname.match(/^\/api\/projects\/\d+\/breakdown$/);
+    const isBountyVerifyFund = req.method === "POST" && url.pathname.match(/^\/api\/bounties\/\d+\/verify-fund$/);
     const isAgentRoute = url.pathname.startsWith("/api/agent/");
-    if (req.method !== "GET" && !isGamePost && !isFeedbackPost && !isBountyPost && !isGroupPost && !isVotePost && !isProposalPost && !isMilestoneWrite && !isXpPost && !isDisputeEvidencePost && !isProjectBreakdownPost && !isAgentRoute) {
+    if (req.method !== "GET" && !isGamePost && !isFeedbackPost && !isBountyPost && !isGroupPost && !isVotePost && !isProposalPost && !isMilestoneWrite && !isXpPost && !isDisputeEvidencePost && !isProjectBreakdownPost && !isBountyVerifyFund && !isAgentRoute) {
       res.writeHead(405);
       return res.end(JSON.stringify({ ok: false, error: "method_not_allowed" }));
     }
@@ -310,6 +311,42 @@ function startApi() {
         console.error("[API] POST /api/bounties error:", e.message);
         res.writeHead(400);
         return res.end(JSON.stringify({ ok: false, error: e.message || "invalid_body" }));
+      }
+    }
+
+    // POST /api/bounties/:id/verify-fund — verify on-chain escrow deposit + link task ID
+    const verifyFundMatch = url.pathname.match(/^\/api\/bounties\/(\d+)\/verify-fund$/);
+    if (verifyFundMatch && req.method === "POST") {
+      try {
+        const body = await readBody(req);
+        const bountyId = parseInt(verifyFundMatch[1]);
+        const bounty = db.getBounty(bountyId);
+        if (!bounty) { res.writeHead(404); return res.end(JSON.stringify({ ok: false, error: "not_found" })); }
+        if (!body.tx_hash) { res.writeHead(400); return res.end(JSON.stringify({ ok: false, error: "tx_hash_required" })); }
+        const result = await verifyEscrowTx(body.tx_hash);
+        if (!result.verified) {
+          res.writeHead(400);
+          return res.end(JSON.stringify({ ok: false, error: "verification_failed", reason: result.reason }));
+        }
+        // Link on-chain task ID and mark as funded
+        if (result.task_id) {
+          try { db.prepare("UPDATE bounties SET onchain_task_id = ?, escrow_verified = 1, funded = 1 WHERE id = ?").run(result.task_id, bountyId); } catch(e) {}
+        } else {
+          try { db.prepare("UPDATE bounties SET escrow_verified = 1, funded = 1 WHERE id = ?").run(bountyId); } catch(e) {}
+        }
+        // Log transaction
+        try {
+          db.prepare(
+            "INSERT OR IGNORE INTO bounty_transactions (bounty_id, tx_type, amount_xrd, tx_hash, description, verified_onchain, onchain_task_id) VALUES (?, 'deposit', ?, ?, ?, 1, ?)"
+          ).run(bountyId, parseFloat(result.amount) || 0, body.tx_hash, "Dashboard escrow deposit verified", result.task_id || null);
+        } catch(e) {}
+        console.log("[API] Bounty #" + bountyId + " funded via dashboard, onchain_task_id=" + result.task_id + ", amount=" + result.amount);
+        res.writeHead(200);
+        return res.end(JSON.stringify({ ok: true, data: { task_id: result.task_id, amount: result.amount } }));
+      } catch (e) {
+        console.error("[API] POST verify-fund error:", e.message);
+        res.writeHead(500);
+        return res.end(JSON.stringify({ ok: false, error: "internal_error" }));
       }
     }
 

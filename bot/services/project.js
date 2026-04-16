@@ -75,7 +75,7 @@ function breakdownProject(groupId, tasks) {
         : null;
 
       const result = d.prepare(
-        "INSERT INTO bounties (title, description, reward_xrd, creator_tg_id, group_id, skills_required, acceptance_criteria, difficulty, deadline, category) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+        "INSERT INTO bounties (title, description, reward_xrd, creator_tg_id, group_id, skills_required, acceptance_criteria, difficulty, deadline, category, escrow_version) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 3)"
       ).run(
         task.title, task.description || null, reward,
         group.lead_tg_id, groupId,
