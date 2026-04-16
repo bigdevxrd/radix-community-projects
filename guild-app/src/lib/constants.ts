@@ -43,13 +43,22 @@ export const ESCROW_PACKAGE =
   "package_rdx1p5m3z284wgnck2cwqs3nayh74c4qkghjrra76mq0azphxmsnhhcvtl";
 
 // TaskEscrow V3 (multi-token) — accepts XRD, xUSDC, xUSDT
-export const ESCROW_V3_COMPONENT =
-  process.env.NEXT_PUBLIC_ESCROW_V3_COMPONENT ||
-  "component_rdx1cpdkaf87pdpfct4v0y85ddpylpfscq9n0ysfusfwe2k3phzsfejm5a";
+// Legacy V3 addresses (superseded by V3-live below)
+export const ESCROW_V3_LEGACY_COMPONENT = "component_rdx1cpdkaf87pdpfct4v0y85ddpylpfscq9n0ysfusfwe2k3phzsfejm5a";
+export const ESCROW_V3_LEGACY_PACKAGE = "package_rdx1pkaw78wcf36838s69rzmdfq030yethlyydea0uq0p8dg60uufej3f4";
 
+// TaskEscrow V3 — LIVE on mainnet (deployed 2026-04-16)
 export const ESCROW_V3_PACKAGE =
   process.env.NEXT_PUBLIC_ESCROW_V3_PACKAGE ||
-  "package_rdx1pkaw78wcf36838s69rzmdfq030yethlyydea0uq0p8dg60uufej3f4";
+  "package_rdx1pktaswcn8dgjk8c9h56djvay2f0c95lyfepmt6q8722n4xtjt3mlda";
+
+export const ESCROW_V3_COMPONENT =
+  process.env.NEXT_PUBLIC_ESCROW_V3_COMPONENT ||
+  "component_rdx1czcjn322rhzvu4gwkculx6qvguv2erqu38mschwqkjyqtdpvpcex9s";
+
+export const ESCROW_V3_RECEIPT =
+  process.env.NEXT_PUBLIC_ESCROW_V3_RECEIPT ||
+  "resource_rdx1ngsnu7l5y6lc32vfg9yhrhdpftgv02c5wcuaazqd7l6zm9576hu09y";
 
 // ConvictionVoting (CV3) — time-weighted fund allocation
 export const CV3_COMPONENT =

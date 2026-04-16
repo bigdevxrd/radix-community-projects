@@ -10,6 +10,8 @@
 
 const GATEWAY = process.env.RADIX_GATEWAY || "https://mainnet.radixdlt.com";
 const ESCROW_COMPONENT = process.env.ESCROW_COMPONENT || "component_rdx1cp8mwwe2pkrrtm05p7txgygf9y9uuwx6p87djkda8stk8nuwpyg56r";
+const ESCROW_V3_COMPONENT = process.env.ESCROW_V3_COMPONENT || "component_rdx1czcjn322rhzvu4gwkculx6qvguv2erqu38mschwqkjyqtdpvpcex9s";
+const WATCHED_COMPONENTS = [ESCROW_COMPONENT, ESCROW_V3_COMPONENT].filter(Boolean);
 const POLL_INTERVAL = 60 * 1000; // 60 seconds
 
 let db = null;
@@ -95,7 +97,7 @@ async function pollEscrowEvents() {
         headers: { "Content-Type": "application/json" },
         signal: controller.signal,
         body: JSON.stringify({
-          affected_global_entities_filter: [ESCROW_COMPONENT],
+          affected_global_entities_filter: WATCHED_COMPONENTS,
           from_state_version: lastStateVersion > 0 ? lastStateVersion + 1 : undefined,
           limit_per_page: 50,
           order: "asc",
@@ -133,7 +135,7 @@ async function pollEscrowEvents() {
 
       for (const event of events) {
         const emitter = event.emitter?.entity?.entity_address;
-        if (emitter !== ESCROW_COMPONENT) continue;
+        if (!WATCHED_COMPONENTS.includes(emitter)) continue;
 
         const name = event.name;
         const fields = event.data?.fields || [];
