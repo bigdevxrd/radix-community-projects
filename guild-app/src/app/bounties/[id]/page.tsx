@@ -95,11 +95,13 @@ function BountyDetailContent() {
         }, 8000);
       } else {
         setFundError("Transaction rejected or failed.");
+        setFunding(false);
       }
     } catch (e: unknown) {
       setFundError(e instanceof Error ? e.message : "Transaction failed");
+      setFunding(false);
     }
-    setFunding(false);
+    // Don't re-enable on success — button stays disabled until bounty.funded flips
   }
 
   const [actionStatus, setActionStatus] = useState("");
