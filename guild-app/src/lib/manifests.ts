@@ -303,6 +303,28 @@ CALL_METHOD
 ;`;
 }
 
+export function releaseTaskManifest(
+  escrowComponent: string,
+  adminBadge: string,
+  account: string,
+  taskId: number,
+): string {
+  const e = validateAddress(escrowComponent, "component_rdx");
+  const a = validateAddress(account, "account_rdx");
+  const ab = validateAddress(adminBadge, "resource_rdx");
+  return `CALL_METHOD
+  Address("${a}")
+  "create_proof_of_amount"
+  Address("${ab}")
+  Decimal("1")
+;
+CALL_METHOD
+  Address("${e}")
+  "release_task"
+  ${taskId}u64
+;`;
+}
+
 export function updateExtraDataManifest(
   manager: string, adminBadge: string, badgeId: string, extraData: string, account: string
 ): string {

@@ -8,9 +8,9 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
-import { API_URL, TG_BOT_URL, ESCROW_COMPONENT, ESCROW_RECEIPT, BADGE_NFT, ESCROW_V3_COMPONENT, ESCROW_V3_RECEIPT } from "@/lib/constants";
+import { API_URL, TG_BOT_URL, ESCROW_COMPONENT, ESCROW_RECEIPT, BADGE_NFT, ADMIN_BADGE, ESCROW_V3_COMPONENT, ESCROW_V3_RECEIPT } from "@/lib/constants";
 import { useWallet } from "@/hooks/useWallet";
-import { createEscrowTaskManifest, claimTaskManifest, submitTaskManifest, cancelTaskManifest } from "@/lib/manifests";
+import { createEscrowTaskManifest, claimTaskManifest, submitTaskManifest, cancelTaskManifest, releaseTaskManifest } from "@/lib/manifests";
 
 interface BountyDetail {
   id: number; title: string; description: string | null; description_long: string | null;
@@ -431,13 +431,38 @@ function BountyDetailContent() {
             <p className="text-sm text-muted-foreground text-center">This task is claimed by another worker.</p>
           )}
 
-          {/* SUBMITTED → Awaiting verification */}
-          {bounty.status === "submitted" && (
+          {/* SUBMITTED/VERIFIED → Release button for admin */}
+          {(bounty.status === "submitted" || bounty.status === "verified") && connected && badge && (
+            <>
+              <div className="text-center mb-2">
+                <Badge variant="outline" className="text-xs">{bounty.status === "verified" ? "Verified — Ready to Release" : "Awaiting Verification"}</Badge>
+                <p className="text-[10px] text-muted-foreground mt-1">
+                  {bounty.github_pr ? "PR merge watcher checks every 5 minutes." : "Admin: verify delivery and release escrow."}
+                </p>
+              </div>
+              <Button variant="default" className="w-full" onClick={async () => {
+                if (!rdt || !account || !bounty) return;
+                setActioning(true); setActionStatus(""); setActionError("");
+                try {
+                  const onchainId = bounty.onchain_task_id ?? bounty.id;
+                  const manifest = releaseTaskManifest(escrowComp, ADMIN_BADGE, account, onchainId);
+                  const result = await rdt.walletApi.sendTransaction({ transactionManifest: manifest, version: 1 });
+                  if (result.isOk()) {
+                    setActionStatus("Released! Payment sent to worker. TX: " + result.value.transactionIntentHash.slice(0, 40) + "...");
+                    setTimeout(() => fetchData(), 10000);
+                  } else { setActionError("Transaction rejected."); }
+                } catch (e: unknown) { setActionError(e instanceof Error ? e.message : "Failed"); }
+                setActioning(false);
+              }} disabled={actioning}>
+                {actioning ? "Waiting for wallet..." : `Verify & Release ${bounty.reward_xrd} XRD`}
+              </Button>
+              <p className="text-[10px] text-muted-foreground text-center">Requires admin badge. Sends {(bounty.reward_xrd * (1 - bounty.platform_fee_pct / 100)).toFixed(1)} XRD to worker, {(bounty.reward_xrd * bounty.platform_fee_pct / 100).toFixed(1)} XRD fee to treasury.</p>
+            </>
+          )}
+          {(bounty.status === "submitted" || bounty.status === "verified") && !connected && (
             <div className="text-center">
               <Badge variant="outline" className="text-xs">Awaiting Verification</Badge>
-              <p className="text-[10px] text-muted-foreground mt-1">
-                {bounty.github_pr ? "PR merge watcher checks every 5 minutes." : "Admin will verify delivery."}
-              </p>
+              <p className="text-[10px] text-muted-foreground mt-1">Connect admin wallet to release escrow.</p>
             </div>
           )}
 
