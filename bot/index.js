@@ -12,6 +12,7 @@ const cv3Watcher = require("./services/conviction-watcher");
 const insurance = require("./services/insurance");
 const disputeService = require("./services/dispute");
 const arbiterService = require("./services/arbiter");
+const projectService = require("./services/project");
 
 const TOKEN = process.env.TG_BOT_TOKEN;
 if (!TOKEN) { console.error("Set TG_BOT_TOKEN in .env"); process.exit(1); }
@@ -24,6 +25,7 @@ try { cv2.init(dbInstance); } catch (e) { console.error("[Init] CV2 init failed 
 try { insurance.init(db); } catch (e) { console.error("[Init] Insurance init failed (non-fatal):", e.message); }
 try { arbiterService.init(db); } catch (e) { console.error("[Init] Arbiter init failed (non-fatal):", e.message); }
 try { disputeService.init(db); } catch (e) { console.error("[Init] Dispute service init failed (non-fatal):", e.message); }
+try { projectService.init(db); } catch (e) { console.error("[Init] Project service init failed (non-fatal):", e.message); }
 const bot = new Bot(TOKEN);
 
 // ── Global Error Handlers ────────────────────────────────
@@ -1308,18 +1310,23 @@ bot.command("project", async (ctx) => {
   if (sub === "status") {
     const groupId = parseInt(args[1]);
     if (!groupId) return ctx.reply("Usage: /project status <group_id>");
-    const group = db.getGroupDetail(groupId);
-    if (!group) return ctx.reply("Group #" + groupId + " not found.");
-    const progress = db.getProjectProgress(groupId);
-    if (!progress) return ctx.reply("No tasks found for group '" + group.name + "'.");
-    ctx.reply(
-      "Project: " + group.name + "\n" +
-      "Progress: " + progress.progress_pct + "% (" + progress.completed + "/" + progress.total_tasks + " tasks)\n" +
-      "  Open: " + progress.open + " | In progress: " + progress.in_progress + " | Blocked: " + progress.blocked + "\n" +
-      "  Completed: " + progress.completed + " | Cancelled: " + progress.cancelled + "\n" +
-      "Budget: " + progress.spent + "/" + progress.total_budget + " XRD spent (" + progress.remaining + " remaining)\n" +
-      "Insurance: " + progress.total_insurance + " XRD collected"
-    );
+    const status = projectService.getFullProjectStatus(groupId);
+    if (!status) return ctx.reply("Group #" + groupId + " not found.");
+    if (!status.progress) return ctx.reply("No tasks in project '" + status.group.name + "'.");
+    const p = status.progress;
+    const b = status.budget;
+    let reply = "Project: " + status.group.name + " [" + status.pipeline + "]\n" +
+      "Progress: " + p.progress_pct + "% (" + p.completed + "/" + p.total_tasks + " tasks)\n" +
+      "  Open: " + p.open + " | In progress: " + p.in_progress + " | Blocked: " + p.blocked + "\n" +
+      "Budget: " + b.spent + "/" + b.total + " XRD (" + b.remaining + " remaining)\n" +
+      "Insurance: " + b.insurance + " XRD | Contributors: " + status.contributors.length;
+    if (status.activeTasks.length > 0) {
+      reply += "\n\nActive:\n" + status.activeTasks.map(t =>
+        "  #" + t.id + " " + t.title.slice(0, 35) + " — " + t.status
+      ).join("\n");
+    }
+    reply += "\n\nFull details: " + PORTAL + "/projects/" + groupId;
+    ctx.reply(reply);
     return;
   }
 
@@ -1332,13 +1339,36 @@ bot.command("project", async (ctx) => {
       const icon = t.status === "paid" ? "done" : t.status === "assigned" ? "wip" : t.is_blocked ? "blocked" : "open";
       return "  #" + t.id + " [" + icon + "] " + t.title.slice(0, 40) + " — " + t.reward_xrd + " XRD";
     });
-    ctx.reply("Project tasks:\n\n" + lines.join("\n"));
+    ctx.reply("Project tasks:\n\n" + lines.join("\n") + "\n\nDetails: " + PORTAL + "/projects/" + groupId);
+    return;
+  }
+
+  if (sub === "ship") {
+    const user = await requireBadge(ctx);
+    if (!user) return;
+    const groupId = parseInt(args[1]);
+    if (!groupId) return ctx.reply("Usage: /project ship <group_id>");
+    const notes = args.slice(2).join(" ") || null;
+    const result = projectService.shipProject(groupId, notes);
+    if (result.error) return ctx.reply("Cannot ship: " + (result.detail || result.error));
+    ctx.reply(
+      "Project '" + result.title + "' SHIPPED!\n\n" +
+      "Tasks: " + result.tasks_completed + " completed, " + result.tasks_cancelled + " cancelled\n" +
+      "Spent: " + result.total_spent + " XRD to " + result.contributors.length + " contributors\n" +
+      "Insurance: " + result.total_insurance + " XRD | Disputes: " + result.disputes + "\n" +
+      "Duration: " + result.actual_days + " days\n" +
+      "Deliverables: " + result.deliverable_count + " items\n" +
+      (result.deliverable_hash ? "Ledger hash: " + result.deliverable_hash.slice(0, 16) + "..." : "") +
+      "\n\nRecorded in project ledger."
+    );
     return;
   }
 
   ctx.reply(
-    "/project status <group_id> — project overview\n" +
-    "/project tasks <group_id> — list project tasks"
+    "/project status <id> — project overview\n" +
+    "/project tasks <id> — list project tasks\n" +
+    "/project ship <id> [notes] — mark project shipped\n\n" +
+    "Full project management: " + PORTAL + "/projects"
   );
 });
 

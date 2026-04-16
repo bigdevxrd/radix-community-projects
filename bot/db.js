@@ -413,6 +413,42 @@ function init() {
   try { db.exec("ALTER TABLE working_groups ADD COLUMN status TEXT DEFAULT 'active'"); } catch(e) {}
   // P6: sunset alert tracking
   try { db.exec("ALTER TABLE working_groups ADD COLUMN sunset_alert_sent INTEGER DEFAULT 0"); } catch(e) {}
+
+  // ── Pipeline columns on working_groups (Phase 6) ──
+  try { db.exec("ALTER TABLE working_groups ADD COLUMN project_status TEXT DEFAULT 'idea'"); } catch(e) {}
+  try { db.exec("ALTER TABLE working_groups ADD COLUMN proposal_id INTEGER"); } catch(e) {}
+  try { db.exec("ALTER TABLE working_groups ADD COLUMN total_budget_xrd REAL DEFAULT 0"); } catch(e) {}
+  try { db.exec("ALTER TABLE working_groups ADD COLUMN budget_spent_xrd REAL DEFAULT 0"); } catch(e) {}
+  try { db.exec("ALTER TABLE working_groups ADD COLUMN shipped_at INTEGER"); } catch(e) {}
+  try { db.exec("ALTER TABLE working_groups ADD COLUMN ledger_hash TEXT"); } catch(e) {}
+
+  // ── Project Ledger (Phase 6) ──
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS project_ledger (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      group_id INTEGER NOT NULL REFERENCES working_groups(id),
+      title TEXT NOT NULL,
+      description TEXT,
+      total_budget_xrd REAL,
+      total_spent_xrd REAL,
+      total_insurance_xrd REAL,
+      total_disputes INTEGER DEFAULT 0,
+      contributor_count INTEGER,
+      task_count INTEGER,
+      tasks_completed INTEGER,
+      tasks_cancelled INTEGER,
+      start_date INTEGER,
+      ship_date INTEGER,
+      estimated_duration_days INTEGER,
+      actual_duration_days INTEGER,
+      deliverables TEXT,
+      deliverable_hash TEXT,
+      contributors TEXT,
+      outcome_notes TEXT,
+      created_at INTEGER DEFAULT (strftime('%s','now'))
+    );
+    CREATE INDEX IF NOT EXISTS idx_ledger_group ON project_ledger(group_id);
+  `);
   // P6: report status + period type
   try { db.exec("ALTER TABLE wg_reports ADD COLUMN status TEXT DEFAULT 'submitted'"); } catch(e) {}
   try { db.exec("ALTER TABLE wg_reports ADD COLUMN period_type TEXT DEFAULT 'biweekly'"); } catch(e) {}

@@ -8,6 +8,7 @@ const { checkContent } = require("./content-filter");
 const insurance = require("./insurance");
 const disputeService = require("./dispute");
 const arbiterService = require("./arbiter");
+const projectService = require("./project");
 
 const API_PORT = parseInt(process.env.API_PORT || "3003");
 const ALLOWED_ORIGINS = (process.env.CORS_ORIGINS || "").split(",").filter(Boolean);
@@ -71,7 +72,8 @@ function startApi() {
     const isMilestoneWrite = (req.method === "POST" || req.method === "PUT" || req.method === "DELETE") && url.pathname.match(/^\/api\/(bounties\/\d+\/milestones|milestones\/\d+)$/);
     const isXpPost = req.method === "POST" && url.pathname === "/api/xp/mark-applied";
     const isDisputeEvidencePost = req.method === "POST" && url.pathname.match(/^\/api\/disputes\/\d+\/evidence$/);
-    if (req.method !== "GET" && !isGamePost && !isFeedbackPost && !isBountyPost && !isGroupPost && !isVotePost && !isProposalPost && !isMilestoneWrite && !isXpPost && !isDisputeEvidencePost) {
+    const isProjectBreakdownPost = req.method === "POST" && url.pathname.match(/^\/api\/projects\/\d+\/breakdown$/);
+    if (req.method !== "GET" && !isGamePost && !isFeedbackPost && !isBountyPost && !isGroupPost && !isVotePost && !isProposalPost && !isMilestoneWrite && !isXpPost && !isDisputeEvidencePost && !isProjectBreakdownPost) {
       res.writeHead(405);
       return res.end(JSON.stringify({ ok: false, error: "method_not_allowed" }));
     }
@@ -80,7 +82,7 @@ function startApi() {
     const forwardedFor = req.headers["x-forwarded-for"];
     const forwardedIps = forwardedFor ? forwardedFor.split(",").map(s => s.trim()) : [];
     const clientIp = forwardedIps[forwardedIps.length - 1] || req.socket.remoteAddress;
-    const isWritePost = isBountyPost || isVotePost || isProposalPost || isMilestoneWrite || isXpPost || isDisputeEvidencePost;
+    const isWritePost = isBountyPost || isVotePost || isProposalPost || isMilestoneWrite || isXpPost || isDisputeEvidencePost || isProjectBreakdownPost;
     if (!rateLimit(clientIp, isGamePost ? 10 : isWritePost ? 20 : 200)) {
       res.writeHead(429);
       return res.end(JSON.stringify({ ok: false, error: "rate_limit_exceeded" }));
@@ -1064,15 +1066,43 @@ function startApi() {
       return res.end(JSON.stringify({ ok: true, data: info }));
     }
 
-    // GET /api/projects/:id — project progress
+    // GET /api/projects/:id — full project status (pipeline, progress, budget, contributors)
     const projectMatch = url.pathname.match(/^\/api\/projects\/(\d+)$/);
     if (projectMatch && req.method === "GET") {
-      const groupId = parseInt(projectMatch[1]);
-      const progress = db.getProjectProgress(groupId);
-      const tasks = db.getProjectBounties(groupId);
-      if (!progress) { res.writeHead(404); return res.end(JSON.stringify({ ok: false, error: "no_tasks" })); }
+      const status = projectService.getFullProjectStatus(parseInt(projectMatch[1]));
+      if (!status) { res.writeHead(404); return res.end(JSON.stringify({ ok: false, error: "not_found" })); }
       res.writeHead(200);
-      return res.end(JSON.stringify({ ok: true, data: { ...progress, tasks } }));
+      return res.end(JSON.stringify({ ok: true, data: status }));
+    }
+
+    // POST /api/projects/:id/breakdown — batch create tasks for a project
+    const breakdownMatch = url.pathname.match(/^\/api\/projects\/(\d+)\/breakdown$/);
+    if (breakdownMatch && req.method === "POST") {
+      const body = await readBody(req);
+      if (!body.tasks || !Array.isArray(body.tasks)) {
+        res.writeHead(400);
+        return res.end(JSON.stringify({ ok: false, error: "tasks array required" }));
+      }
+      const result = projectService.breakdownProject(parseInt(breakdownMatch[1]), body.tasks);
+      res.writeHead(result.error ? 400 : 200);
+      return res.end(JSON.stringify(result.error ? { ok: false, ...result } : { ok: true, data: result }));
+    }
+
+    // GET /api/ledger — project completion ledger
+    if (url.pathname === "/api/ledger" && req.method === "GET") {
+      const limit = parseInt(url.searchParams.get("limit") || "20");
+      const entries = projectService.getLedgerEntries(Math.min(limit, 100));
+      res.writeHead(200);
+      return res.end(JSON.stringify({ ok: true, data: entries }));
+    }
+
+    // GET /api/ledger/:group_id — specific project ledger entry
+    const ledgerMatch = url.pathname.match(/^\/api\/ledger\/(\d+)$/);
+    if (ledgerMatch && req.method === "GET") {
+      const entry = projectService.getLedgerEntry(parseInt(ledgerMatch[1]));
+      if (!entry) { res.writeHead(404); return res.end(JSON.stringify({ ok: false, error: "not_found" })); }
+      res.writeHead(200);
+      return res.end(JSON.stringify({ ok: true, data: entry }));
     }
 
     // GET /api/templates — task templates
