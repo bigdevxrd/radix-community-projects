@@ -454,6 +454,118 @@ function init() {
     });
   }
 
+  // ── Insurance Pool (Phase 3) ──
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS insurance_pool (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      bounty_id INTEGER REFERENCES bounties(id),
+      milestone_id INTEGER REFERENCES bounty_milestones(id),
+      fee_amount REAL NOT NULL,
+      status TEXT DEFAULT 'held',
+      collected_at INTEGER DEFAULT (strftime('%s','now')),
+      released_at INTEGER,
+      arbiter_tg_id INTEGER,
+      dispute_id INTEGER,
+      notes TEXT
+    );
+    CREATE INDEX IF NOT EXISTS idx_insurance_bounty ON insurance_pool(bounty_id);
+    CREATE INDEX IF NOT EXISTS idx_insurance_status ON insurance_pool(status);
+  `);
+
+  // Insurance columns on bounties
+  try { db.exec("ALTER TABLE bounties ADD COLUMN insurance_fee_xrd REAL DEFAULT 0"); } catch(e) {}
+  try { db.exec("ALTER TABLE bounties ADD COLUMN insurance_fee_pct REAL DEFAULT 0"); } catch(e) {}
+  try { db.exec("ALTER TABLE bounties ADD COLUMN insurance_status TEXT DEFAULT 'none'"); } catch(e) {}
+
+  // Insurance tier config (idempotent per-key seeding)
+  const seedIns = db.prepare("INSERT OR IGNORE INTO platform_config (key, value) VALUES (?, ?)");
+  seedIns.run("insurance_fee_tier_0_100", "15");       // 15% for 0-100 XRD
+  seedIns.run("insurance_fee_tier_100_500", "10");      // 10% for 100-500 XRD
+  seedIns.run("insurance_fee_tier_500_2000", "7");      // 7% for 500-2000 XRD
+  seedIns.run("insurance_fee_tier_2000_plus", "5");     // 5% for 2000+ XRD
+  seedIns.run("insurance_fee_mode", "deduct_from_escrow");
+  seedIns.run("insurance_pool_balance", "0");
+
+  // ── Dispute Resolution (Phase 4) ──
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS disputes (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      bounty_id INTEGER NOT NULL REFERENCES bounties(id),
+      milestone_id INTEGER REFERENCES bounty_milestones(id),
+      raised_by_tg_id INTEGER NOT NULL,
+      raised_against_tg_id INTEGER NOT NULL,
+      reason TEXT NOT NULL,
+      desired_outcome TEXT,
+      arbiter_tg_id INTEGER,
+      arbiter_assigned_at INTEGER,
+      arbiter_deadline INTEGER,
+      decision TEXT,
+      decision_split_pct INTEGER,
+      decision_notes TEXT,
+      decision_at INTEGER,
+      appeal_status TEXT DEFAULT 'none',
+      appeal_filed_by_tg_id INTEGER,
+      appeal_filed_at INTEGER,
+      appeal_fee_xrd REAL DEFAULT 0,
+      appeal_panel_ids TEXT,
+      appeal_decision TEXT,
+      appeal_decision_split_pct INTEGER,
+      appeal_decision_notes TEXT,
+      appeal_decided_at INTEGER,
+      status TEXT DEFAULT 'open',
+      insurance_fee_xrd REAL DEFAULT 0,
+      created_at INTEGER DEFAULT (strftime('%s','now')),
+      resolved_at INTEGER
+    );
+    CREATE INDEX IF NOT EXISTS idx_disputes_bounty ON disputes(bounty_id);
+    CREATE INDEX IF NOT EXISTS idx_disputes_status ON disputes(status);
+
+    CREATE TABLE IF NOT EXISTS arbiters (
+      tg_id INTEGER PRIMARY KEY,
+      badge_id TEXT,
+      radix_address TEXT,
+      registered_at INTEGER DEFAULT (strftime('%s','now')),
+      active INTEGER DEFAULT 1,
+      availability TEXT DEFAULT 'available',
+      reputation_score INTEGER DEFAULT 100,
+      total_handled INTEGER DEFAULT 0,
+      total_upheld INTEGER DEFAULT 0,
+      total_overturned INTEGER DEFAULT 0,
+      last_dispute_at INTEGER,
+      specialty_tags TEXT,
+      notes TEXT
+    );
+    CREATE INDEX IF NOT EXISTS idx_arbiters_available ON arbiters(active, availability);
+
+    CREATE TABLE IF NOT EXISTS dispute_evidence (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      dispute_id INTEGER NOT NULL REFERENCES disputes(id),
+      submitted_by_tg_id INTEGER NOT NULL,
+      evidence_type TEXT NOT NULL,
+      content TEXT NOT NULL,
+      description TEXT,
+      created_at INTEGER DEFAULT (strftime('%s','now'))
+    );
+    CREATE INDEX IF NOT EXISTS idx_evidence_dispute ON dispute_evidence(dispute_id);
+
+    CREATE TABLE IF NOT EXISTS dispute_timeline (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      dispute_id INTEGER NOT NULL REFERENCES disputes(id),
+      event_type TEXT NOT NULL,
+      actor_tg_id INTEGER,
+      description TEXT,
+      created_at INTEGER DEFAULT (strftime('%s','now'))
+    );
+    CREATE INDEX IF NOT EXISTS idx_timeline_dispute ON dispute_timeline(dispute_id);
+  `);
+
+  // Dispute config defaults (idempotent per-key seeding)
+  const seedDis = db.prepare("INSERT OR IGNORE INTO platform_config (key, value) VALUES (?, ?)");
+  seedDis.run("dispute_arbiter_deadline_days", "7");
+  seedDis.run("dispute_appeal_window_days", "3");
+  seedDis.run("dispute_appeal_min_xrd", "500");
+  seedDis.run("dispute_appeal_fee_pct", "5");
+
   // Escrow: per-task funding (funded/unfunded)
   try { db.exec("ALTER TABLE bounties ADD COLUMN funded INTEGER DEFAULT 0"); } catch(e) {}
 
@@ -756,12 +868,14 @@ function getReadyParams() {
 
 function createBounty(title, rewardXrd, creatorTgId, opts = {}) {
   const result = db.prepare(
-    "INSERT INTO bounties (title, description, reward_xrd, reward_xp, creator_tg_id, github_issue, proposal_id, category, difficulty, deadline, platform_fee_pct) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+    "INSERT INTO bounties (title, description, reward_xrd, reward_xp, creator_tg_id, github_issue, proposal_id, category, difficulty, deadline, platform_fee_pct, skills_required, acceptance_criteria, tags, priority) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
   ).run(
     title, opts.description || null, rewardXrd, opts.rewardXp || 0, creatorTgId,
     opts.githubIssue || null, opts.proposalId || null,
     opts.category || "general", opts.difficulty || "medium",
-    opts.deadline || null, 2.5
+    opts.deadline || null, 2.5,
+    opts.skills || null, opts.criteria || null,
+    opts.tags || null, opts.priority || "normal"
   );
   return result.lastInsertRowid;
 }
@@ -775,6 +889,16 @@ function assignBounty(id, tgId, radixAddress) {
   if (!bounty) return { changes: 0, error: "not_found" };
   if (bounty.status !== "open") return { changes: 0, error: "not_open" };
   if (!bounty.funded) return { changes: 0, error: "not_funded" };
+  // Enforce application requirement for high-value tasks
+  const config = getPlatformConfig();
+  const appThreshold = parseFloat(config.require_application_above_xrd || 100);
+  if (bounty.reward_xrd > appThreshold) {
+    // Check if this user has an approved application for this bounty
+    const approved = db.prepare(
+      "SELECT * FROM bounty_applications WHERE bounty_id = ? AND applicant_tg_id = ? AND status = 'accepted'"
+    ).get(id, tgId);
+    if (!approved) return { changes: 0, error: "application_required", threshold: appThreshold };
+  }
   const now = Math.floor(Date.now() / 1000);
   return db.prepare("UPDATE bounties SET assignee_tg_id = ?, assignee_address = ?, status = 'assigned', assigned_at = ? WHERE id = ? AND status = 'open' AND funded = 1")
     .run(tgId, radixAddress, now, id);
@@ -827,8 +951,21 @@ function getEscrowBalance() {
   return {
     funded: row?.total_funded_xrd || 0,
     released: row?.total_released_xrd || 0,
+    fees_collected: row?.total_fees_collected_xrd || 0,
     available: (row?.total_funded_xrd || 0) - (row?.total_released_xrd || 0),
   };
+}
+
+// Update fee tracking when an escrow release event is detected
+function recordEscrowRelease(bountyId, payoutXrd, feeXrd, txHash) {
+  const now = Math.floor(Date.now() / 1000);
+  // Update bounty fee tracking
+  if (bountyId) {
+    db.prepare("UPDATE bounties SET fee_collected_xrd = ? WHERE id = ?").run(feeXrd, bountyId);
+  }
+  // Update aggregate escrow wallet
+  db.prepare("UPDATE escrow_wallet SET total_released_xrd = total_released_xrd + ?, total_fees_collected_xrd = total_fees_collected_xrd + ? WHERE id = 1")
+    .run(payoutXrd + feeXrd, feeXrd);
 }
 
 function getBountyTransactions() {
@@ -842,8 +979,126 @@ function getBountyStats() {
   const verified = db.prepare("SELECT COUNT(*) as c FROM bounties WHERE status = 'verified'").get().c;
   const paid = db.prepare("SELECT COUNT(*) as c FROM bounties WHERE status = 'paid'").get().c;
   const totalPaid = db.prepare("SELECT COALESCE(SUM(reward_xrd), 0) as t FROM bounties WHERE status = 'paid'").get().t;
+  const totalFees = db.prepare("SELECT COALESCE(SUM(fee_collected_xrd), 0) as t FROM bounties WHERE fee_collected_xrd > 0").get().t;
   const escrow = getEscrowBalance();
-  return { open, assigned, submitted, verified, paid, totalPaid, escrow };
+  return { open, assigned, submitted, verified, paid, totalPaid, totalFees, escrow };
+}
+
+// ── Milestones ──────────────────────────────────────────
+
+function addMilestone(bountyId, title, description, percentage) {
+  const bounty = getBounty(bountyId);
+  if (!bounty) return { error: "bounty_not_found" };
+  if (bounty.status !== "open") return { error: "bounty_not_open", detail: "Can only add milestones before the bounty is claimed" };
+
+  // Validate percentage
+  if (!percentage || percentage < 1 || percentage > 100) return { error: "invalid_percentage", detail: "Percentage must be 1-100" };
+  const existing = db.prepare("SELECT COALESCE(SUM(percentage), 0) as total FROM bounty_milestones WHERE bounty_id = ?").get(bountyId);
+  if (existing.total + percentage > 100) return { error: "exceeds_100", detail: "Total milestones would be " + (existing.total + percentage) + "% (max 100%)" };
+
+  const amountXrd = (percentage / 100) * bounty.reward_xrd;
+  const result = db.prepare(
+    "INSERT INTO bounty_milestones (bounty_id, title, description, percentage, amount_xrd) VALUES (?, ?, ?, ?, ?)"
+  ).run(bountyId, title, description || null, percentage, amountXrd);
+
+  return {
+    ok: true,
+    id: result.lastInsertRowid,
+    bountyId,
+    title,
+    percentage,
+    amountXrd,
+    totalAllocated: existing.total + percentage,
+    remaining: 100 - (existing.total + percentage),
+  };
+}
+
+function getMilestones(bountyId) {
+  return db.prepare("SELECT * FROM bounty_milestones WHERE bounty_id = ? ORDER BY id").all(bountyId);
+}
+
+function getMilestoneById(id) {
+  return db.prepare("SELECT * FROM bounty_milestones WHERE id = ?").get(id);
+}
+
+function submitMilestone(milestoneId, tgId) {
+  const ms = getMilestoneById(milestoneId);
+  if (!ms) return { error: "not_found" };
+  if (ms.status !== "pending") return { error: "not_pending", detail: "Milestone status is: " + ms.status };
+  const bounty = getBounty(ms.bounty_id);
+  if (!bounty) return { error: "bounty_not_found" };
+  if (bounty.assignee_tg_id !== tgId) return { error: "not_assignee", detail: "Only the assigned worker can submit milestones" };
+
+  const now = Math.floor(Date.now() / 1000);
+  db.prepare("UPDATE bounty_milestones SET status = 'submitted', submitted_at = ? WHERE id = ?").run(now, milestoneId);
+  return { ok: true, milestoneId, bountyId: ms.bounty_id, title: ms.title };
+}
+
+function verifyMilestone(milestoneId, tgId) {
+  const ms = getMilestoneById(milestoneId);
+  if (!ms) return { error: "not_found" };
+  if (ms.status !== "submitted") return { error: "not_submitted", detail: "Milestone must be submitted first" };
+  const bounty = getBounty(ms.bounty_id);
+  if (!bounty) return { error: "bounty_not_found" };
+  if (bounty.assignee_tg_id === tgId) return { error: "self_verify", detail: "Assignee cannot verify their own milestones" };
+
+  const now = Math.floor(Date.now() / 1000);
+  db.prepare("UPDATE bounty_milestones SET status = 'verified', verified_at = ? WHERE id = ?").run(now, milestoneId);
+  return { ok: true, milestoneId, bountyId: ms.bounty_id, title: ms.title, amount: ms.amount_xrd };
+}
+
+function payMilestone(milestoneId, txHash) {
+  const ms = getMilestoneById(milestoneId);
+  if (!ms) return { error: "not_found" };
+  if (ms.status !== "verified") return { error: "not_verified", detail: "Milestone must be verified before payment" };
+
+  const now = Math.floor(Date.now() / 1000);
+  db.prepare("UPDATE bounty_milestones SET status = 'paid', paid_at = ?, paid_tx = ? WHERE id = ?").run(now, txHash, milestoneId);
+
+  // Check if ALL milestones for this bounty are now paid
+  const allMs = getMilestones(ms.bounty_id);
+  const allPaid = allMs.every(m => m.id === milestoneId ? true : m.status === "paid");
+
+  if (allPaid) {
+    // Auto-complete the bounty
+    db.prepare("UPDATE bounties SET status = 'paid', paid_at = ? WHERE id = ?").run(now, ms.bounty_id);
+  }
+
+  return {
+    ok: true,
+    milestoneId,
+    bountyId: ms.bounty_id,
+    title: ms.title,
+    amount: ms.amount_xrd,
+    txHash,
+    bountyComplete: allPaid,
+  };
+}
+
+function removeMilestone(milestoneId) {
+  const ms = getMilestoneById(milestoneId);
+  if (!ms) return { error: "not_found" };
+  if (ms.status !== "pending") return { error: "not_pending", detail: "Can only remove pending milestones" };
+  db.prepare("DELETE FROM bounty_milestones WHERE id = ?").run(milestoneId);
+  return { ok: true, milestoneId, bountyId: ms.bounty_id };
+}
+
+function getMilestoneProgress(bountyId) {
+  const all = getMilestones(bountyId);
+  if (all.length === 0) return null;
+  const pending = all.filter(m => m.status === "pending").length;
+  const submitted = all.filter(m => m.status === "submitted").length;
+  const verified = all.filter(m => m.status === "verified").length;
+  const paid = all.filter(m => m.status === "paid").length;
+  const paidPct = all.filter(m => m.status === "paid").reduce((sum, m) => sum + m.percentage, 0);
+  const paidXrd = all.filter(m => m.status === "paid").reduce((sum, m) => sum + m.amount_xrd, 0);
+  const totalXrd = all.reduce((sum, m) => sum + m.amount_xrd, 0);
+  return {
+    total: all.length, pending, submitted, verified, paid,
+    totalPct: all.reduce((sum, m) => sum + m.percentage, 0),
+    paidPct, paidXrd, totalXrd,
+    remainingXrd: totalXrd - paidXrd,
+  };
 }
 
 // ── Marketplace Extensions ───────────────────────────────
@@ -898,12 +1153,21 @@ function cancelBounty(id, reason) {
   return result.changes > 0;
 }
 
-function getFilteredBounties({ category, status, difficulty, sort, limit = 50 } = {}) {
+function getFilteredBounties({ category, status, difficulty, sort, skills, limit = 50 } = {}) {
   let query = "SELECT * FROM bounties WHERE 1=1";
   const params = [];
   if (category && category !== "all") { query += " AND category = ?"; params.push(category); }
   if (status && status !== "all") { query += " AND status = ?"; params.push(status); }
   if (difficulty && difficulty !== "all") { query += " AND difficulty = ?"; params.push(difficulty); }
+  // Skills filter: match any of the requested skills (OR logic)
+  if (skills) {
+    const skillList = skills.split(",").map(s => s.trim()).filter(Boolean);
+    if (skillList.length > 0) {
+      const skillClauses = skillList.map(() => "skills_required LIKE ?");
+      query += " AND (" + skillClauses.join(" OR ") + ")";
+      skillList.forEach(s => params.push("%" + s + "%"));
+    }
+  }
   if (sort === "reward_desc") query += " ORDER BY reward_xrd DESC";
   else if (sort === "deadline") query += " ORDER BY deadline ASC NULLS LAST";
   else if (sort === "newest") query += " ORDER BY created_at DESC";
@@ -1321,7 +1585,7 @@ module.exports = {
   getVoteCountForUser, getTotalVoters, getTotalProposals,
   getCharterParams, getCharterParam, resolveCharterParam, getCharterStatus, getReadyParams,
   createBounty, getBounty, getOpenBounties, getAllBounties, assignBounty, submitBounty, verifyBounty, payBounty,
-  fundEscrow, getEscrowBalance, getBountyTransactions, getBountyStats,
+  fundEscrow, getEscrowBalance, getBountyTransactions, getBountyStats, recordEscrowRelease,
   rollDice, recordRoll, getGameState, getGameLeaderboard, ROLL_BONUSES,
   generateGrid, createBoard, getBoard, getAvailableRolls, rollOnBoard, useWildCard, abandonBoard, getBoardStats,
   getAchievements, getAchievementSummary, GRID_MILESTONES,
@@ -1404,6 +1668,14 @@ module.exports.fundTask = fundTask;
 module.exports.getCategories = getCategories;
 module.exports.getPlatformConfig = getPlatformConfig;
 module.exports.getBountyDetail = getBountyDetail;
+module.exports.addMilestone = addMilestone;
+module.exports.getMilestones = getMilestones;
+module.exports.getMilestoneById = getMilestoneById;
+module.exports.submitMilestone = submitMilestone;
+module.exports.verifyMilestone = verifyMilestone;
+module.exports.payMilestone = payMilestone;
+module.exports.removeMilestone = removeMilestone;
+module.exports.getMilestoneProgress = getMilestoneProgress;
 module.exports.createApplication = createApplication;
 module.exports.getApplication = getApplication;
 module.exports.approveApplication = approveApplication;
@@ -1458,6 +1730,10 @@ function getTrustScore(tgId) {
   // Feedback submitted (community engagement)
   const feedback = db.prepare("SELECT COUNT(*) as c FROM feedback WHERE tg_id = ?").get(tgId)?.c || 0;
 
+  // Dispute reputation delta (from Phase 4 dispute outcomes)
+  const disputeDeltaRow = db.prepare("SELECT value FROM platform_config WHERE key = ?").get("trust_delta_" + tgId);
+  const disputeDelta = disputeDeltaRow ? parseFloat(disputeDeltaRow.value) : 0;
+
   // Composite score
   const score =
     Math.min(ageDays, 365) * 0.2 +    // max 73 points from age (1 year cap)
@@ -1465,9 +1741,10 @@ function getTrustScore(tgId) {
     proposals * 10 +                     // 10 points per proposal
     tasksCompleted * 25 +                // 25 points per completed task
     groups * 5 +                         // 5 points per group
-    feedback * 1;                        // 1 point per feedback
+    feedback * 1 +                       // 1 point per feedback
+    disputeDelta;                        // dispute outcomes (+/- from dispute resolution)
 
-  const roundedScore = Math.round(score);
+  const roundedScore = Math.max(0, Math.round(score));
 
   // Tier determination
   let tier = "bronze";
@@ -1492,6 +1769,7 @@ function getTrustScore(tgId) {
       group_points: groups * 5,
       feedback,
       feedback_points: feedback,
+      dispute_delta: disputeDelta,
     },
   };
 }
@@ -1646,3 +1924,6 @@ module.exports.renewCharter = function(groupId, newSunsetDate) {
 module.exports.markSunsetAlertSent = function(groupId) {
   db.prepare("UPDATE working_groups SET sunset_alert_sent = ? WHERE id = ?").run(Math.floor(Date.now() / 1000), groupId);
 };
+
+// Raw DB accessor for services that need direct SQL (insurance, disputes)
+module.exports._raw = function() { return db; };

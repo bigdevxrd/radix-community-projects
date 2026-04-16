@@ -110,6 +110,24 @@ async function main() {
       console.log("    TX:", intentHash);
       const result = await waitForCommit(intentHash, 90000);
       console.log("    Status:", result.success ? "SUCCESS" : "FAILED");
+
+      // Mark XP as applied so it won't be re-queued on next run
+      if (result.success) {
+        try {
+          const markResp = await fetch(API_URL + "/api/xp/mark-applied", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ address }),
+          });
+          if (markResp.ok) {
+            console.log("    XP marked as applied for", address.slice(0, 20) + "...");
+          } else {
+            console.log("    Warning: failed to mark XP applied (HTTP " + markResp.status + ")");
+          }
+        } catch (markErr) {
+          console.log("    Warning: failed to mark XP applied:", markErr.message);
+        }
+      }
     } catch (e) {
       console.log("    Error:", e.message);
     }

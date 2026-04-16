@@ -5,6 +5,9 @@ const { hasBadge, getBadgeData } = require("./gateway");
 const cv2 = require("./consultation");
 const cv3 = require("./conviction-watcher");
 const { checkContent } = require("./content-filter");
+const insurance = require("./insurance");
+const disputeService = require("./dispute");
+const arbiterService = require("./arbiter");
 
 const API_PORT = parseInt(process.env.API_PORT || "3003");
 const ALLOWED_ORIGINS = (process.env.CORS_ORIGINS || "").split(",").filter(Boolean);
@@ -58,14 +61,17 @@ function startApi() {
 
     const url = new URL(req.url, "http://localhost");
 
-    // Allow GET + POST for game board routes, feedback, and bounties, GET only for everything else
+    // Allow GET + POST for game board routes, feedback, bounties, milestones, disputes, XP; GET only for everything else
     const isGamePost = req.method === "POST" && url.pathname.includes("/board/");
     const isFeedbackPost = req.method === "POST" && url.pathname === "/api/feedback";
     const isBountyPost = req.method === "POST" && url.pathname === "/api/bounties";
     const isGroupPost = req.method === "POST" && url.pathname.match(/^\/api\/groups\/\d+\/(join|leave)$/);
     const isVotePost = req.method === "POST" && url.pathname.match(/^\/api\/proposals\/\d+\/vote$/);
     const isProposalPost = req.method === "POST" && url.pathname === "/api/proposals";
-    if (req.method !== "GET" && !isGamePost && !isFeedbackPost && !isBountyPost && !isGroupPost && !isVotePost && !isProposalPost) {
+    const isMilestoneWrite = (req.method === "POST" || req.method === "PUT" || req.method === "DELETE") && url.pathname.match(/^\/api\/(bounties\/\d+\/milestones|milestones\/\d+)$/);
+    const isXpPost = req.method === "POST" && url.pathname === "/api/xp/mark-applied";
+    const isDisputeEvidencePost = req.method === "POST" && url.pathname.match(/^\/api\/disputes\/\d+\/evidence$/);
+    if (req.method !== "GET" && !isGamePost && !isFeedbackPost && !isBountyPost && !isGroupPost && !isVotePost && !isProposalPost && !isMilestoneWrite && !isXpPost && !isDisputeEvidencePost) {
       res.writeHead(405);
       return res.end(JSON.stringify({ ok: false, error: "method_not_allowed" }));
     }
@@ -74,7 +80,7 @@ function startApi() {
     const forwardedFor = req.headers["x-forwarded-for"];
     const forwardedIps = forwardedFor ? forwardedFor.split(",").map(s => s.trim()) : [];
     const clientIp = forwardedIps[forwardedIps.length - 1] || req.socket.remoteAddress;
-    const isWritePost = isBountyPost || isVotePost || isProposalPost;
+    const isWritePost = isBountyPost || isVotePost || isProposalPost || isMilestoneWrite || isXpPost || isDisputeEvidencePost;
     if (!rateLimit(clientIp, isGamePost ? 10 : isWritePost ? 20 : 200)) {
       res.writeHead(429);
       return res.end(JSON.stringify({ ok: false, error: "rate_limit_exceeded" }));
@@ -286,9 +292,14 @@ function startApi() {
           category: body.category || "general",
           difficulty: body.difficulty || "medium",
           deadline: deadlineSec,
+          skills: body.skills_required || null,
+          criteria: body.acceptance_criteria || null,
+          tags: body.tags || null,
+          priority: body.priority || "normal",
         });
+        const insFee = insurance.calculateInsuranceFee(reward);
         res.writeHead(200);
-        return res.end(JSON.stringify({ ok: true, data: { id } }));
+        return res.end(JSON.stringify({ ok: true, data: { id, insurance: insFee } }));
       } catch (e) {
         console.error("[API] POST /api/bounties error:", e.message);
         res.writeHead(400);
@@ -302,8 +313,9 @@ function startApi() {
       const status = url.searchParams.get("status");
       const difficulty = url.searchParams.get("difficulty");
       const sort = url.searchParams.get("sort");
-      const bounties = (category || status || difficulty || sort)
-        ? db.getFilteredBounties({ category, status, difficulty, sort })
+      const skills = url.searchParams.get("skills");
+      const bounties = (category || status || difficulty || sort || skills)
+        ? db.getFilteredBounties({ category, status, difficulty, sort, skills })
         : db.getAllBounties();
       const stats = db.getBountyStats();
       res.writeHead(200);
@@ -332,6 +344,88 @@ function startApi() {
       }
       res.writeHead(200);
       return res.end(JSON.stringify({ ok: true, data: detail }));
+    }
+
+    // GET /api/bounties/:id/milestones — milestone list + progress
+    const msMatcher = url.pathname.match(/^\/api\/bounties\/(\d+)\/milestones$/);
+    if (msMatcher) {
+      const bountyId = parseInt(msMatcher[1]);
+      const milestones = db.getMilestones(bountyId);
+      const progress = db.getMilestoneProgress(bountyId);
+      res.writeHead(200);
+      return res.end(JSON.stringify({ ok: true, data: { milestones, progress } }));
+    }
+
+    // POST /api/bounties/:id/milestones — create milestone
+    const msCreateMatch = url.pathname.match(/^\/api\/bounties\/(\d+)\/milestones$/);
+    if (msCreateMatch && req.method === "POST") {
+      try {
+        const body = await readBody(req);
+        const bountyId = parseInt(msCreateMatch[1]);
+        if (!body.title || !body.percentage) {
+          res.writeHead(400);
+          return res.end(JSON.stringify({ ok: false, error: "title and percentage required" }));
+        }
+        // Badge check
+        if (body.address) {
+          const hasBadgeResult = await hasBadge(body.address);
+          if (!hasBadgeResult) {
+            res.writeHead(403);
+            return res.end(JSON.stringify({ ok: false, error: "badge_required" }));
+          }
+        }
+        const result = db.addMilestone(bountyId, body.title, body.description || null, parseInt(body.percentage));
+        if (result.error) {
+          res.writeHead(400);
+          return res.end(JSON.stringify({ ok: false, error: result.error, detail: result.detail }));
+        }
+        res.writeHead(200);
+        return res.end(JSON.stringify({ ok: true, data: result }));
+      } catch (e) {
+        res.writeHead(400);
+        return res.end(JSON.stringify({ ok: false, error: e.message }));
+      }
+    }
+
+    // PUT /api/milestones/:id — update milestone status
+    const msUpdateMatch = url.pathname.match(/^\/api\/milestones\/(\d+)$/);
+    if (msUpdateMatch && req.method === "PUT") {
+      try {
+        const body = await readBody(req);
+        const msId = parseInt(msUpdateMatch[1]);
+        let result;
+        if (body.status === "submitted" && body.tg_id) {
+          result = db.submitMilestone(msId, body.tg_id);
+        } else if (body.status === "verified" && body.tg_id) {
+          result = db.verifyMilestone(msId, body.tg_id);
+        } else if (body.status === "paid" && body.tx_hash) {
+          result = db.payMilestone(msId, body.tx_hash);
+        } else {
+          res.writeHead(400);
+          return res.end(JSON.stringify({ ok: false, error: "invalid status or missing params" }));
+        }
+        if (result.error) {
+          res.writeHead(400);
+          return res.end(JSON.stringify({ ok: false, error: result.error, detail: result.detail }));
+        }
+        res.writeHead(200);
+        return res.end(JSON.stringify({ ok: true, data: result }));
+      } catch (e) {
+        res.writeHead(400);
+        return res.end(JSON.stringify({ ok: false, error: e.message }));
+      }
+    }
+
+    // DELETE /api/milestones/:id — remove pending milestone
+    if (msUpdateMatch && req.method === "DELETE") {
+      const msId = parseInt(msUpdateMatch[1]);
+      const result = db.removeMilestone(msId);
+      if (result.error) {
+        res.writeHead(400);
+        return res.end(JSON.stringify({ ok: false, error: result.error, detail: result.detail }));
+      }
+      res.writeHead(200);
+      return res.end(JSON.stringify({ ok: true, data: result }));
     }
 
     // GET /api/escrow — escrow balance + transactions + on-chain stats
@@ -375,9 +469,27 @@ function startApi() {
 
     // GET /api/xp-queue — pending XP rewards
     if (url.pathname === "/api/xp-queue") {
-      const { getXpQueue } = require("./xp");
+      const { getXpQueue, getXpStats } = require("./xp");
       res.writeHead(200);
-      return res.end(JSON.stringify({ ok: true, data: getXpQueue() }));
+      return res.end(JSON.stringify({ ok: true, data: getXpQueue(), stats: getXpStats() }));
+    }
+
+    // POST /api/xp/mark-applied — mark XP as applied on-chain (called by batch signer)
+    if (url.pathname === "/api/xp/mark-applied" && req.method === "POST") {
+      try {
+        const body = await readBody(req);
+        if (!body.address) {
+          res.writeHead(400);
+          return res.end(JSON.stringify({ ok: false, error: "address required" }));
+        }
+        const { markXpApplied } = require("./xp");
+        markXpApplied(body.address);
+        res.writeHead(200);
+        return res.end(JSON.stringify({ ok: true, marked: body.address }));
+      } catch (e) {
+        res.writeHead(500);
+        return res.end(JSON.stringify({ ok: false, error: e.message }));
+      }
     }
 
     // GET /api/stats
@@ -821,6 +933,152 @@ function startApi() {
       const stakes = cv3.getStakes(parseInt(cv3StakesMatch[1]));
       res.writeHead(200);
       return res.end(JSON.stringify({ ok: true, data: stakes }));
+    }
+
+    // ── Dispute Resolution Endpoints ──
+
+    // GET /api/disputes — list disputes (with optional status filter)
+    if (url.pathname === "/api/disputes" && req.method === "GET") {
+      const status = url.searchParams.get("status");
+      const bountyId = url.searchParams.get("bounty_id");
+      if (bountyId) {
+        const disputes = disputeService.getDisputesByBounty(parseInt(bountyId));
+        res.writeHead(200);
+        return res.end(JSON.stringify({ ok: true, data: disputes }));
+      }
+      if (status === "open") {
+        const disputes = disputeService.getOpenDisputes();
+        res.writeHead(200);
+        return res.end(JSON.stringify({ ok: true, data: disputes }));
+      }
+      const limit = parseInt(url.searchParams.get("limit") || "50");
+      const disputes = disputeService.getAllDisputes(Math.min(limit, 200));
+      res.writeHead(200);
+      return res.end(JSON.stringify({ ok: true, data: disputes }));
+    }
+
+    // GET /api/disputes/stats — global dispute statistics
+    if (url.pathname === "/api/disputes/stats" && req.method === "GET") {
+      const stats = disputeService.getDisputeStats();
+      res.writeHead(200);
+      return res.end(JSON.stringify({ ok: true, data: stats }));
+    }
+
+    // GET /api/disputes/:id — full dispute detail with evidence + timeline
+    const disputeDetailMatch = url.pathname.match(/^\/api\/disputes\/(\d+)$/);
+    if (disputeDetailMatch && req.method === "GET") {
+      const detail = disputeService.getDisputeDetail(parseInt(disputeDetailMatch[1]));
+      if (!detail) {
+        res.writeHead(404);
+        return res.end(JSON.stringify({ ok: false, error: "not_found" }));
+      }
+      res.writeHead(200);
+      return res.end(JSON.stringify({ ok: true, data: detail }));
+    }
+
+    // GET /api/disputes/:id/evidence — evidence list
+    const evidenceMatch = url.pathname.match(/^\/api\/disputes\/(\d+)\/evidence$/);
+    if (evidenceMatch && req.method === "GET") {
+      const evidence = disputeService.getDisputeEvidence(parseInt(evidenceMatch[1]));
+      res.writeHead(200);
+      return res.end(JSON.stringify({ ok: true, data: evidence }));
+    }
+
+    // POST /api/disputes/:id/evidence — submit evidence (badge required)
+    const evidencePostMatch = url.pathname.match(/^\/api\/disputes\/(\d+)\/evidence$/);
+    if (evidencePostMatch && req.method === "POST") {
+      const body = await readBody(req);
+      if (!body.address || !body.content) {
+        res.writeHead(400);
+        return res.end(JSON.stringify({ ok: false, error: "address and content required" }));
+      }
+      // Verify badge ownership
+      const badge = await hasBadge(body.address);
+      if (!badge) {
+        res.writeHead(403);
+        return res.end(JSON.stringify({ ok: false, error: "badge_required" }));
+      }
+      const user = db.getUserByAddress(body.address);
+      if (!user) {
+        res.writeHead(403);
+        return res.end(JSON.stringify({ ok: false, error: "not_registered" }));
+      }
+      const result = disputeService.addEvidence(
+        parseInt(evidencePostMatch[1]),
+        user.tg_id,
+        body.evidence_type || "text",
+        body.content,
+        body.description || null
+      );
+      res.writeHead(result.error ? 400 : 200);
+      return res.end(JSON.stringify(result.error ? { ok: false, error: result.error, detail: result.detail } : { ok: true, data: result }));
+    }
+
+    // GET /api/arbiters — arbiter pool
+    if (url.pathname === "/api/arbiters" && req.method === "GET") {
+      const pool = arbiterService.getArbiterPool();
+      res.writeHead(200);
+      return res.end(JSON.stringify({ ok: true, data: pool }));
+    }
+
+    // GET /api/arbiters/:tg_id — arbiter detail + stats
+    const arbiterMatch = url.pathname.match(/^\/api\/arbiters\/(\d+)$/);
+    if (arbiterMatch && req.method === "GET") {
+      const stats = arbiterService.getArbiterStats(parseInt(arbiterMatch[1]));
+      if (!stats) {
+        res.writeHead(404);
+        return res.end(JSON.stringify({ ok: false, error: "not_found" }));
+      }
+      res.writeHead(200);
+      return res.end(JSON.stringify({ ok: true, data: stats }));
+    }
+
+    // ── Insurance Pool Endpoints ──
+
+    // GET /api/insurance — pool stats
+    if (url.pathname === "/api/insurance" && req.method === "GET") {
+      const stats = insurance.getPoolStats();
+      res.writeHead(200);
+      return res.end(JSON.stringify({ ok: true, data: stats }));
+    }
+
+    // GET /api/insurance/history — pool transaction history
+    if (url.pathname === "/api/insurance/history" && req.method === "GET") {
+      const limit = parseInt(url.searchParams.get("limit") || "50");
+      const history = insurance.getPoolHistory(Math.min(limit, 200));
+      res.writeHead(200);
+      return res.end(JSON.stringify({ ok: true, data: history }));
+    }
+
+    // GET /api/insurance/calculate?amount=300 — preview fee for an amount
+    if (url.pathname === "/api/insurance/calculate" && req.method === "GET") {
+      const amount = parseFloat(url.searchParams.get("amount") || "0");
+      if (!amount || amount <= 0) {
+        res.writeHead(400);
+        return res.end(JSON.stringify({ ok: false, error: "invalid_amount" }));
+      }
+      const fee = insurance.calculateInsuranceFee(amount);
+      res.writeHead(200);
+      return res.end(JSON.stringify({ ok: true, data: fee }));
+    }
+
+    // GET /api/bounties/:id/insurance — insurance details for specific bounty
+    const insMatch = url.pathname.match(/^\/api\/bounties\/(\d+)\/insurance$/);
+    if (insMatch && req.method === "GET") {
+      const bountyId = parseInt(insMatch[1]);
+      const records = insurance.getInsuranceForBounty(bountyId);
+      const bounty = db.getBounty(bountyId);
+      res.writeHead(200);
+      return res.end(JSON.stringify({
+        ok: true,
+        data: {
+          bounty_id: bountyId,
+          insurance_fee_xrd: bounty?.insurance_fee_xrd || 0,
+          insurance_fee_pct: bounty?.insurance_fee_pct || 0,
+          insurance_status: bounty?.insurance_status || "none",
+          records,
+        },
+      }));
     }
 
     res.writeHead(404);
