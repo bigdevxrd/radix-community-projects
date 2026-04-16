@@ -13,6 +13,7 @@ const insurance = require("./services/insurance");
 const disputeService = require("./services/dispute");
 const arbiterService = require("./services/arbiter");
 const projectService = require("./services/project");
+const txSigner = require("./services/tx-signer");
 
 const TOKEN = process.env.TG_BOT_TOKEN;
 if (!TOKEN) { console.error("Set TG_BOT_TOKEN in .env"); process.exit(1); }
@@ -26,6 +27,13 @@ try { insurance.init(db); } catch (e) { console.error("[Init] Insurance init fai
 try { arbiterService.init(db); } catch (e) { console.error("[Init] Arbiter init failed (non-fatal):", e.message); }
 try { disputeService.init(db); } catch (e) { console.error("[Init] Dispute service init failed (non-fatal):", e.message); }
 try { projectService.init(db); } catch (e) { console.error("[Init] Project service init failed (non-fatal):", e.message); }
+try {
+  txSigner.init(db, (msg) => {
+    // Admin notifier — sends TG alerts to admin
+    const adminId = parseInt(process.env.ADMIN_TG_IDS?.split(",")[0] || "0");
+    if (adminId && bot) bot.api.sendMessage(adminId, "[Signer] " + msg).catch(() => {});
+  });
+} catch (e) { console.error("[Init] TX signer init failed (non-fatal):", e.message); }
 const bot = new Bot(TOKEN);
 
 // ── Global Error Handlers ────────────────────────────────
@@ -891,7 +899,26 @@ bot.command("bounty", async (ctx) => {
     const result = db.verifyBounty(id);
     if (result.changes === 0) return ctx.reply("Bounty not found or not submitted.");
     const updated = db.getBounty(id);
-    ctx.reply("Bounty #" + id + " verified! Ready for payment: " + updated.reward_xrd + " XRD\nAdmin: /bounty pay " + id + " <tx_hash>");
+
+    // Auto-release escrow if signer is enabled and bounty has on-chain task ID
+    if (updated.onchain_task_id && txSigner.isEnabled()) {
+      ctx.reply("Bounty #" + id + " verified! Auto-releasing escrow...");
+      const txResult = await txSigner.releaseTask(updated.onchain_task_id, id);
+      if (txResult.ok) {
+        db.payBounty(id, txResult.txHash);
+        const insRelease = insurance.releaseToTreasury(id);
+        const unblocked = db.checkAndUnblock(id);
+        queueXpReward(updated.assignee_address, "bounty_complete");
+        let reply = "Bounty #" + id + " PAID (auto-signed)! " + updated.reward_xrd + " XRD\nTX: " + txResult.txHash.slice(0, 30) + "...";
+        if (insRelease.ok) reply += "\nInsurance: " + insRelease.amount + " XRD to treasury.";
+        if (unblocked.length > 0) reply += "\nUnblocked: " + unblocked.map(u => "#" + u.id).join(", ");
+        ctx.reply(reply);
+      } else {
+        ctx.reply("Bounty #" + id + " verified but auto-release failed: " + (txResult.detail || txResult.error) + "\nManual payment: /bounty pay " + id + " <tx_hash>");
+      }
+    } else {
+      ctx.reply("Bounty #" + id + " verified! Ready for payment: " + updated.reward_xrd + " XRD\nAdmin: /bounty pay " + id + " <tx_hash>");
+    }
     return;
   }
 
@@ -1369,6 +1396,72 @@ bot.command("project", async (ctx) => {
     "/project tasks <id> — list project tasks\n" +
     "/project ship <id> [notes] — mark project shipped\n\n" +
     "Full project management: " + PORTAL + "/projects"
+  );
+});
+
+// ── /signer (admin only) ──────────────────────────────────
+
+bot.command("signer", async (ctx) => {
+  if (!ADMIN_IDS.includes(ctx.from.id)) return ctx.reply("Admin only.");
+  const args = ctx.message.text.split(" ").slice(1);
+  const sub = (args[0] || "").toLowerCase();
+
+  if (sub === "status") {
+    const status = txSigner.getSignerStatus();
+    ctx.reply(
+      "TX Signer: " + (status.enabled ? "ENABLED" : "DISABLED") + "\n" +
+      "Account: " + status.account + "\n" +
+      "Today: " + status.today.count + " TX, " + status.today.value_xrd.toFixed(1) + " XRD" +
+      (status.today.failed > 0 ? " (" + status.today.failed + " failed)" : "") + "\n" +
+      "This hour: " + status.this_hour.count + " TX\n" +
+      "Total: " + status.total_tx + " TX\n" +
+      "Limits: " + status.limits.max_per_hour + "/hr, " + status.limits.max_per_day + "/day, " +
+      status.limits.max_xrd_per_tx + " XRD/tx, " + status.limits.max_xrd_per_day + " XRD/day"
+    );
+    return;
+  }
+
+  if (sub === "disable") {
+    const reason = args.slice(1).join(" ") || "Manual disable via TG";
+    txSigner.disableSigner(reason);
+    ctx.reply("TX signer DISABLED. Reason: " + reason);
+    return;
+  }
+
+  if (sub === "enable") {
+    txSigner.enableSigner();
+    ctx.reply("TX signer ENABLED.");
+    return;
+  }
+
+  if (sub === "audit") {
+    const limit = parseInt(args[1]) || 10;
+    const log = txSigner.getAuditLog(limit);
+    if (log.length === 0) return ctx.reply("No audit entries.");
+    const lines = log.map(e => {
+      const time = new Date(e.created_at * 1000).toISOString().slice(5, 16);
+      return time + " " + e.action + " [" + e.status + "]" +
+        (e.value_xrd ? " " + e.value_xrd + "XRD" : "") +
+        (e.tx_hash ? " " + e.tx_hash.slice(0, 12) + "..." : "") +
+        (e.error_message ? " ERR:" + e.error_message.slice(0, 30) : "");
+    });
+    ctx.reply("Signer Audit (" + log.length + "):\n\n" + lines.join("\n"));
+    return;
+  }
+
+  if (sub === "balance") {
+    const bal = await txSigner.checkBalance();
+    if (bal.error) return ctx.reply("Balance check failed: " + (bal.detail || bal.error));
+    ctx.reply("Signer balance: " + bal.balance.toFixed(2) + " XRD" + (bal.alert ? " (LOW!)" : ""));
+    return;
+  }
+
+  ctx.reply(
+    "/signer status — overview\n" +
+    "/signer disable [reason] — kill switch\n" +
+    "/signer enable — re-enable\n" +
+    "/signer audit [N] — last N transactions\n" +
+    "/signer balance — wallet balance"
   );
 });
 
@@ -2569,6 +2662,15 @@ setInterval(() => {
     console.error("[Disputes] Overdue check failed:", e.message);
   }
 }, 24 * 60 * 60 * 1000); // daily
+
+// ── Signer Balance Check (hourly) ─────────────────
+setInterval(async () => {
+  try {
+    if (txSigner.isEnabled()) await txSigner.checkBalance();
+  } catch (e) {
+    console.error("[Signer] Balance check failed:", e.message);
+  }
+}, 60 * 60 * 1000); // hourly
 
 // ── PR Merge Watcher (auto-verify tasks) ─────────────────
 

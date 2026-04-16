@@ -602,6 +602,34 @@ function init() {
   seedDis.run("dispute_appeal_min_xrd", "500");
   seedDis.run("dispute_appeal_fee_pct", "5");
 
+  // ── TX Signer (Phase 7) ──
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS signer_audit (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      action TEXT NOT NULL,
+      params TEXT NOT NULL,
+      tx_hash TEXT,
+      status TEXT NOT NULL,
+      error_message TEXT,
+      value_xrd REAL,
+      triggered_by TEXT,
+      bounty_id INTEGER,
+      dispute_id INTEGER,
+      created_at INTEGER DEFAULT (strftime('%s','now'))
+    );
+    CREATE INDEX IF NOT EXISTS idx_signer_audit_action ON signer_audit(action, created_at);
+  `);
+
+  // Signer config defaults (idempotent)
+  const seedSign = db.prepare("INSERT OR IGNORE INTO platform_config (key, value) VALUES (?, ?)");
+  seedSign.run("signer_max_release_per_hour", "10");
+  seedSign.run("signer_max_release_per_day", "50");
+  seedSign.run("signer_max_xrd_per_tx", "1000");
+  seedSign.run("signer_max_xrd_per_day", "5000");
+  seedSign.run("signer_enabled", "true");
+  seedSign.run("signer_last_disabled_at", "0");
+  seedSign.run("signer_alert_balance_xrd", "10");
+
   // ── Task Dependencies + Templates (Phase 5) ──
   try { db.exec("ALTER TABLE bounties ADD COLUMN depends_on TEXT DEFAULT '[]'"); } catch(e) {}
   try { db.exec("ALTER TABLE bounties ADD COLUMN blocks TEXT DEFAULT '[]'"); } catch(e) {}

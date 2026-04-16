@@ -9,6 +9,7 @@ const insurance = require("./insurance");
 const disputeService = require("./dispute");
 const arbiterService = require("./arbiter");
 const projectService = require("./project");
+const txSigner = require("./tx-signer");
 
 const API_PORT = parseInt(process.env.API_PORT || "3003");
 const ALLOWED_ORIGINS = (process.env.CORS_ORIGINS || "").split(",").filter(Boolean);
@@ -1110,6 +1111,23 @@ function startApi() {
       const templates = db.getTemplates();
       res.writeHead(200);
       return res.end(JSON.stringify({ ok: true, data: templates }));
+    }
+
+    // ── TX Signer Endpoints (Phase 7) ──
+
+    // GET /api/signer/status — signer status (admin dashboard)
+    if (url.pathname === "/api/signer/status" && req.method === "GET") {
+      const status = txSigner.getSignerStatus();
+      res.writeHead(200);
+      return res.end(JSON.stringify({ ok: true, data: status }));
+    }
+
+    // GET /api/signer/audit — audit log
+    if (url.pathname === "/api/signer/audit" && req.method === "GET") {
+      const limit = parseInt(url.searchParams.get("limit") || "20");
+      const log = txSigner.getAuditLog(Math.min(limit, 100));
+      res.writeHead(200);
+      return res.end(JSON.stringify({ ok: true, data: log }));
     }
 
     // ── Insurance Pool Endpoints ──
