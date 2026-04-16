@@ -220,15 +220,17 @@ export function claimTaskManifest(
   badgeNft: string,
   account: string,
   taskId: number,
+  badgeLocalId?: string,
 ): string {
   const e = validateAddress(escrowComponent, "component_rdx");
   const a = validateAddress(account, "account_rdx");
   const b = validateAddress(badgeNft, "resource_rdx");
+  const nftId = badgeLocalId ? sanitize(badgeLocalId) : "#1#";
   return `CALL_METHOD
   Address("${a}")
-  "create_proof_of_amount"
+  "create_proof_of_non_fungibles"
   Address("${b}")
-  Decimal("1")
+  Array<NonFungibleLocalId>(NonFungibleLocalId("${nftId}"))
 ;
 POP_FROM_AUTH_ZONE
   Proof("badge_proof")
@@ -247,15 +249,17 @@ export function submitTaskManifest(
   badgeNft: string,
   account: string,
   taskId: number,
+  badgeLocalId?: string,
 ): string {
   const e = validateAddress(escrowComponent, "component_rdx");
   const a = validateAddress(account, "account_rdx");
   const b = validateAddress(badgeNft, "resource_rdx");
+  const nftId = badgeLocalId ? sanitize(badgeLocalId) : "#1#";
   return `CALL_METHOD
   Address("${a}")
-  "create_proof_of_amount"
+  "create_proof_of_non_fungibles"
   Address("${b}")
-  Decimal("1")
+  Array<NonFungibleLocalId>(NonFungibleLocalId("${nftId}"))
 ;
 POP_FROM_AUTH_ZONE
   Proof("badge_proof")

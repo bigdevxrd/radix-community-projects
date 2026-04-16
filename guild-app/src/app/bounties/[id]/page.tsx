@@ -114,7 +114,7 @@ function BountyDetailContent() {
     setActioning(true); setActionStatus(""); setActionError("");
     try {
       const onchainId = bounty.onchain_task_id ?? bounty.id;
-      const manifest = claimTaskManifest(escrowComp, BADGE_NFT, account, onchainId);
+      const manifest = claimTaskManifest(escrowComp, BADGE_NFT, account, onchainId, badge?.id);
       const result = await rdt.walletApi.sendTransaction({ transactionManifest: manifest, version: 1 });
       if (result.isOk()) {
         setActionStatus("Claimed! TX: " + result.value.transactionIntentHash.slice(0, 40) + "...");
@@ -129,7 +129,7 @@ function BountyDetailContent() {
     setActioning(true); setActionStatus(""); setActionError("");
     try {
       const onchainId = bounty.onchain_task_id ?? bounty.id;
-      const manifest = submitTaskManifest(escrowComp, BADGE_NFT, account, onchainId);
+      const manifest = submitTaskManifest(escrowComp, BADGE_NFT, account, onchainId, badge?.id);
       const result = await rdt.walletApi.sendTransaction({ transactionManifest: manifest, version: 1 });
       if (result.isOk()) {
         setActionStatus("Submitted! Awaiting verification. TX: " + result.value.transactionIntentHash.slice(0, 40) + "...");
