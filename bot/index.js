@@ -14,6 +14,7 @@ const disputeService = require("./services/dispute");
 const arbiterService = require("./services/arbiter");
 const projectService = require("./services/project");
 const txSigner = require("./services/tx-signer");
+const agentBridge = require("./services/agent-bridge");
 
 const TOKEN = process.env.TG_BOT_TOKEN;
 if (!TOKEN) { console.error("Set TG_BOT_TOKEN in .env"); process.exit(1); }
@@ -34,6 +35,7 @@ try {
     if (adminId && bot) bot.api.sendMessage(adminId, "[Signer] " + msg).catch(() => {});
   });
 } catch (e) { console.error("[Init] TX signer init failed (non-fatal):", e.message); }
+try { agentBridge.init(db); } catch (e) { console.error("[Init] Agent bridge init failed (non-fatal):", e.message); }
 const bot = new Bot(TOKEN);
 
 // ── Global Error Handlers ────────────────────────────────
@@ -2435,6 +2437,77 @@ bot.command("cv3", async (ctx) => {
   }
   msg += "Use /cv3 <id> for details";
   return ctx.reply(msg);
+});
+
+// ── Agent Management (Phase 8) ────────────────────────
+
+bot.command("agent", async (ctx) => {
+  if (!ADMIN_IDS.includes(ctx.from.id)) return ctx.reply("Admin only.");
+
+  const args = (ctx.match || "").trim().split(/\s+/);
+  const sub = args[0];
+
+  if (sub === "create") {
+    const name = args[1];
+    const scopeStr = args[2];
+    if (!name || !scopeStr) return ctx.reply("Usage: /agent create <name> <scopes>\nScopes (comma-separated): tasks:read, tasks:claim, tasks:submit, proposals:read, proposals:create, projects:read, projects:breakdown, admin");
+    const scopes = scopeStr.split(",").map(s => s.trim());
+    const result = agentBridge.createAgentKey(name, scopes, ctx.from.id);
+    if (result.error) return ctx.reply("Error: " + result.error + (result.detail ? " — " + result.detail : ""));
+    return ctx.reply(
+      "Agent key created!\n\n" +
+      "Name: " + result.name + "\n" +
+      "Key ID: " + result.keyId + "\n" +
+      "Scopes: " + result.scopes.join(", ") + "\n" +
+      "Rate limit: " + result.rateLimitPerHour + "/hour\n" +
+      "Daily budget: " + result.dailyBudgetXrd + " XRD\n\n" +
+      "API Key (save now — shown ONCE):\n<code>" + result.rawKey + "</code>\n\n" +
+      "Usage: Authorization: Bearer " + result.rawKey.slice(0, 12) + "...",
+      { parse_mode: "HTML" }
+    );
+  }
+
+  if (sub === "list") {
+    const keys = agentBridge.listKeys();
+    if (keys.length === 0) return ctx.reply("No agent keys.");
+    let msg = "Agent Keys (" + keys.length + "):\n\n";
+    for (const k of keys) {
+      const status = k.enabled ? "active" : "REVOKED";
+      const lastUsed = k.last_used_at ? new Date(k.last_used_at * 1000).toLocaleDateString() : "never";
+      msg += "#" + k.id + " " + k.name + " [" + status + "]\n";
+      msg += "  Scopes: " + k.scopes.join(", ") + "\n";
+      msg += "  Rate: " + k.rate_limit_per_hour + "/hr | Budget: " + k.daily_budget_xrd + " XRD/day\n";
+      msg += "  Last used: " + lastUsed + "\n\n";
+    }
+    return ctx.reply(msg);
+  }
+
+  if (sub === "revoke") {
+    const keyId = parseInt(args[1]);
+    if (!keyId) return ctx.reply("Usage: /agent revoke <key_id>");
+    const result = agentBridge.revokeKey(keyId);
+    return ctx.reply(result.ok ? "Key #" + keyId + " revoked." : "Error: " + result.error);
+  }
+
+  if (sub === "activity") {
+    const keyId = args[1] ? parseInt(args[1]) : null;
+    const activity = agentBridge.getActivity(keyId, 10);
+    if (activity.length === 0) return ctx.reply("No agent activity" + (keyId ? " for key #" + keyId : "") + ".");
+    let msg = "Recent Agent Activity:\n\n";
+    for (const a of activity) {
+      const time = new Date(a.created_at * 1000).toLocaleString();
+      msg += (a.agent_name || "#" + a.agent_key_id) + " | " + a.action + " | " + time + "\n";
+    }
+    return ctx.reply(msg);
+  }
+
+  return ctx.reply(
+    "Agent Management:\n" +
+    "/agent create <name> <scopes> — Create API key\n" +
+    "/agent list — Show all keys\n" +
+    "/agent revoke <id> — Disable key\n" +
+    "/agent activity [id] — Recent actions"
+  );
 });
 
 // ── Welcome new members ────────────────────────────────

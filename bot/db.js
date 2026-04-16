@@ -162,6 +162,8 @@ function init() {
   try { db.exec("ALTER TABLE bounties ADD COLUMN approval_criteria TEXT"); } catch(e) {}
   try { db.exec("ALTER TABLE bounties ADD COLUMN approval_branch TEXT DEFAULT 'main'"); } catch(e) {}
   try { db.exec("ALTER TABLE bounties ADD COLUMN auto_released_at INTEGER"); } catch(e) {}
+  // Phase 8: Agent integration
+  try { db.exec("ALTER TABLE bounties ADD COLUMN claimed_by_agent INTEGER DEFAULT 0"); } catch(e) {}
 
   // Bounty milestones (partial delivery)
   db.exec(`
@@ -735,6 +737,34 @@ function init() {
       resolved_at INTEGER
     );
     CREATE INDEX IF NOT EXISTS idx_feedback_status ON feedback(status);
+  `);
+
+  // Phase 8: Agent Integration
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS agent_keys (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL UNIQUE,
+      api_key_hash TEXT NOT NULL UNIQUE,
+      scopes TEXT DEFAULT '[]',
+      owner_tg_id INTEGER,
+      rate_limit_per_hour INTEGER DEFAULT 60,
+      daily_budget_xrd REAL DEFAULT 100,
+      enabled INTEGER DEFAULT 1,
+      created_at INTEGER DEFAULT (strftime('%s','now')),
+      last_used_at INTEGER
+    );
+    CREATE INDEX IF NOT EXISTS idx_agent_keys_hash ON agent_keys(api_key_hash);
+
+    CREATE TABLE IF NOT EXISTS agent_activity (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      agent_key_id INTEGER NOT NULL,
+      action TEXT NOT NULL,
+      params TEXT DEFAULT '{}',
+      result TEXT DEFAULT '{}',
+      created_at INTEGER DEFAULT (strftime('%s','now')),
+      FOREIGN KEY (agent_key_id) REFERENCES agent_keys(id)
+    );
+    CREATE INDEX IF NOT EXISTS idx_agent_activity_key ON agent_activity(agent_key_id, created_at);
   `);
 
   // Indexes for 20k+ scale

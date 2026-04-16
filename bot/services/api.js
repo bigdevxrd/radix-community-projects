@@ -10,6 +10,7 @@ const disputeService = require("./dispute");
 const arbiterService = require("./arbiter");
 const projectService = require("./project");
 const txSigner = require("./tx-signer");
+const agentBridge = require("./agent-bridge");
 
 const API_PORT = parseInt(process.env.API_PORT || "3003");
 const ALLOWED_ORIGINS = (process.env.CORS_ORIGINS || "").split(",").filter(Boolean);
@@ -48,7 +49,7 @@ function startApi() {
       res.setHeader("Access-Control-Allow-Origin", "*"); // dev fallback
     }
     res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
-    res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+    res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
 
     if (req.method === "OPTIONS") {
       res.writeHead(200);
@@ -74,7 +75,8 @@ function startApi() {
     const isXpPost = req.method === "POST" && url.pathname === "/api/xp/mark-applied";
     const isDisputeEvidencePost = req.method === "POST" && url.pathname.match(/^\/api\/disputes\/\d+\/evidence$/);
     const isProjectBreakdownPost = req.method === "POST" && url.pathname.match(/^\/api\/projects\/\d+\/breakdown$/);
-    if (req.method !== "GET" && !isGamePost && !isFeedbackPost && !isBountyPost && !isGroupPost && !isVotePost && !isProposalPost && !isMilestoneWrite && !isXpPost && !isDisputeEvidencePost && !isProjectBreakdownPost) {
+    const isAgentRoute = url.pathname.startsWith("/api/agent/");
+    if (req.method !== "GET" && !isGamePost && !isFeedbackPost && !isBountyPost && !isGroupPost && !isVotePost && !isProposalPost && !isMilestoneWrite && !isXpPost && !isDisputeEvidencePost && !isProjectBreakdownPost && !isAgentRoute) {
       res.writeHead(405);
       return res.end(JSON.stringify({ ok: false, error: "method_not_allowed" }));
     }
@@ -1176,6 +1178,232 @@ function startApi() {
           records,
         },
       }));
+    }
+
+    // ── Agent API (/api/agent/*) ─────────────────────────────
+    if (isAgentRoute) {
+      const agentPath = url.pathname.replace("/api/agent", "");
+
+      // Auth: all agent routes require Bearer token
+      const auth = agentBridge.authenticateRequest(req);
+      if (auth.error) {
+        res.writeHead(auth.status || 401);
+        return res.end(JSON.stringify({ ok: false, error: auth.error, detail: auth.detail }));
+      }
+      const agent = auth.agent;
+
+      // GET /api/agent/whoami
+      if (req.method === "GET" && agentPath === "/whoami") {
+        const budget = agentBridge.checkDailyBudget(agent.id, agent.dailyBudgetXrd);
+        return res.end(JSON.stringify({
+          ok: true,
+          data: {
+            id: agent.id, name: agent.name, scopes: agent.scopes,
+            rate_limit_per_hour: agent.rateLimitPerHour,
+            daily_budget: budget,
+          },
+        }));
+      }
+
+      // GET /api/agent/activity
+      if (req.method === "GET" && agentPath === "/activity") {
+        const limit = parseInt(url.searchParams.get("limit") || "20");
+        const activity = agentBridge.getActivity(agent.id, limit);
+        return res.end(JSON.stringify({ ok: true, data: activity }));
+      }
+
+      // GET /api/agent/tasks/match — skill-matched tasks
+      if (req.method === "GET" && agentPath === "/tasks/match") {
+        if (!agentBridge.hasScope(agent, "tasks:read")) {
+          res.writeHead(403);
+          return res.end(JSON.stringify({ ok: false, error: "insufficient_scope", detail: "Requires tasks:read" }));
+        }
+        const skills = (url.searchParams.get("skills") || "").split(",").filter(Boolean);
+        const results = db.matchBounties(skills, {
+          status: url.searchParams.get("status") || "open",
+          difficulty: url.searchParams.get("difficulty") || null,
+          limit: parseInt(url.searchParams.get("limit") || "20"),
+        });
+        agentBridge.logActivity(agent.id, "match_tasks", { skills }, { count: results.length });
+        return res.end(JSON.stringify({ ok: true, data: results }));
+      }
+
+      // GET /api/agent/tasks/:id
+      if (req.method === "GET" && agentPath.match(/^\/tasks\/\d+$/)) {
+        if (!agentBridge.hasScope(agent, "tasks:read")) {
+          res.writeHead(403);
+          return res.end(JSON.stringify({ ok: false, error: "insufficient_scope" }));
+        }
+        const taskId = parseInt(agentPath.split("/")[2]);
+        const bounty = db.getBountyDetail(taskId);
+        if (!bounty) { res.writeHead(404); return res.end(JSON.stringify({ ok: false, error: "not_found" })); }
+        return res.end(JSON.stringify({ ok: true, data: bounty }));
+      }
+
+      // GET /api/agent/proposals
+      if (req.method === "GET" && agentPath === "/proposals") {
+        if (!agentBridge.hasScope(agent, "proposals:read")) {
+          res.writeHead(403);
+          return res.end(JSON.stringify({ ok: false, error: "insufficient_scope" }));
+        }
+        const proposals = db.getActiveProposals();
+        return res.end(JSON.stringify({ ok: true, data: proposals }));
+      }
+
+      // POST /api/agent/tasks/:id/claim
+      if (req.method === "POST" && agentPath.match(/^\/tasks\/\d+\/claim$/)) {
+        if (!agentBridge.hasScope(agent, "tasks:claim")) {
+          res.writeHead(403);
+          return res.end(JSON.stringify({ ok: false, error: "insufficient_scope", detail: "Requires tasks:claim" }));
+        }
+        const taskId = parseInt(agentPath.split("/")[2]);
+        const bounty = db.getBounty(taskId);
+        if (!bounty) { res.writeHead(404); return res.end(JSON.stringify({ ok: false, error: "not_found" })); }
+        if (bounty.status !== "open") {
+          return res.end(JSON.stringify({ ok: false, error: "not_open", detail: "Task status: " + bounty.status }));
+        }
+        if (!bounty.funded) {
+          return res.end(JSON.stringify({ ok: false, error: "not_funded" }));
+        }
+
+        const budget = agentBridge.checkDailyBudget(agent.id, agent.dailyBudgetXrd);
+        if (!budget.allowed) {
+          return res.end(JSON.stringify({ ok: false, error: "daily_budget_exceeded", detail: budget }));
+        }
+
+        // Assign to agent (use negative agent ID as TG ID sentinel, agent address as placeholder)
+        const agentTgId = -(agent.id + 900000); // negative sentinel for agent identity
+        const result = db.assignBounty(taskId, agentTgId, "agent:" + agent.name);
+        if (!result) {
+          return res.end(JSON.stringify({ ok: false, error: "assign_failed" }));
+        }
+
+        // Flag as agent-claimed
+        db._raw().prepare("UPDATE bounties SET claimed_by_agent = 1 WHERE id = ?").run(taskId);
+
+        agentBridge.logActivity(agent.id, "claim_task", { taskId, reward_xrd: bounty.reward_xrd }, { ok: true });
+        return res.end(JSON.stringify({ ok: true, data: { taskId, status: "assigned", agent: agent.name } }));
+      }
+
+      // POST /api/agent/tasks/:id/submit
+      if (req.method === "POST" && agentPath.match(/^\/tasks\/\d+\/submit$/)) {
+        if (!agentBridge.hasScope(agent, "tasks:submit")) {
+          res.writeHead(403);
+          return res.end(JSON.stringify({ ok: false, error: "insufficient_scope", detail: "Requires tasks:submit" }));
+        }
+        const taskId = parseInt(agentPath.split("/")[2]);
+        const body = await readBody(req);
+        const bounty = db.getBounty(taskId);
+        if (!bounty) { res.writeHead(404); return res.end(JSON.stringify({ ok: false, error: "not_found" })); }
+        if (bounty.status !== "assigned") {
+          return res.end(JSON.stringify({ ok: false, error: "not_assigned", detail: "Task status: " + bounty.status }));
+        }
+
+        const githubPr = body.github_pr || body.url || null;
+        db.submitBounty(taskId, githubPr);
+
+        agentBridge.logActivity(agent.id, "submit_work", { taskId, github_pr: githubPr }, { ok: true });
+        return res.end(JSON.stringify({
+          ok: true,
+          data: { taskId, status: "submitted", github_pr: githubPr, note: "Awaiting human verification" },
+        }));
+      }
+
+      // POST /api/agent/proposals/temp-check
+      if (req.method === "POST" && agentPath === "/proposals/temp-check") {
+        if (!agentBridge.hasScope(agent, "proposals:create")) {
+          res.writeHead(403);
+          return res.end(JSON.stringify({ ok: false, error: "insufficient_scope", detail: "Requires proposals:create" }));
+        }
+        const body = await readBody(req);
+        if (!body.title || body.title.length < 5) {
+          return res.end(JSON.stringify({ ok: false, error: "title_required", detail: "Title must be at least 5 characters" }));
+        }
+
+        const contentCheck = checkContent(body.title + " " + (body.description || ""));
+        if (contentCheck.blocked) {
+          return res.end(JSON.stringify({ ok: false, error: "content_blocked", detail: contentCheck.reason }));
+        }
+
+        const agentTgId = -(agent.id + 900000);
+        const proposal = db.createProposal(body.title, agentTgId, {
+          type: "yesno",
+          stage: "temp_check",
+          category: body.category || "general",
+          durationDays: 3,
+        });
+
+        agentBridge.logActivity(agent.id, "create_temp_check", { title: body.title }, { ok: true, proposalId: proposal.id });
+        return res.end(JSON.stringify({
+          ok: true,
+          data: { proposalId: proposal.id, title: body.title, stage: "temp_check", note: "Requires community votes to advance" },
+        }));
+      }
+
+      // POST /api/agent/projects/:id/breakdown
+      if (req.method === "POST" && agentPath.match(/^\/projects\/\d+\/breakdown$/)) {
+        if (!agentBridge.hasScope(agent, "projects:breakdown")) {
+          res.writeHead(403);
+          return res.end(JSON.stringify({ ok: false, error: "insufficient_scope", detail: "Requires projects:breakdown" }));
+        }
+        const groupId = parseInt(agentPath.split("/")[2]);
+        const body = await readBody(req);
+        if (!body.tasks || !Array.isArray(body.tasks) || body.tasks.length === 0) {
+          return res.end(JSON.stringify({ ok: false, error: "tasks_required" }));
+        }
+
+        const result = projectService.breakdownProject(groupId, body.tasks);
+        agentBridge.logActivity(agent.id, "project_breakdown", { groupId, taskCount: body.tasks.length }, result);
+        return res.end(JSON.stringify(result));
+      }
+
+      // GET /api/agent/projects/:id
+      if (req.method === "GET" && agentPath.match(/^\/projects\/\d+$/)) {
+        if (!agentBridge.hasScope(agent, "projects:read")) {
+          res.writeHead(403);
+          return res.end(JSON.stringify({ ok: false, error: "insufficient_scope" }));
+        }
+        const groupId = parseInt(agentPath.split("/")[2]);
+        const status = projectService.getFullProjectStatus(groupId);
+        if (!status) { res.writeHead(404); return res.end(JSON.stringify({ ok: false, error: "not_found" })); }
+        return res.end(JSON.stringify({ ok: true, data: status }));
+      }
+
+      // ── Admin agent routes ──
+
+      // POST /api/agent/keys — create key (requires admin scope)
+      if (req.method === "POST" && agentPath === "/keys") {
+        if (!agentBridge.hasScope(agent, "admin")) {
+          res.writeHead(403);
+          return res.end(JSON.stringify({ ok: false, error: "insufficient_scope", detail: "Requires admin scope" }));
+        }
+        const body = await readBody(req);
+        const result = agentBridge.createAgentKey(body.name, body.scopes, body.owner_tg_id, body.rate_limit_per_hour, body.daily_budget_xrd);
+        return res.end(JSON.stringify(result));
+      }
+
+      // GET /api/agent/keys
+      if (req.method === "GET" && agentPath === "/keys") {
+        if (!agentBridge.hasScope(agent, "admin")) {
+          res.writeHead(403);
+          return res.end(JSON.stringify({ ok: false, error: "insufficient_scope" }));
+        }
+        return res.end(JSON.stringify({ ok: true, data: agentBridge.listKeys() }));
+      }
+
+      // DELETE /api/agent/keys/:id
+      if (req.method === "DELETE" && agentPath.match(/^\/keys\/\d+$/)) {
+        if (!agentBridge.hasScope(agent, "admin")) {
+          res.writeHead(403);
+          return res.end(JSON.stringify({ ok: false, error: "insufficient_scope" }));
+        }
+        const keyId = parseInt(agentPath.split("/")[2]);
+        const result = agentBridge.revokeKey(keyId);
+        return res.end(JSON.stringify(result));
+      }
+
+      res.writeHead(404);
+      return res.end(JSON.stringify({ ok: false, error: "agent_route_not_found" }));
     }
 
     res.writeHead(404);
