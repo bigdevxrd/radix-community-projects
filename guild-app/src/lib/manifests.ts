@@ -226,9 +226,9 @@ export function claimTaskManifest(
   const b = validateAddress(badgeNft, "resource_rdx");
   return `CALL_METHOD
   Address("${a}")
-  "create_proof_of_non_fungibles"
+  "create_proof_of_amount"
   Address("${b}")
-  Array<NonFungibleLocalId>()
+  Decimal("1")
 ;
 POP_FROM_AUTH_ZONE
   Proof("badge_proof")
@@ -253,9 +253,9 @@ export function submitTaskManifest(
   const b = validateAddress(badgeNft, "resource_rdx");
   return `CALL_METHOD
   Address("${a}")
-  "create_proof_of_non_fungibles"
+  "create_proof_of_amount"
   Address("${b}")
-  Array<NonFungibleLocalId>()
+  Decimal("1")
 ;
 POP_FROM_AUTH_ZONE
   Proof("badge_proof")
