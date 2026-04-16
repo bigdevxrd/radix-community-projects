@@ -29,6 +29,7 @@ interface BountyDetail {
   submitted_at: number | null; verified_at: number | null;
   paid_at: number | null; cancelled_at: number | null; cancel_reason: string | null;
   funded: number;
+  onchain_task_id: number | null;
   milestones: { id: number; title: string; percentage: number; amount_xrd: number; status: string }[];
   applications: { id: number; applicant_tg_id: number; applicant_address: string; pitch: string | null; estimated_hours: number | null; status: string; created_at: number }[];
 }
@@ -112,7 +113,8 @@ function BountyDetailContent() {
     if (!rdt || !account || !bounty) return;
     setActioning(true); setActionStatus(""); setActionError("");
     try {
-      const manifest = claimTaskManifest(escrowComp, BADGE_NFT, account, bounty.id);
+      const onchainId = bounty.onchain_task_id ?? bounty.id;
+      const manifest = claimTaskManifest(escrowComp, BADGE_NFT, account, onchainId);
       const result = await rdt.walletApi.sendTransaction({ transactionManifest: manifest, version: 1 });
       if (result.isOk()) {
         setActionStatus("Claimed! TX: " + result.value.transactionIntentHash.slice(0, 40) + "...");
@@ -126,7 +128,8 @@ function BountyDetailContent() {
     if (!rdt || !account || !bounty) return;
     setActioning(true); setActionStatus(""); setActionError("");
     try {
-      const manifest = submitTaskManifest(escrowComp, BADGE_NFT, account, bounty.id);
+      const onchainId = bounty.onchain_task_id ?? bounty.id;
+      const manifest = submitTaskManifest(escrowComp, BADGE_NFT, account, onchainId);
       const result = await rdt.walletApi.sendTransaction({ transactionManifest: manifest, version: 1 });
       if (result.isOk()) {
         setActionStatus("Submitted! Awaiting verification. TX: " + result.value.transactionIntentHash.slice(0, 40) + "...");
@@ -140,7 +143,8 @@ function BountyDetailContent() {
     if (!rdt || !account || !bounty) return;
     setActioning(true); setActionStatus(""); setActionError("");
     try {
-      const manifest = cancelTaskManifest(escrowComp, escrowReceipt, account, bounty.id);
+      const onchainId = bounty.onchain_task_id ?? bounty.id;
+      const manifest = cancelTaskManifest(escrowComp, escrowReceipt, account, onchainId);
       const result = await rdt.walletApi.sendTransaction({ transactionManifest: manifest, version: 1 });
       if (result.isOk()) {
         setActionStatus("Cancelled! XRD refunded. TX: " + result.value.transactionIntentHash.slice(0, 40) + "...");
