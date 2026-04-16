@@ -1,6 +1,7 @@
-const GATEWAY = "https://mainnet.radixdlt.com";
+const GATEWAY = process.env.RADIX_GATEWAY || "https://mainnet.radixdlt.com";
 const BADGE_NFT = process.env.BADGE_NFT || "resource_rdx1n22rq94kh6ugwnrvc65m2pwhle3s6ez6j7702vkn2ctkaxemz4ppwl";
 const ESCROW_COMPONENT = process.env.ESCROW_COMPONENT || "component_rdx1cp8mwwe2pkrrtm05p7txgygf9y9uuwx6p87djkda8stk8nuwpyg56r";
+const ESCROW_VERSION = process.env.ESCROW_VERSION || "v2"; // "v2" or "v3"
 
 async function hasBadge(radixAddress) {
   try {
@@ -66,44 +67,91 @@ async function getBadgeData(radixAddress) {
 // ── Escrow On-Chain Reads ────────────────────────────────
 
 /**
- * Read TaskEscrow component state from mainnet.
- * Returns: { total_tasks, total_completed, total_cancelled, total_escrowed, total_released, fee_pct, next_id }
+ * Fetch raw component state fields from Gateway.
+ * Shared by both V2 and V3 readers.
+ */
+async function fetchComponentState(component) {
+  const resp = await fetch(`${GATEWAY}/state/entity/details`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      addresses: [component || ESCROW_COMPONENT],
+      aggregation_level: "Vault",
+      opt_ins: { explicit_metadata: ["name"] },
+    }),
+  });
+  if (!resp.ok) {
+    console.error("[Gateway] fetchComponentState HTTP", resp.status);
+    return null;
+  }
+  const data = await resp.json();
+  return data.items?.[0]?.details?.state?.fields || null;
+}
+
+/**
+ * Read TaskEscrow V2 component state.
+ * V2 struct layout:
+ *   0: task_vaults (KVS), 1: tasks (KVS), 2: fee_vault, 3: minter_vault,
+ *   4: receipt_manager, 5: badge_resource, 6: next_id, 7: fee_pct,
+ *   8: min_deposit, 9: total_tasks, 10: total_completed, 11: total_cancelled,
+ *   12: total_escrowed, 13: total_released
+ */
+function parseEscrowV2(state) {
+  const g = (i) => state[i]?.value || "0";
+  return {
+    next_id: parseInt(g(6)) || 1,
+    fee_pct: g(7),
+    min_deposit: g(8),
+    total_tasks: parseInt(g(9)) || 0,
+    total_completed: parseInt(g(10)) || 0,
+    total_cancelled: parseInt(g(11)) || 0,
+    total_escrowed: g(12),
+    total_released: g(13),
+    version: "v2",
+  };
+}
+
+/**
+ * Read TaskEscrow V3 component state.
+ * V3 struct layout:
+ *   0: task_vaults (KVS), 1: tasks (KVS), 2: fee_vaults (KVS),
+ *   3: accepted_tokens (KVS), 4: accepted_token_list (Vec),
+ *   5: minter_vault, 6: receipt_manager, 7: badge_resource,
+ *   8: next_id, 9: fee_pct, 10: total_tasks, 11: total_completed,
+ *   12: total_cancelled
+ * Note: V3 has no total_escrowed/total_released — those are returned as "N/A"
+ */
+function parseEscrowV3(state) {
+  const g = (i) => state[i]?.value || "0";
+  // accepted_token_list is a Vec at index 4 — try to read its elements
+  const tokenListField = state[4];
+  const tokenCount = tokenListField?.elements?.length || 0;
+  return {
+    next_id: parseInt(g(8)) || 1,
+    fee_pct: g(9),
+    min_deposit: "per-token", // V3 uses per-token minimums in accepted_tokens KVS
+    total_tasks: parseInt(g(10)) || 0,
+    total_completed: parseInt(g(11)) || 0,
+    total_cancelled: parseInt(g(12)) || 0,
+    total_escrowed: "N/A",    // V3 doesn't track aggregate — would need vault reads
+    total_released: "N/A",
+    accepted_token_count: tokenCount,
+    version: "v3",
+  };
+}
+
+/**
+ * Read TaskEscrow component state. Auto-detects V2/V3 based on ESCROW_VERSION env.
+ * Returns: { total_tasks, total_completed, total_cancelled, fee_pct, next_id, version, ... }
  */
 async function getEscrowStats() {
   try {
-    const resp = await fetch(`${GATEWAY}/state/entity/details`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        addresses: [ESCROW_COMPONENT],
-        aggregation_level: "Vault",
-        opt_ins: { explicit_metadata: ["name"] },
-      }),
-    });
-    if (!resp.ok) {
-      console.error("[Gateway] getEscrowStats HTTP", resp.status);
-      return null;
-    }
-    const data = await resp.json();
-    const state = data.items?.[0]?.details?.state?.fields;
+    const state = await fetchComponentState(ESCROW_COMPONENT);
     if (!state) return null;
 
-    // Fields are in order from the Scrypto struct
-    // 0: task_vaults (KVS), 1: tasks (KVS), 2: fee_vault, 3: minter_vault,
-    // 4: receipt_manager, 5: badge_resource, 6: next_id, 7: fee_pct,
-    // 8: min_deposit, 9: total_tasks, 10: total_completed, 11: total_cancelled,
-    // 12: total_escrowed, 13: total_released
-    const g = (i) => state[i]?.value || "0";
-
+    const parsed = ESCROW_VERSION === "v3" ? parseEscrowV3(state) : parseEscrowV2(state);
     return {
-      next_id: parseInt(g(6)) || 1,
-      fee_pct: g(7),
-      min_deposit: g(8),
-      total_tasks: parseInt(g(9)) || 0,
-      total_completed: parseInt(g(10)) || 0,
-      total_cancelled: parseInt(g(11)) || 0,
-      total_escrowed: g(12),
-      total_released: g(13),
+      ...parsed,
       component: ESCROW_COMPONENT,
       source: "on-chain",
     };

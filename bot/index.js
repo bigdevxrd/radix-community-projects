@@ -9,12 +9,31 @@ const cv2 = require("./services/consultation");
 const { checkContent } = require("./services/content-filter");
 const escrowWatcher = require("./services/escrow-watcher");
 const cv3Watcher = require("./services/conviction-watcher");
+const insurance = require("./services/insurance");
+const disputeService = require("./services/dispute");
+const arbiterService = require("./services/arbiter");
+const projectService = require("./services/project");
+const txSigner = require("./services/tx-signer");
 
 const TOKEN = process.env.TG_BOT_TOKEN;
 if (!TOKEN) { console.error("Set TG_BOT_TOKEN in .env"); process.exit(1); }
 
+const ADMIN_IDS = (process.env.ADMIN_TG_IDS || "6102618406").split(",").map(Number);
+const BOT_USERNAME = process.env.BOT_USERNAME || "@rad_gov";
+
 const dbInstance = db.init();
 try { cv2.init(dbInstance); } catch (e) { console.error("[Init] CV2 init failed (non-fatal):", e.message); }
+try { insurance.init(db); } catch (e) { console.error("[Init] Insurance init failed (non-fatal):", e.message); }
+try { arbiterService.init(db); } catch (e) { console.error("[Init] Arbiter init failed (non-fatal):", e.message); }
+try { disputeService.init(db); } catch (e) { console.error("[Init] Dispute service init failed (non-fatal):", e.message); }
+try { projectService.init(db); } catch (e) { console.error("[Init] Project service init failed (non-fatal):", e.message); }
+try {
+  txSigner.init(db, (msg) => {
+    // Admin notifier — sends TG alerts to admin
+    const adminId = parseInt(process.env.ADMIN_TG_IDS?.split(",")[0] || "0");
+    if (adminId && bot) bot.api.sendMessage(adminId, "[Signer] " + msg).catch(() => {});
+  });
+} catch (e) { console.error("[Init] TX signer init failed (non-fatal):", e.message); }
 const bot = new Bot(TOKEN);
 
 // ── Global Error Handlers ────────────────────────────────
@@ -127,7 +146,7 @@ bot.command("start", (ctx) => {
     // Simple text in groups
     ctx.reply(
       "Radix Governance\n\n" +
-      "DM me to get started: @rad_gov\n" +
+      "DM me to get started: " + BOT_USERNAME + "\n" +
       "Or: /register <account_rdx1...> then /proposals\n\n" +
       "/help for commands | /faq for questions"
     );
@@ -538,9 +557,10 @@ bot.command("temps", (ctx) => {
 // ── /decisions — link to dashboard decisions page ────────
 
 bot.command("decisions", (ctx) => {
+  const decisionCount = db.getDecisions().length;
   ctx.reply(
     "Governance Decisions\n\n" +
-    "47 decisions mapped across charter, structural, and P3 service categories.\n" +
+    decisionCount + " decisions mapped across charter, structural, and P3 service categories.\n" +
     "All currently running as non-binding temp checks.\n\n" +
     "Vote on the dashboard: " + PORTAL + "/decisions\n" +
     "Or view temp checks here: /temps"
@@ -734,39 +754,85 @@ bot.command("bounty", async (ctx) => {
   if (sub === "create") {
     const user = await requireBadge(ctx);
     if (!user) return;
-    // Parse flags: --approval pr_merged --repo owner/repo
+    // Parse flags: --approval pr_merged --repo owner/repo --skills "x,y" --criteria "text" --depends 5,7 --template name
     const fullText = args.slice(1).join(" ");
     const approvalMatch = fullText.match(/--approval\s+(\S+)/);
     const repoMatch = fullText.match(/--repo\s+(\S+)/);
-    // Remove flags from title
-    const cleanTitle = fullText.replace(/--approval\s+\S+/g, "").replace(/--repo\s+\S+/g, "").trim();
-    const xrd = parseInt(args[1]);
-    const title = cleanTitle.replace(/^\d+\s*/, ""); // remove leading number (the xrd amount)
-    if (!xrd || !title) return ctx.reply("Usage: /bounty create <xrd> <title> [--approval pr_merged --repo owner/repo]");
+    const skillsMatch = fullText.match(/--skills\s+"([^"]+)"/);
+    const criteriaMatch = fullText.match(/--criteria\s+"([^"]+)"/);
+    const dependsMatch = fullText.match(/--depends\s+(\S+)/);
+    const templateMatch = fullText.match(/--template\s+(\S+)/);
+    const rewardOverride = fullText.match(/--reward\s+(\d+)/);
+    // Remove all flags from title
+    const cleanTitle = fullText
+      .replace(/--approval\s+\S+/g, "")
+      .replace(/--repo\s+\S+/g, "")
+      .replace(/--skills\s+"[^"]+"/g, "")
+      .replace(/--criteria\s+"[^"]+"/g, "")
+      .replace(/--depends\s+\S+/g, "")
+      .replace(/--template\s+\S+/g, "")
+      .replace(/--reward\s+\d+/g, "")
+      .trim();
+
+    // Template support
+    let xrd, title, skills, criteria;
+    if (templateMatch) {
+      const tmpl = db.getTemplate(templateMatch[1]);
+      if (!tmpl) return ctx.reply("Template '" + templateMatch[1] + "' not found. Use /bounty templates to see available templates.");
+      const detail = cleanTitle.replace(/^\d+\s*/, "").trim() || "TBD";
+      title = tmpl.title_template.replace("{detail}", detail);
+      xrd = rewardOverride ? parseInt(rewardOverride[1]) : (parseInt(args[1]) || tmpl.default_reward_xrd);
+      skills = skillsMatch ? skillsMatch[1] : JSON.parse(tmpl.default_skills || "[]").join(",");
+      criteria = criteriaMatch ? criteriaMatch[1] : tmpl.default_criteria;
+    } else {
+      xrd = parseInt(args[1]);
+      title = cleanTitle.replace(/^\d+\s*/, "");
+      skills = skillsMatch ? skillsMatch[1] : null;
+      criteria = criteriaMatch ? criteriaMatch[1] : null;
+    }
+
+    if (!xrd || !title) return ctx.reply("Usage: /bounty create <xrd> <title> [--skills \"x,y\" --criteria \"text\"] [--depends 5,7] [--template name]");
     if (title.length > 500) return ctx.reply("Title too long (max 500)");
     const bountyFilter = checkContent(title);
     if (bountyFilter.blocked) return ctx.reply("Content not allowed. Please rephrase your task title.");
-    const id = db.createBounty(title, xrd, ctx.from.id);
+    const id = db.createBounty(title, xrd, ctx.from.id, { skills, criteria });
+
+    // Handle dependencies
+    if (dependsMatch) {
+      const depIds = dependsMatch[1].split(",").map(Number).filter(n => n > 0);
+      for (const depId of depIds) {
+        const depResult = db.addDependency(id, depId);
+        if (depResult.error) {
+          ctx.reply("Warning: dependency on #" + depId + " failed — " + (depResult.detail || depResult.error));
+        }
+      }
+    }
     // Set approval type if specified
     const approvalType = approvalMatch ? approvalMatch[1] : "admin_approved";
     const approvalRepo = repoMatch ? repoMatch[1] : null;
     if (approvalType !== "admin_approved") {
       try { db.prepare("UPDATE bounties SET approval_type = ?, approval_repo = ? WHERE id = ?").run(approvalType, approvalRepo, id); } catch(e) {}
     }
-    queueXpReward(user.radix_address, "propose");
-    ctx.reply(
-      "Task #" + id + " created: " + xrd + " XRD\n" +
-      title + "\n\n" +
-      "Next: fund it on-chain so workers can claim it.\n\n" +
+    // Calculate and store insurance fee
+    const insFee = insurance.calculateInsuranceFee(xrd);
+    queueXpReward(user.radix_address, "bounty_create");
+    const createdBounty = db.getBounty(id);
+    let reply = "Task #" + id + " created: " + xrd + " XRD\n" + title + "\n";
+    if (skills) reply += "Skills: " + skills + "\n";
+    if (criteria) reply += "Criteria: " + criteria + "\n";
+    reply += "Insurance fee: " + insFee.fee_amount + " XRD (" + insFee.fee_pct + "%)\n";
+    reply += "Net to worker: " + insFee.net_to_worker + " XRD\n";
+    if (createdBounty && createdBounty.is_blocked) reply += "Status: BLOCKED (waiting on dependencies)\n";
+    reply += "\nNext: fund it on-chain so workers can claim it.\n\n" +
       "1. Open the Radix Dashboard and send a transaction:\n" +
       "   Deposit " + xrd + " XRD into the escrow vault\n" +
       "2. Copy the transaction hash\n" +
       "3. Run: /bounty fund " + id + " <tx_hash>\n\n" +
       "The bot verifies your TX on-chain before marking it funded.\n" +
       "Escrow: component_rdx1cp8m...pyg56r\n" +
-      "Min deposit: 200 XRD (~$5)\n\n" +
-      "View: " + PORTAL + "/bounties/" + id
-    );
+      "Min deposit: " + (db.getPlatformConfig().min_bounty_xrd || 5) + " XRD\n\n" +
+      "View: " + PORTAL + "/bounties/" + id;
+    ctx.reply(reply);
     return;
   }
 
@@ -779,8 +845,18 @@ bot.command("bounty", async (ctx) => {
     if (result.error === "not_funded") return ctx.reply("Task #" + id + " isn't funded yet.\n\nThe creator needs to deposit XRD into the on-chain escrow, then verify with:\n/bounty fund " + id + " <tx_hash>");
     if (result.error === "not_found") return ctx.reply("Task #" + id + " not found.");
     if (result.error === "not_open") return ctx.reply("Task #" + id + " is not open for claiming.");
+    if (result.error === "application_required") return ctx.reply("Task #" + id + " requires an application (reward > " + result.threshold + " XRD).\n\nUse: /bounty apply " + id + " <your pitch>\n\nThe task creator will review and approve applications.");
     if (result.changes === 0) return ctx.reply("Could not claim task #" + id + ".");
-    ctx.reply("Task #" + id + " claimed! Submit your work with: /bounty submit " + id + " <deliverable_url>");
+    // Collect insurance fee on claim (bounty is now funded + assigned)
+    const insResult = insurance.collectInsuranceFee(id);
+    const bountyDetail = db.getBounty(id);
+    let claimReply = "Task #" + id + " claimed!";
+    if (insResult.ok) {
+      claimReply += "\nReward: " + bountyDetail.reward_xrd + " XRD | Insurance: " + insResult.fee_amount + " XRD (" + insResult.fee_pct + "%)";
+      claimReply += "\nYou'll receive: " + (bountyDetail.reward_xrd - insResult.fee_amount) + " XRD";
+    }
+    claimReply += "\n\nSubmit your work with: /bounty submit " + id + " <deliverable_url>";
+    ctx.reply(claimReply);
     return;
   }
 
@@ -811,27 +887,60 @@ bot.command("bounty", async (ctx) => {
   }
 
   if (sub === "verify") {
-    // Admin only — requires badge
-    const user = await requireBadge(ctx);
-    if (!user) return;
+    // Admin only — prevents self-verification
+    if (!ADMIN_IDS.includes(ctx.from.id)) return ctx.reply("Admin only.");
     const id = parseInt(args[1]);
     if (!id) return ctx.reply("Usage: /bounty verify <id>");
+    const bounty = db.getBounty(id);
+    if (!bounty) return ctx.reply("Bounty #" + id + " not found.");
+    if (bounty.assignee_tg_id && ADMIN_IDS.length > 0 && bounty.assignee_tg_id === ctx.from.id) {
+      return ctx.reply("Cannot verify a bounty you are assigned to.");
+    }
     const result = db.verifyBounty(id);
     if (result.changes === 0) return ctx.reply("Bounty not found or not submitted.");
-    const bounty = db.getBounty(id);
-    ctx.reply("Bounty #" + id + " verified! Ready for payment: " + bounty.reward_xrd + " XRD\nAdmin: /bounty pay " + id + " <tx_hash>");
+    const updated = db.getBounty(id);
+
+    // Auto-release escrow if signer is enabled and bounty has on-chain task ID
+    if (updated.onchain_task_id && txSigner.isEnabled()) {
+      ctx.reply("Bounty #" + id + " verified! Auto-releasing escrow...");
+      const txResult = await txSigner.releaseTask(updated.onchain_task_id, id);
+      if (txResult.ok) {
+        db.payBounty(id, txResult.txHash);
+        const insRelease = insurance.releaseToTreasury(id);
+        const unblocked = db.checkAndUnblock(id);
+        queueXpReward(updated.assignee_address, "bounty_complete");
+        let reply = "Bounty #" + id + " PAID (auto-signed)! " + updated.reward_xrd + " XRD\nTX: " + txResult.txHash.slice(0, 30) + "...";
+        if (insRelease.ok) reply += "\nInsurance: " + insRelease.amount + " XRD to treasury.";
+        if (unblocked.length > 0) reply += "\nUnblocked: " + unblocked.map(u => "#" + u.id).join(", ");
+        ctx.reply(reply);
+      } else {
+        ctx.reply("Bounty #" + id + " verified but auto-release failed: " + (txResult.detail || txResult.error) + "\nManual payment: /bounty pay " + id + " <tx_hash>");
+      }
+    } else {
+      ctx.reply("Bounty #" + id + " verified! Ready for payment: " + updated.reward_xrd + " XRD\nAdmin: /bounty pay " + id + " <tx_hash>");
+    }
     return;
   }
 
   if (sub === "pay") {
+    if (!ADMIN_IDS.includes(ctx.from.id)) return ctx.reply("Admin only.");
     const id = parseInt(args[1]);
     const txHash = args[2];
     if (!id || !txHash) return ctx.reply("Usage: /bounty pay <id> <tx_hash>");
     const result = db.payBounty(id, txHash);
     if (!result.ok) return ctx.reply("Error: " + result.error);
     const bounty = db.getBounty(id);
-    queueXpReward(bounty.assignee_address, "propose");
-    ctx.reply("Bounty #" + id + " PAID! " + bounty.reward_xrd + " XRD\nTX: " + txHash.slice(0, 30) + "...\nAssignee earned XP.");
+    queueXpReward(bounty.assignee_address, "bounty_complete");
+    // Release insurance fee to treasury (no dispute)
+    const insRelease = insurance.releaseToTreasury(id);
+    let payReply = "Bounty #" + id + " PAID! " + bounty.reward_xrd + " XRD\nTX: " + txHash.slice(0, 30) + "...\nAssignee earned +50 XP.";
+    if (insRelease.ok) payReply += "\nInsurance fee (" + insRelease.amount + " XRD) released to treasury pool.";
+    // Auto-unblock dependent tasks
+    const unblocked = db.checkAndUnblock(id);
+    if (unblocked.length > 0) {
+      payReply += "\nUnblocked tasks: " + unblocked.map(u => "#" + u.id + " " + u.title).join(", ");
+    }
+    ctx.reply(payReply);
     return;
   }
 
@@ -844,7 +953,11 @@ bot.command("bounty", async (ctx) => {
     if (bounty.creator_tg_id !== ctx.from.id) return ctx.reply("Only the creator can cancel.");
     const ok = db.cancelBounty(id, reason);
     if (!ok) return ctx.reply("Can only cancel open bounties.");
-    ctx.reply("Bounty #" + id + " cancelled.\nReason: " + reason);
+    // Refund insurance if collected and no work started
+    const insRefund = insurance.refundInsurance(id);
+    let cancelReply = "Bounty #" + id + " cancelled.\nReason: " + reason;
+    if (insRefund.ok) cancelReply += "\nInsurance fee (" + insRefund.amount + " XRD) refunded.";
+    ctx.reply(cancelReply);
     notifyDiscord("**Task #" + id + " cancelled** — " + bounty.title + "\nReason: " + reason);
     return;
   }
@@ -866,6 +979,13 @@ bot.command("bounty", async (ctx) => {
   if (sub === "approve") {
     const appId = parseInt(args[1]);
     if (!appId) return ctx.reply("Usage: /bounty approve <application_id>");
+    const application = db.getApplication(appId);
+    if (!application) return ctx.reply("Application #" + appId + " not found.");
+    const bounty = db.getBounty(application.bounty_id);
+    if (!bounty) return ctx.reply("Bounty not found.");
+    if (bounty.creator_tg_id !== ctx.from.id && !ADMIN_IDS.includes(ctx.from.id)) {
+      return ctx.reply("Only the bounty creator can approve applications.");
+    }
     const result = db.approveApplication(appId);
     if (!result.ok) return ctx.reply("Error: " + result.error);
     ctx.reply("Application #" + appId + " approved! Bounty #" + result.bountyId + " assigned.");
@@ -943,21 +1063,520 @@ bot.command("bounty", async (ctx) => {
     return;
   }
 
+  if (sub === "deps") {
+    const id = parseInt(args[1]);
+    if (!id) return ctx.reply("Usage: /bounty deps <id>");
+    const info = db.getDependencyInfo(id);
+    if (!info) return ctx.reply("Bounty #" + id + " not found.");
+    let reply = "Dependencies for task #" + id + ":\n";
+    if (info.depends_on.length === 0) {
+      reply += "  No dependencies\n";
+    } else {
+      reply += "  Depends on:\n";
+      info.depends_on.forEach(d => {
+        const icon = d.status === "paid" ? "done" : d.status === "assigned" ? "in progress" : "pending";
+        reply += "    #" + d.id + " " + d.title.slice(0, 40) + " (" + icon + ")\n";
+      });
+    }
+    if (info.blocks.length > 0) {
+      reply += "  Blocks:\n";
+      info.blocks.forEach(b => reply += "    #" + b.id + " " + b.title.slice(0, 40) + "\n");
+    }
+    if (info.is_blocked) reply += "\nStatus: BLOCKED";
+    ctx.reply(reply);
+    return;
+  }
+
+  if (sub === "match") {
+    const userSkills = args.slice(1).join(",").split(",").map(s => s.trim()).filter(Boolean);
+    if (userSkills.length === 0) return ctx.reply("Usage: /bounty match <skills>\nExample: /bounty match scrypto,testing");
+    const results = db.matchBounties(userSkills);
+    const top = results.filter(r => r.match_score > 0).slice(0, 10);
+    if (top.length === 0) return ctx.reply("No matching open tasks for skills: " + userSkills.join(", "));
+    const lines = top.map((r, i) =>
+      (i + 1) + ". #" + r.id + " " + r.title.slice(0, 40) + " — " + r.reward_xrd + " XRD — Match: " +
+      Math.round(r.match_score * 100) + "%" +
+      (r.matched_skills.length > 0 ? " (" + r.matched_skills.join(", ") + ")" : "")
+    );
+    ctx.reply("Matching tasks for [" + userSkills.join(", ") + "]:\n\n" + lines.join("\n"));
+    return;
+  }
+
+  if (sub === "templates") {
+    const templates = db.getTemplates();
+    if (templates.length === 0) return ctx.reply("No templates available.");
+    const lines = templates.map(t =>
+      "  " + t.name + " — " + t.default_reward_xrd + " XRD, " + t.default_difficulty + ", " + t.default_deadline_days + "d"
+    );
+    ctx.reply("Task Templates:\n\n" + lines.join("\n") + "\n\nUsage: /bounty create --template " + templates[0].name + " \"description\"");
+    return;
+  }
+
   ctx.reply(
     "Task commands:\n\n" +
     "/bounty — guided menu\n" +
     "/bounty list — open tasks\n" +
     "/bounty stats — stats + escrow\n" +
     "/bounty create <xrd> <title> — quick create\n" +
+    "/bounty create --template <name> \"detail\" — from template\n" +
     "/bounty claim <id> — claim a task\n" +
     "/bounty apply <id> [pitch] — apply for tasks >100 XRD\n" +
     "/bounty cancel <id> [reason] — cancel your task\n" +
     "/bounty submit <id> <pr_url> — submit work\n" +
-    "/bounty categories — list categories\n" +
+    "/bounty deps <id> — view dependencies\n" +
+    "/bounty match <skills> — find matching tasks\n" +
+    "/bounty templates — list templates\n" +
     "/bounty verify <id> — verify delivery (admin)\n" +
     "/bounty pay <id> <tx_hash> — release payment (admin)\n" +
-    "/bounty approve <app_id> — approve applicant (creator)\n" +
     "/bounty fund <id> <tx_hash> — verify on-chain escrow deposit"
+  );
+});
+
+// ── /dispute ──────────────────────────────────────────
+
+bot.command("dispute", async (ctx) => {
+  const args = ctx.message.text.split(" ").slice(1);
+  const sub = (args[0] || "").toLowerCase();
+
+  if (sub === "raise") {
+    const user = await requireBadge(ctx);
+    if (!user) return;
+    const bountyId = parseInt(args[1]);
+    const reason = args.slice(2).join(" ");
+    if (!bountyId || !reason) return ctx.reply("Usage: /dispute raise <bounty_id> <reason>");
+    const result = disputeService.raiseDispute(bountyId, ctx.from.id, reason);
+    if (result.error) return ctx.reply("Cannot raise dispute: " + (result.detail || result.error));
+    let reply = "Dispute #" + result.disputeId + " raised for task #" + result.bountyId + ".\n";
+    if (result.arbiter) {
+      reply += "Arbiter assigned (ID: " + result.arbiter + "). Deadline: 7 days.\n";
+    } else {
+      reply += "No eligible arbiter found — escalated to admin.\n";
+    }
+    reply += "\nSubmit evidence: /dispute evidence " + result.disputeId + " <url_or_text>";
+    ctx.reply(reply);
+    return;
+  }
+
+  if (sub === "evidence") {
+    const user = await requireBadge(ctx);
+    if (!user) return;
+    const disputeId = parseInt(args[1]);
+    const content = args.slice(2).join(" ");
+    if (!disputeId || !content) return ctx.reply("Usage: /dispute evidence <dispute_id> <url_or_text>");
+    // Auto-detect type
+    const evidenceType = content.startsWith("http") ? "url" : "text";
+    const result = disputeService.addEvidence(disputeId, ctx.from.id, evidenceType, content);
+    if (result.error) return ctx.reply("Error: " + (result.detail || result.error));
+    ctx.reply("Evidence #" + result.evidenceId + " added to dispute #" + disputeId + ". Other party notified.");
+    return;
+  }
+
+  if (sub === "status") {
+    const disputeId = parseInt(args[1]);
+    if (!disputeId) return ctx.reply("Usage: /dispute status <dispute_id>");
+    const detail = disputeService.getDisputeDetail(disputeId);
+    if (!detail) return ctx.reply("Dispute #" + disputeId + " not found.");
+    let reply = "Dispute #" + detail.id + " — " + detail.status.toUpperCase() + "\n";
+    reply += "Task: #" + detail.bounty_id + (detail.bounty ? " — " + detail.bounty.title : "") + "\n";
+    reply += "Raised by: " + detail.raised_by_tg_id + " vs " + detail.raised_against_tg_id + "\n";
+    reply += "Reason: " + detail.reason.slice(0, 200) + "\n";
+    if (detail.arbiter) reply += "Arbiter: " + detail.arbiter.tg_id + " (rep: " + detail.arbiter.reputation_score + ")\n";
+    if (detail.decision) reply += "Decision: " + detail.decision + (detail.decision_split_pct ? " (" + detail.decision_split_pct + "% to worker)" : "") + "\n";
+    if (detail.decision_notes) reply += "Reasoning: " + detail.decision_notes.slice(0, 200) + "\n";
+    reply += "Evidence: " + detail.evidence.length + " items | Timeline: " + detail.timeline.length + " events";
+    if (detail.appeal_status !== "none") reply += "\nAppeal: " + detail.appeal_status;
+    ctx.reply(reply);
+    return;
+  }
+
+  if (sub === "decide") {
+    const user = await requireBadge(ctx);
+    if (!user) return;
+    const disputeId = parseInt(args[1]);
+    const decision = (args[2] || "").toLowerCase();
+    // Parse: /dispute decide <id> split <pct> <notes...>  OR  /dispute decide <id> release <notes...>
+    let splitPct = null;
+    let notesStart = 3;
+    if (decision === "split") {
+      splitPct = parseInt(args[3]);
+      if (isNaN(splitPct)) return ctx.reply("Usage: /dispute decide <id> split <1-99> <reasoning>\nExample: /dispute decide 1 split 70 Worker completed 70% of deliverables");
+      notesStart = 4;
+    }
+    const notes = args.slice(notesStart).join(" ");
+    // Map shorthand
+    const decisionMap = { release: "full_release", return: "full_return", split: "split", mediate: "mediated" };
+    const mappedDecision = decisionMap[decision] || decision;
+    if (!disputeId || !mappedDecision || !notes) {
+      return ctx.reply("Usage: /dispute decide <id> <release|return|split <pct>|mediate> <reasoning>\nExample: /dispute decide 1 split 70 Worker completed 70% of deliverables");
+    }
+    const result = disputeService.makeDecision(disputeId, ctx.from.id, mappedDecision, splitPct, notes);
+    if (result.error) return ctx.reply("Error: " + (result.detail || result.error));
+    let reply = "Decision recorded: " + result.decision;
+    if (result.splitPct) reply += " (" + result.splitPct + "% to worker)";
+    reply += "\nInsurance fee paid to arbiter.";
+    if (result.canAppeal) reply += "\nAppeal window: " + result.appealWindowDays + " days.";
+    ctx.reply(reply);
+    return;
+  }
+
+  if (sub === "appeal") {
+    const user = await requireBadge(ctx);
+    if (!user) return;
+    const disputeId = parseInt(args[1]);
+    if (!disputeId) return ctx.reply("Usage: /dispute appeal <dispute_id>");
+    const result = disputeService.fileAppeal(disputeId, ctx.from.id);
+    if (result.error) return ctx.reply("Cannot appeal: " + (result.detail || result.error));
+    ctx.reply("Appeal filed for dispute #" + disputeId + ".\nFee: " + result.appealFee + " XRD\nPanel of 3 arbiters assigned. Decision within 7 days.");
+    return;
+  }
+
+  if (sub === "list") {
+    const filter = (args[1] || "").replace("--", "");
+    let disputes;
+    if (filter === "mine") {
+      const d = db._raw();
+      disputes = d.prepare(
+        "SELECT d.*, b.title as bounty_title FROM disputes d LEFT JOIN bounties b ON d.bounty_id = b.id WHERE d.raised_by_tg_id = ? OR d.raised_against_tg_id = ? ORDER BY d.created_at DESC LIMIT 20"
+      ).all(ctx.from.id, ctx.from.id);
+    } else if (filter === "open") {
+      disputes = disputeService.getOpenDisputes();
+    } else {
+      disputes = disputeService.getAllDisputes(20);
+    }
+    if (!disputes || disputes.length === 0) return ctx.reply("No disputes found.");
+    const lines = disputes.map(d =>
+      "#" + d.id + " [" + d.status + "] Task #" + d.bounty_id + (d.bounty_title ? " — " + d.bounty_title.slice(0, 40) : "")
+    );
+    ctx.reply("Disputes:\n" + lines.join("\n"));
+    return;
+  }
+
+  // Help
+  ctx.reply(
+    "/dispute raise <bounty_id> <reason> — raise a dispute\n" +
+    "/dispute evidence <id> <content> — submit evidence\n" +
+    "/dispute status <id> — view dispute details\n" +
+    "/dispute decide <id> <decision> <notes> — arbiter decision\n" +
+    "/dispute appeal <id> — appeal a decision\n" +
+    "/dispute list [--mine|--open] — list disputes"
+  );
+});
+
+// ── /arbiter ──────────────────────────────────────────
+
+bot.command("arbiter", async (ctx) => {
+  const args = ctx.message.text.split(" ").slice(1);
+  const sub = (args[0] || "").toLowerCase();
+
+  if (sub === "register") {
+    const user = await requireBadge(ctx);
+    if (!user) return;
+    const tags = args.slice(1).join(",").replace(/\s/g, "") || null;
+    const result = arbiterService.registerArbiter(ctx.from.id, user.badge_id || null, user.radix_address, tags);
+    if (result.error === "already_registered") return ctx.reply("You're already registered as an arbiter.");
+    if (result.error === "too_new") return ctx.reply("Must be a member for 30+ days (current: " + result.days + " days).");
+    if (result.error) return ctx.reply("Error: " + result.error);
+    ctx.reply("Registered as arbiter!" + (tags ? " Specialties: " + tags : "") + (result.reactivated ? " (reactivated)" : ""));
+    return;
+  }
+
+  if (sub === "status") {
+    const stats = arbiterService.getArbiterStats(ctx.from.id);
+    if (!stats) return ctx.reply("Not registered as an arbiter. Use: /arbiter register [specialties]");
+    ctx.reply(
+      "Arbiter Status:\n" +
+      "Reputation: " + stats.reputation_score + "\n" +
+      "Handled: " + stats.total_handled + " | Upheld: " + stats.total_upheld + " | Overturned: " + stats.total_overturned + "\n" +
+      "Availability: " + stats.availability + "\n" +
+      (stats.specialty_tags ? "Specialties: " + stats.specialty_tags : "")
+    );
+    return;
+  }
+
+  if (sub === "available") {
+    const result = arbiterService.updateAvailability(ctx.from.id, "available");
+    if (result.error) return ctx.reply("Error: " + result.error);
+    ctx.reply("You're now available for dispute assignments.");
+    return;
+  }
+
+  if (sub === "unavailable") {
+    const result = arbiterService.updateAvailability(ctx.from.id, "unavailable");
+    if (result.error) return ctx.reply("Error: " + result.error);
+    ctx.reply("You're now unavailable. You won't receive new dispute assignments.");
+    return;
+  }
+
+  if (sub === "pool") {
+    const pool = arbiterService.getArbiterPool();
+    if (pool.length === 0) return ctx.reply("No arbiters registered yet. Be the first: /arbiter register");
+    const lines = pool.map(a =>
+      (a.availability === "available" ? "+" : "-") + " " + a.tg_id +
+      " (rep: " + a.reputation_score + ", handled: " + a.total_handled + ")" +
+      (a.specialty_tags ? " [" + a.specialty_tags + "]" : "")
+    );
+    ctx.reply("Arbiter Pool (" + pool.length + "):\n" + lines.join("\n"));
+    return;
+  }
+
+  ctx.reply(
+    "/arbiter register [specialties] — register as arbiter\n" +
+    "/arbiter status — your arbiter stats\n" +
+    "/arbiter available — mark available\n" +
+    "/arbiter unavailable — mark unavailable\n" +
+    "/arbiter pool — view all arbiters"
+  );
+});
+
+// ── /project ──────────────────────────────────────────
+
+bot.command("project", async (ctx) => {
+  const args = ctx.message.text.split(" ").slice(1);
+  const sub = (args[0] || "").toLowerCase();
+
+  if (sub === "status") {
+    const groupId = parseInt(args[1]);
+    if (!groupId) return ctx.reply("Usage: /project status <group_id>");
+    const status = projectService.getFullProjectStatus(groupId);
+    if (!status) return ctx.reply("Group #" + groupId + " not found.");
+    if (!status.progress) return ctx.reply("No tasks in project '" + status.group.name + "'.");
+    const p = status.progress;
+    const b = status.budget;
+    let reply = "Project: " + status.group.name + " [" + status.pipeline + "]\n" +
+      "Progress: " + p.progress_pct + "% (" + p.completed + "/" + p.total_tasks + " tasks)\n" +
+      "  Open: " + p.open + " | In progress: " + p.in_progress + " | Blocked: " + p.blocked + "\n" +
+      "Budget: " + b.spent + "/" + b.total + " XRD (" + b.remaining + " remaining)\n" +
+      "Insurance: " + b.insurance + " XRD | Contributors: " + status.contributors.length;
+    if (status.activeTasks.length > 0) {
+      reply += "\n\nActive:\n" + status.activeTasks.map(t =>
+        "  #" + t.id + " " + t.title.slice(0, 35) + " — " + t.status
+      ).join("\n");
+    }
+    reply += "\n\nFull details: " + PORTAL + "/projects/" + groupId;
+    ctx.reply(reply);
+    return;
+  }
+
+  if (sub === "tasks") {
+    const groupId = parseInt(args[1]);
+    if (!groupId) return ctx.reply("Usage: /project tasks <group_id>");
+    const tasks = db.getProjectBounties(groupId);
+    if (tasks.length === 0) return ctx.reply("No tasks in this project.");
+    const lines = tasks.map(t => {
+      const icon = t.status === "paid" ? "done" : t.status === "assigned" ? "wip" : t.is_blocked ? "blocked" : "open";
+      return "  #" + t.id + " [" + icon + "] " + t.title.slice(0, 40) + " — " + t.reward_xrd + " XRD";
+    });
+    ctx.reply("Project tasks:\n\n" + lines.join("\n") + "\n\nDetails: " + PORTAL + "/projects/" + groupId);
+    return;
+  }
+
+  if (sub === "ship") {
+    const user = await requireBadge(ctx);
+    if (!user) return;
+    const groupId = parseInt(args[1]);
+    if (!groupId) return ctx.reply("Usage: /project ship <group_id>");
+    const notes = args.slice(2).join(" ") || null;
+    const result = projectService.shipProject(groupId, notes);
+    if (result.error) return ctx.reply("Cannot ship: " + (result.detail || result.error));
+    ctx.reply(
+      "Project '" + result.title + "' SHIPPED!\n\n" +
+      "Tasks: " + result.tasks_completed + " completed, " + result.tasks_cancelled + " cancelled\n" +
+      "Spent: " + result.total_spent + " XRD to " + result.contributors.length + " contributors\n" +
+      "Insurance: " + result.total_insurance + " XRD | Disputes: " + result.disputes + "\n" +
+      "Duration: " + result.actual_days + " days\n" +
+      "Deliverables: " + result.deliverable_count + " items\n" +
+      (result.deliverable_hash ? "Ledger hash: " + result.deliverable_hash.slice(0, 16) + "..." : "") +
+      "\n\nRecorded in project ledger."
+    );
+    return;
+  }
+
+  ctx.reply(
+    "/project status <id> — project overview\n" +
+    "/project tasks <id> — list project tasks\n" +
+    "/project ship <id> [notes] — mark project shipped\n\n" +
+    "Full project management: " + PORTAL + "/projects"
+  );
+});
+
+// ── /signer (admin only) ──────────────────────────────────
+
+bot.command("signer", async (ctx) => {
+  if (!ADMIN_IDS.includes(ctx.from.id)) return ctx.reply("Admin only.");
+  const args = ctx.message.text.split(" ").slice(1);
+  const sub = (args[0] || "").toLowerCase();
+
+  if (sub === "status") {
+    const status = txSigner.getSignerStatus();
+    ctx.reply(
+      "TX Signer: " + (status.enabled ? "ENABLED" : "DISABLED") + "\n" +
+      "Account: " + status.account + "\n" +
+      "Today: " + status.today.count + " TX, " + status.today.value_xrd.toFixed(1) + " XRD" +
+      (status.today.failed > 0 ? " (" + status.today.failed + " failed)" : "") + "\n" +
+      "This hour: " + status.this_hour.count + " TX\n" +
+      "Total: " + status.total_tx + " TX\n" +
+      "Limits: " + status.limits.max_per_hour + "/hr, " + status.limits.max_per_day + "/day, " +
+      status.limits.max_xrd_per_tx + " XRD/tx, " + status.limits.max_xrd_per_day + " XRD/day"
+    );
+    return;
+  }
+
+  if (sub === "disable") {
+    const reason = args.slice(1).join(" ") || "Manual disable via TG";
+    txSigner.disableSigner(reason);
+    ctx.reply("TX signer DISABLED. Reason: " + reason);
+    return;
+  }
+
+  if (sub === "enable") {
+    txSigner.enableSigner();
+    ctx.reply("TX signer ENABLED.");
+    return;
+  }
+
+  if (sub === "audit") {
+    const limit = parseInt(args[1]) || 10;
+    const log = txSigner.getAuditLog(limit);
+    if (log.length === 0) return ctx.reply("No audit entries.");
+    const lines = log.map(e => {
+      const time = new Date(e.created_at * 1000).toISOString().slice(5, 16);
+      return time + " " + e.action + " [" + e.status + "]" +
+        (e.value_xrd ? " " + e.value_xrd + "XRD" : "") +
+        (e.tx_hash ? " " + e.tx_hash.slice(0, 12) + "..." : "") +
+        (e.error_message ? " ERR:" + e.error_message.slice(0, 30) : "");
+    });
+    ctx.reply("Signer Audit (" + log.length + "):\n\n" + lines.join("\n"));
+    return;
+  }
+
+  if (sub === "balance") {
+    const bal = await txSigner.checkBalance();
+    if (bal.error) return ctx.reply("Balance check failed: " + (bal.detail || bal.error));
+    ctx.reply("Signer balance: " + bal.balance.toFixed(2) + " XRD" + (bal.alert ? " (LOW!)" : ""));
+    return;
+  }
+
+  ctx.reply(
+    "/signer status — overview\n" +
+    "/signer disable [reason] — kill switch\n" +
+    "/signer enable — re-enable\n" +
+    "/signer audit [N] — last N transactions\n" +
+    "/signer balance — wallet balance"
+  );
+});
+
+// ── /milestone ──────────────────────────────────────────
+
+bot.command("milestone", async (ctx) => {
+  const args = ctx.message.text.split(" ").slice(1);
+  const sub = (args[0] || "").toLowerCase();
+
+  if (sub === "add") {
+    const user = await requireBadge(ctx);
+    if (!user) return;
+    const bountyId = parseInt(args[1]);
+    const pct = parseInt(args[2]);
+    const title = args.slice(3).join(" ");
+    if (!bountyId || !pct || !title) return ctx.reply("Usage: /milestone add <bounty_id> <percentage> <title>");
+    const bounty = db.getBounty(bountyId);
+    if (!bounty) return ctx.reply("Bounty #" + bountyId + " not found.");
+    if (bounty.creator_tg_id !== ctx.from.id && !ADMIN_IDS.includes(ctx.from.id)) {
+      return ctx.reply("Only the bounty creator or admin can add milestones.");
+    }
+    const result = db.addMilestone(bountyId, title, null, pct);
+    if (result.error) return ctx.reply("Error: " + (result.detail || result.error));
+    ctx.reply(
+      "Milestone added to Task #" + bountyId + ":\n" +
+      "\"" + title + "\" — " + pct + "% (" + result.amountXrd.toFixed(1) + " XRD)\n\n" +
+      "Allocated: " + result.totalAllocated + "% | Remaining: " + result.remaining + "%"
+    );
+    return;
+  }
+
+  if (sub === "list") {
+    const bountyId = parseInt(args[1]);
+    if (!bountyId) return ctx.reply("Usage: /milestone list <bounty_id>");
+    const milestones = db.getMilestones(bountyId);
+    if (milestones.length === 0) return ctx.reply("No milestones for Task #" + bountyId + ".");
+    const bounty = db.getBounty(bountyId);
+    const progress = db.getMilestoneProgress(bountyId);
+    const icons = { pending: "⏳", submitted: "🔄", verified: "✅", paid: "💰" };
+    let msg = "Task #" + bountyId + " Milestones" + (bounty ? " (" + bounty.reward_xrd + " XRD)" : "") + "\n\n";
+    milestones.forEach((m, i) => {
+      msg += (icons[m.status] || "?") + " " + (i + 1) + ". " + m.title + " — " + m.percentage + "% (" + m.amount_xrd.toFixed(1) + " XRD) [" + m.status + "]\n";
+    });
+    if (progress) {
+      msg += "\nProgress: " + progress.paidPct + "% paid, " + progress.remainingXrd.toFixed(1) + " XRD remaining";
+    }
+    ctx.reply(msg);
+    return;
+  }
+
+  if (sub === "submit") {
+    const user = await requireBadge(ctx);
+    if (!user) return;
+    const msId = parseInt(args[1]);
+    if (!msId) return ctx.reply("Usage: /milestone submit <milestone_id>");
+    const result = db.submitMilestone(msId, ctx.from.id);
+    if (result.error) return ctx.reply("Error: " + (result.detail || result.error));
+    ctx.reply("Milestone #" + msId + " submitted: \"" + result.title + "\"\nAwaiting verification.");
+    // Notify bounty creator
+    const bounty = db.getBounty(result.bountyId);
+    if (bounty && bounty.creator_tg_id !== ctx.from.id) {
+      try { await ctx.api.sendMessage(bounty.creator_tg_id, "🔔 Milestone submitted for Task #" + result.bountyId + ":\n\"" + result.title + "\"\n\nVerify: /milestone verify " + msId); } catch(_) {}
+    }
+    return;
+  }
+
+  if (sub === "verify") {
+    const user = await requireBadge(ctx);
+    if (!user) return;
+    const msId = parseInt(args[1]);
+    if (!msId) return ctx.reply("Usage: /milestone verify <milestone_id>");
+    const result = db.verifyMilestone(msId, ctx.from.id);
+    if (result.error) return ctx.reply("Error: " + (result.detail || result.error));
+    ctx.reply("Milestone #" + msId + " verified: \"" + result.title + "\" (" + result.amount.toFixed(1) + " XRD)\nReady for payment: /milestone pay " + msId + " <tx_hash>");
+    return;
+  }
+
+  if (sub === "pay") {
+    if (!ADMIN_IDS.includes(ctx.from.id)) return ctx.reply("Admin only.");
+    const msId = parseInt(args[1]);
+    const txHash = args[2];
+    if (!msId || !txHash) return ctx.reply("Usage: /milestone pay <milestone_id> <tx_hash>");
+    const result = db.payMilestone(msId, txHash);
+    if (result.error) return ctx.reply("Error: " + (result.detail || result.error));
+    let msg = "Milestone #" + msId + " PAID: " + result.amount.toFixed(1) + " XRD\n\"" + result.title + "\"\nTX: " + txHash.slice(0, 25) + "...";
+    if (result.bountyComplete) msg += "\n\n🎉 All milestones paid — Task #" + result.bountyId + " is COMPLETE!";
+    ctx.reply(msg);
+    return;
+  }
+
+  if (sub === "remove") {
+    const user = await requireBadge(ctx);
+    if (!user) return;
+    const msId = parseInt(args[1]);
+    if (!msId) return ctx.reply("Usage: /milestone remove <milestone_id>");
+    const ms = db.getMilestoneById(msId);
+    if (!ms) return ctx.reply("Milestone not found.");
+    const bounty = db.getBounty(ms.bounty_id);
+    if (bounty && bounty.creator_tg_id !== ctx.from.id && !ADMIN_IDS.includes(ctx.from.id)) {
+      return ctx.reply("Only the bounty creator or admin can remove milestones.");
+    }
+    const result = db.removeMilestone(msId);
+    if (result.error) return ctx.reply("Error: " + (result.detail || result.error));
+    ctx.reply("Milestone #" + msId + " removed from Task #" + result.bountyId + ".");
+    return;
+  }
+
+  ctx.reply(
+    "Milestone Commands\n\n" +
+    "/milestone add <bounty_id> <pct> <title> — add milestone\n" +
+    "/milestone list <bounty_id> — show milestones\n" +
+    "/milestone submit <ms_id> — submit work (assignee)\n" +
+    "/milestone verify <ms_id> — verify delivery (reviewer)\n" +
+    "/milestone pay <ms_id> <tx_hash> — release payment (admin)\n" +
+    "/milestone remove <ms_id> — remove pending milestone"
   );
 });
 
@@ -1116,6 +1735,7 @@ bot.command("wg", async (ctx) => {
 
   // /wg sunset <group> <YYYY-MM-DD> — set charter expiry
   if (sub === "sunset") {
+    if (!ADMIN_IDS.includes(ctx.from.id)) return ctx.reply("Admin only.");
     const dateStr = args[args.length - 1]; // last arg is date
     const name = args.slice(1, -1).join(" ");
     if (!name || !dateStr) return ctx.reply("Usage: /wg sunset <group name> <YYYY-MM-DD>");
@@ -1130,15 +1750,17 @@ bot.command("wg", async (ctx) => {
 
   // /wg renew <group> <months> — extend charter
   if (sub === "renew") {
+    if (!ADMIN_IDS.includes(ctx.from.id)) return ctx.reply("Admin only.");
     const months = parseInt(args[args.length - 1]) || 6;
     const name = args.slice(1, -1).join(" ");
     if (!name) return ctx.reply("Usage: /wg renew <group name> <months>");
     const group = db.getGroupByName(name);
     if (!group) return ctx.reply("Group not found: " + name);
-    const base = group.sunset_date && group.sunset_date > Date.now() / 1000
-      ? group.sunset_date
-      : Math.floor(Date.now() / 1000);
-    const newSunset = base + (months * 30 * 86400);
+    const baseDate = group.sunset_date && group.sunset_date > Date.now() / 1000
+      ? new Date(group.sunset_date * 1000)
+      : new Date();
+    baseDate.setMonth(baseDate.getMonth() + months);
+    const newSunset = Math.floor(baseDate.getTime() / 1000);
     db.renewCharter(group.id, newSunset);
     const newDate = new Date(newSunset * 1000).toISOString().slice(0, 10);
     return ctx.reply("Charter renewed for " + group.name + ". New sunset: " + newDate + " (+" + months + " months)");
@@ -1586,7 +2208,6 @@ bot.command("mystatus", (ctx) => {
 
 bot.command("adminfeedback", async (ctx) => {
   // Simple admin check — only creator can manage feedback
-  const ADMIN_IDS = [6102618406]; // bigdev's TG ID
   if (!ADMIN_IDS.includes(ctx.from.id)) return ctx.reply("Admin only.");
 
   const args = ctx.message.text.split(/\s+/).slice(1);
@@ -1670,6 +2291,7 @@ bot.command("cv2", async (ctx) => {
 
   // /cv2 sync — force refresh (admin)
   if (sub === "sync") {
+    if (!ADMIN_IDS.includes(ctx.from.id)) return ctx.reply("Admin only.");
     try {
       await cv2.syncFromChain();
       return ctx.reply("CV2 sync completed successfully.");
@@ -2021,6 +2643,35 @@ setInterval(() => {
   }
 }, 60 * 60 * 1000);
 
+// ── Dispute Overdue Check (daily) ─────────────────
+setInterval(() => {
+  try {
+    const results = disputeService.checkOverdueDisputes();
+    if (results.length > 0) {
+      console.log("[Disputes] Overdue check: " + results.length + " arbiter(s) timed out");
+      results.forEach(r => {
+        const msg = "Dispute #" + r.disputeId + ": arbiter " + r.timedOutArbiter + " timed out.";
+        if (r.reassigned) {
+          console.log(msg + " Reassigned to " + r.newArbiter);
+        } else {
+          console.log(msg + " No eligible arbiter — escalated to admin.");
+        }
+      });
+    }
+  } catch (e) {
+    console.error("[Disputes] Overdue check failed:", e.message);
+  }
+}, 24 * 60 * 60 * 1000); // daily
+
+// ── Signer Balance Check (hourly) ─────────────────
+setInterval(async () => {
+  try {
+    if (txSigner.isEnabled()) await txSigner.checkBalance();
+  } catch (e) {
+    console.error("[Signer] Balance check failed:", e.message);
+  }
+}, 60 * 60 * 1000); // hourly
+
 // ── PR Merge Watcher (auto-verify tasks) ─────────────────
 
 const { parsePRUrl: parsePR, checkPRStatus } = require("./services/github");
@@ -2127,7 +2778,7 @@ const { startApi } = require("./services/api");
 startApi();
 
 // Start escrow event watcher (auto-detects on-chain events)
-try { escrowWatcher.init(dbInstance, bot); } catch (e) { console.error("[Init] Escrow watcher failed (non-fatal):", e.message); }
+try { escrowWatcher.init(dbInstance, bot, db); } catch (e) { console.error("[Init] Escrow watcher failed (non-fatal):", e.message); }
 try { cv3Watcher.init(dbInstance, bot); } catch (e) { console.error("[Init] CV3 watcher failed (non-fatal):", e.message); }
 
 bot.start();

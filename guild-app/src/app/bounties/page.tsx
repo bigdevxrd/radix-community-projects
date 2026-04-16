@@ -16,6 +16,7 @@ interface Bounty {
   reward_xrd: number; reward_xp: number; status: string;
   category: string; difficulty: string; priority: string;
   deadline: number | null; platform_fee_pct: number;
+  skills_required: string | null;
   creator_tg_id: number; assignee_tg_id: number | null;
   assignee_address: string | null; github_issue: string | null;
   github_pr: string | null; created_at: number;
@@ -36,11 +37,13 @@ interface EscrowTx {
 }
 
 const STATUS_COLORS: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
-  open: "default", assigned: "secondary", submitted: "outline", verified: "outline", paid: "default", cancelled: "destructive",
+  open: "default", assigned: "secondary", submitted: "outline", verified: "outline",
+  paid: "default", cancelled: "destructive", disputed: "destructive",
 };
 const STATUS_TEXT_COLORS: Record<string, string> = {
   open: "text-primary", assigned: "text-yellow-500", submitted: "text-blue-400",
   verified: "text-blue-400", paid: "text-muted-foreground",
+  cancelled: "text-red-400", disputed: "text-orange-400",
 };
 const DIFFICULTY_COLORS: Record<string, string> = {
   easy: "text-green-400", medium: "text-yellow-500", hard: "text-orange-400", expert: "text-red-400",
@@ -69,6 +72,7 @@ function BountiesContent() {
   const [showTxs, setShowTxs] = useState(false);
 
   // Create form state
+  const [search, setSearch] = useState("");
   const [showCreate, setShowCreate] = useState(false);
   const [newTitle, setNewTitle] = useState("");
   const [newReward, setNewReward] = useState("");
@@ -76,6 +80,8 @@ function BountiesContent() {
   const [newCategory, setNewCategory] = useState("general");
   const [newDifficulty, setNewDifficulty] = useState("medium");
   const [newDeadlineDays, setNewDeadlineDays] = useState("");
+  const [newSkills, setNewSkills] = useState("");
+  const [newCriteria, setNewCriteria] = useState("");
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState("");
 
@@ -95,6 +101,8 @@ function BountiesContent() {
           category: newCategory,
           difficulty: newDifficulty,
           deadline_days: newDeadlineDays ? parseInt(newDeadlineDays) : null,
+          skills_required: newSkills.trim() ? JSON.stringify(newSkills.split(",").map(s => s.trim()).filter(Boolean)) : null,
+          acceptance_criteria: newCriteria.trim() ? JSON.stringify(newCriteria.split("\n").map(s => s.trim()).filter(Boolean)) : null,
         }),
       });
       const data = await res.json();
@@ -102,6 +110,7 @@ function BountiesContent() {
         setShowCreate(false);
         setNewTitle(""); setNewReward(""); setNewDescription("");
         setNewCategory("general"); setNewDifficulty("medium"); setNewDeadlineDays("");
+        setNewSkills(""); setNewCriteria("");
         fetchData();
       } else {
         setCreateError(data.error || "Failed to create task");
@@ -129,6 +138,10 @@ function BountiesContent() {
 
   let filtered = filter === "all" ? bounties : bounties.filter(b => b.status === filter);
   if (catFilter !== "all") filtered = filtered.filter(b => b.category === catFilter);
+  if (search.trim()) {
+    const q = search.toLowerCase();
+    filtered = filtered.filter(b => b.title.toLowerCase().includes(q) || (b.description && b.description.toLowerCase().includes(q)));
+  }
 
   return (
     <div className="space-y-5">
@@ -189,6 +202,11 @@ function BountiesContent() {
                 <textarea placeholder="Description (optional)" value={newDescription}
                   onChange={e => setNewDescription(e.target.value)}
                   className="w-full min-h-[80px] rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring" />
+                <Input placeholder="Skills required (comma-separated, e.g. rust, scrypto, react)" value={newSkills}
+                  onChange={e => setNewSkills(e.target.value)} className="text-sm" />
+                <textarea placeholder="Acceptance criteria (one per line)" value={newCriteria}
+                  onChange={e => setNewCriteria(e.target.value)} rows={3}
+                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring" />
                 <div className="flex flex-wrap gap-2">
                   <div>
                     <div className="text-[10px] text-muted-foreground uppercase mb-1">Category</div>
@@ -292,14 +310,20 @@ function BountiesContent() {
         </div>
       )}
 
-      {/* Status Filter */}
+      {/* Search + Status Filter */}
+      <Input placeholder="Search tasks..." value={search}
+        onChange={e => setSearch(e.target.value)} className="text-sm max-w-xs" />
       <div className="flex items-center gap-2 overflow-x-auto">
-        {["all", "open", "assigned", "submitted", "verified", "paid"].map(f => (
-          <Button key={f} variant={filter === f ? "default" : "ghost"} size="sm"
-            onClick={() => setFilter(f)} className="capitalize text-xs">
-            {f === "all" ? `All (${bounties.length})` : f}
-          </Button>
-        ))}
+        {["all", "open", "assigned", "submitted", "verified", "paid", "disputed", "cancelled"].map(f => {
+          const count = f === "all" ? bounties.length : bounties.filter(b => b.status === f).length;
+          if (f !== "all" && count === 0) return null;
+          return (
+            <Button key={f} variant={filter === f ? "default" : "ghost"} size="sm"
+              onClick={() => setFilter(f)} className="capitalize text-xs">
+              {f === "all" ? `All (${count})` : `${f} (${count})`}
+            </Button>
+          );
+        })}
       </div>
 
       {/* Category Filter */}
@@ -381,6 +405,17 @@ function BountiesContent() {
                 {b.description && (
                   <p className="text-xs text-muted-foreground mb-2">{b.description.slice(0, 120)}{b.description.length > 120 ? "..." : ""}</p>
                 )}
+                {(() => {
+                  try {
+                    const skills = b.skills_required ? JSON.parse(b.skills_required) as string[] : [];
+                    if (skills.length === 0) return null;
+                    return (
+                      <div className="flex flex-wrap gap-1 mb-2">
+                        {skills.slice(0, 5).map(s => <Badge key={s} variant="outline" className="text-[9px] font-mono">{s}</Badge>)}
+                      </div>
+                    );
+                  } catch { return null; }
+                })()}
                 <div className="flex flex-wrap gap-3 text-[11px] text-muted-foreground">
                   <span>Created {new Date(b.created_at * 1000).toLocaleDateString()}</span>
                   {b.assignee_address && (

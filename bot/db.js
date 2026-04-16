@@ -413,6 +413,42 @@ function init() {
   try { db.exec("ALTER TABLE working_groups ADD COLUMN status TEXT DEFAULT 'active'"); } catch(e) {}
   // P6: sunset alert tracking
   try { db.exec("ALTER TABLE working_groups ADD COLUMN sunset_alert_sent INTEGER DEFAULT 0"); } catch(e) {}
+
+  // ── Pipeline columns on working_groups (Phase 6) ──
+  try { db.exec("ALTER TABLE working_groups ADD COLUMN project_status TEXT DEFAULT 'idea'"); } catch(e) {}
+  try { db.exec("ALTER TABLE working_groups ADD COLUMN proposal_id INTEGER"); } catch(e) {}
+  try { db.exec("ALTER TABLE working_groups ADD COLUMN total_budget_xrd REAL DEFAULT 0"); } catch(e) {}
+  try { db.exec("ALTER TABLE working_groups ADD COLUMN budget_spent_xrd REAL DEFAULT 0"); } catch(e) {}
+  try { db.exec("ALTER TABLE working_groups ADD COLUMN shipped_at INTEGER"); } catch(e) {}
+  try { db.exec("ALTER TABLE working_groups ADD COLUMN ledger_hash TEXT"); } catch(e) {}
+
+  // ── Project Ledger (Phase 6) ──
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS project_ledger (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      group_id INTEGER NOT NULL REFERENCES working_groups(id),
+      title TEXT NOT NULL,
+      description TEXT,
+      total_budget_xrd REAL,
+      total_spent_xrd REAL,
+      total_insurance_xrd REAL,
+      total_disputes INTEGER DEFAULT 0,
+      contributor_count INTEGER,
+      task_count INTEGER,
+      tasks_completed INTEGER,
+      tasks_cancelled INTEGER,
+      start_date INTEGER,
+      ship_date INTEGER,
+      estimated_duration_days INTEGER,
+      actual_duration_days INTEGER,
+      deliverables TEXT,
+      deliverable_hash TEXT,
+      contributors TEXT,
+      outcome_notes TEXT,
+      created_at INTEGER DEFAULT (strftime('%s','now'))
+    );
+    CREATE INDEX IF NOT EXISTS idx_ledger_group ON project_ledger(group_id);
+  `);
   // P6: report status + period type
   try { db.exec("ALTER TABLE wg_reports ADD COLUMN status TEXT DEFAULT 'submitted'"); } catch(e) {}
   try { db.exec("ALTER TABLE wg_reports ADD COLUMN period_type TEXT DEFAULT 'biweekly'"); } catch(e) {}
@@ -453,6 +489,177 @@ function init() {
       seedMember.run(r.lastInsertRowid, ADMIN_TG_ID, ADMIN_ADDRESS);
     });
   }
+
+  // ── Insurance Pool (Phase 3) ──
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS insurance_pool (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      bounty_id INTEGER REFERENCES bounties(id),
+      milestone_id INTEGER REFERENCES bounty_milestones(id),
+      fee_amount REAL NOT NULL,
+      status TEXT DEFAULT 'held',
+      collected_at INTEGER DEFAULT (strftime('%s','now')),
+      released_at INTEGER,
+      arbiter_tg_id INTEGER,
+      dispute_id INTEGER,
+      notes TEXT
+    );
+    CREATE INDEX IF NOT EXISTS idx_insurance_bounty ON insurance_pool(bounty_id);
+    CREATE INDEX IF NOT EXISTS idx_insurance_status ON insurance_pool(status);
+  `);
+
+  // Insurance columns on bounties
+  try { db.exec("ALTER TABLE bounties ADD COLUMN insurance_fee_xrd REAL DEFAULT 0"); } catch(e) {}
+  try { db.exec("ALTER TABLE bounties ADD COLUMN insurance_fee_pct REAL DEFAULT 0"); } catch(e) {}
+  try { db.exec("ALTER TABLE bounties ADD COLUMN insurance_status TEXT DEFAULT 'none'"); } catch(e) {}
+
+  // Insurance tier config (idempotent per-key seeding)
+  const seedIns = db.prepare("INSERT OR IGNORE INTO platform_config (key, value) VALUES (?, ?)");
+  seedIns.run("insurance_fee_tier_0_100", "15");       // 15% for 0-100 XRD
+  seedIns.run("insurance_fee_tier_100_500", "10");      // 10% for 100-500 XRD
+  seedIns.run("insurance_fee_tier_500_2000", "7");      // 7% for 500-2000 XRD
+  seedIns.run("insurance_fee_tier_2000_plus", "5");     // 5% for 2000+ XRD
+  seedIns.run("insurance_fee_mode", "deduct_from_escrow");
+  seedIns.run("insurance_pool_balance", "0");
+
+  // ── Dispute Resolution (Phase 4) ──
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS disputes (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      bounty_id INTEGER NOT NULL REFERENCES bounties(id),
+      milestone_id INTEGER REFERENCES bounty_milestones(id),
+      raised_by_tg_id INTEGER NOT NULL,
+      raised_against_tg_id INTEGER NOT NULL,
+      reason TEXT NOT NULL,
+      desired_outcome TEXT,
+      arbiter_tg_id INTEGER,
+      arbiter_assigned_at INTEGER,
+      arbiter_deadline INTEGER,
+      decision TEXT,
+      decision_split_pct INTEGER,
+      decision_notes TEXT,
+      decision_at INTEGER,
+      appeal_status TEXT DEFAULT 'none',
+      appeal_filed_by_tg_id INTEGER,
+      appeal_filed_at INTEGER,
+      appeal_fee_xrd REAL DEFAULT 0,
+      appeal_panel_ids TEXT,
+      appeal_decision TEXT,
+      appeal_decision_split_pct INTEGER,
+      appeal_decision_notes TEXT,
+      appeal_decided_at INTEGER,
+      status TEXT DEFAULT 'open',
+      insurance_fee_xrd REAL DEFAULT 0,
+      created_at INTEGER DEFAULT (strftime('%s','now')),
+      resolved_at INTEGER
+    );
+    CREATE INDEX IF NOT EXISTS idx_disputes_bounty ON disputes(bounty_id);
+    CREATE INDEX IF NOT EXISTS idx_disputes_status ON disputes(status);
+
+    CREATE TABLE IF NOT EXISTS arbiters (
+      tg_id INTEGER PRIMARY KEY,
+      badge_id TEXT,
+      radix_address TEXT,
+      registered_at INTEGER DEFAULT (strftime('%s','now')),
+      active INTEGER DEFAULT 1,
+      availability TEXT DEFAULT 'available',
+      reputation_score INTEGER DEFAULT 100,
+      total_handled INTEGER DEFAULT 0,
+      total_upheld INTEGER DEFAULT 0,
+      total_overturned INTEGER DEFAULT 0,
+      last_dispute_at INTEGER,
+      specialty_tags TEXT,
+      notes TEXT
+    );
+    CREATE INDEX IF NOT EXISTS idx_arbiters_available ON arbiters(active, availability);
+
+    CREATE TABLE IF NOT EXISTS dispute_evidence (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      dispute_id INTEGER NOT NULL REFERENCES disputes(id),
+      submitted_by_tg_id INTEGER NOT NULL,
+      evidence_type TEXT NOT NULL,
+      content TEXT NOT NULL,
+      description TEXT,
+      created_at INTEGER DEFAULT (strftime('%s','now'))
+    );
+    CREATE INDEX IF NOT EXISTS idx_evidence_dispute ON dispute_evidence(dispute_id);
+
+    CREATE TABLE IF NOT EXISTS dispute_timeline (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      dispute_id INTEGER NOT NULL REFERENCES disputes(id),
+      event_type TEXT NOT NULL,
+      actor_tg_id INTEGER,
+      description TEXT,
+      created_at INTEGER DEFAULT (strftime('%s','now'))
+    );
+    CREATE INDEX IF NOT EXISTS idx_timeline_dispute ON dispute_timeline(dispute_id);
+  `);
+
+  // Dispute config defaults (idempotent per-key seeding)
+  const seedDis = db.prepare("INSERT OR IGNORE INTO platform_config (key, value) VALUES (?, ?)");
+  seedDis.run("dispute_arbiter_deadline_days", "7");
+  seedDis.run("dispute_appeal_window_days", "3");
+  seedDis.run("dispute_appeal_min_xrd", "500");
+  seedDis.run("dispute_appeal_fee_pct", "5");
+
+  // ── TX Signer (Phase 7) ──
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS signer_audit (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      action TEXT NOT NULL,
+      params TEXT NOT NULL,
+      tx_hash TEXT,
+      status TEXT NOT NULL,
+      error_message TEXT,
+      value_xrd REAL,
+      triggered_by TEXT,
+      bounty_id INTEGER,
+      dispute_id INTEGER,
+      created_at INTEGER DEFAULT (strftime('%s','now'))
+    );
+    CREATE INDEX IF NOT EXISTS idx_signer_audit_action ON signer_audit(action, created_at);
+  `);
+
+  // Signer config defaults (idempotent)
+  const seedSign = db.prepare("INSERT OR IGNORE INTO platform_config (key, value) VALUES (?, ?)");
+  seedSign.run("signer_max_release_per_hour", "10");
+  seedSign.run("signer_max_release_per_day", "50");
+  seedSign.run("signer_max_xrd_per_tx", "1000");
+  seedSign.run("signer_max_xrd_per_day", "5000");
+  seedSign.run("signer_enabled", "true");
+  seedSign.run("signer_last_disabled_at", "0");
+  seedSign.run("signer_alert_balance_xrd", "10");
+
+  // ── Task Dependencies + Templates (Phase 5) ──
+  try { db.exec("ALTER TABLE bounties ADD COLUMN depends_on TEXT DEFAULT '[]'"); } catch(e) {}
+  try { db.exec("ALTER TABLE bounties ADD COLUMN blocks TEXT DEFAULT '[]'"); } catch(e) {}
+  try { db.exec("ALTER TABLE bounties ADD COLUMN is_blocked INTEGER DEFAULT 0"); } catch(e) {}
+
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS task_templates (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT UNIQUE NOT NULL,
+      title_template TEXT NOT NULL,
+      default_reward_xrd REAL,
+      default_skills TEXT,
+      default_difficulty TEXT,
+      default_deadline_days INTEGER,
+      default_criteria TEXT,
+      description TEXT,
+      created_at INTEGER DEFAULT (strftime('%s','now'))
+    );
+  `);
+
+  // Seed templates
+  const tmplSeed = db.prepare("INSERT OR IGNORE INTO task_templates (name, title_template, default_reward_xrd, default_skills, default_difficulty, default_deadline_days, default_criteria) VALUES (?, ?, ?, ?, ?, ?, ?)");
+  tmplSeed.run("code-review", "Code Review: {detail}", 20, '["code-review"]', "easy", 2, "Thorough review with inline comments, approve or request changes");
+  tmplSeed.run("bug-fix", "Bug Fix: {detail}", 50, '["code","testing"]', "medium", 5, "Bug reproduced, fix implemented, test added, PR passes CI");
+  tmplSeed.run("scrypto-component", "Scrypto: {detail}", 100, '["scrypto"]', "hard", 7, "Component compiles, unit tests pass, security review");
+  tmplSeed.run("documentation", "Docs: {detail}", 30, '["docs"]', "easy", 3, "Clear, accurate, follows existing doc style");
+  tmplSeed.run("research", "Research: {detail}", 40, '["research"]', "medium", 5, "Thorough analysis with sources, actionable recommendations");
+  tmplSeed.run("frontend", "Frontend: {detail}", 80, '["frontend","js"]', "medium", 7, "Component renders correctly, responsive, matches design");
+  tmplSeed.run("testing", "Testing: {detail}", 40, '["testing"]', "medium", 3, "Test coverage > 80%, all tests pass, edge cases covered");
+  tmplSeed.run("deploy", "Deploy: {detail}", 40, '["devops"]', "medium", 2, "Deployed to target environment, verified working, documented");
 
   // Escrow: per-task funding (funded/unfunded)
   try { db.exec("ALTER TABLE bounties ADD COLUMN funded INTEGER DEFAULT 0"); } catch(e) {}
@@ -756,18 +963,20 @@ function getReadyParams() {
 
 function createBounty(title, rewardXrd, creatorTgId, opts = {}) {
   const result = db.prepare(
-    "INSERT INTO bounties (title, description, reward_xrd, reward_xp, creator_tg_id, github_issue, proposal_id, category, difficulty, deadline, platform_fee_pct) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+    "INSERT INTO bounties (title, description, reward_xrd, reward_xp, creator_tg_id, github_issue, proposal_id, category, difficulty, deadline, platform_fee_pct, skills_required, acceptance_criteria, tags, priority) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
   ).run(
     title, opts.description || null, rewardXrd, opts.rewardXp || 0, creatorTgId,
     opts.githubIssue || null, opts.proposalId || null,
     opts.category || "general", opts.difficulty || "medium",
-    opts.deadline || null, 2.5
+    opts.deadline || null, 2.5,
+    opts.skills || null, opts.criteria || null,
+    opts.tags || null, opts.priority || "normal"
   );
   return result.lastInsertRowid;
 }
 
 function getBounty(id) { return db.prepare("SELECT * FROM bounties WHERE id = ?").get(id); }
-function getOpenBounties() { return db.prepare("SELECT * FROM bounties WHERE status IN ('open','assigned') ORDER BY created_at DESC").all(); }
+function getOpenBounties() { return db.prepare("SELECT * FROM bounties WHERE status IN ('open','assigned') AND is_blocked = 0 ORDER BY created_at DESC").all(); }
 function getAllBounties() { return db.prepare("SELECT * FROM bounties ORDER BY created_at DESC").all(); }
 
 function assignBounty(id, tgId, radixAddress) {
@@ -775,6 +984,16 @@ function assignBounty(id, tgId, radixAddress) {
   if (!bounty) return { changes: 0, error: "not_found" };
   if (bounty.status !== "open") return { changes: 0, error: "not_open" };
   if (!bounty.funded) return { changes: 0, error: "not_funded" };
+  // Enforce application requirement for high-value tasks
+  const config = getPlatformConfig();
+  const appThreshold = parseFloat(config.require_application_above_xrd || 100);
+  if (bounty.reward_xrd > appThreshold) {
+    // Check if this user has an approved application for this bounty
+    const approved = db.prepare(
+      "SELECT * FROM bounty_applications WHERE bounty_id = ? AND applicant_tg_id = ? AND status = 'accepted'"
+    ).get(id, tgId);
+    if (!approved) return { changes: 0, error: "application_required", threshold: appThreshold };
+  }
   const now = Math.floor(Date.now() / 1000);
   return db.prepare("UPDATE bounties SET assignee_tg_id = ?, assignee_address = ?, status = 'assigned', assigned_at = ? WHERE id = ? AND status = 'open' AND funded = 1")
     .run(tgId, radixAddress, now, id);
@@ -827,8 +1046,21 @@ function getEscrowBalance() {
   return {
     funded: row?.total_funded_xrd || 0,
     released: row?.total_released_xrd || 0,
+    fees_collected: row?.total_fees_collected_xrd || 0,
     available: (row?.total_funded_xrd || 0) - (row?.total_released_xrd || 0),
   };
+}
+
+// Update fee tracking when an escrow release event is detected
+function recordEscrowRelease(bountyId, payoutXrd, feeXrd, txHash) {
+  const now = Math.floor(Date.now() / 1000);
+  // Update bounty fee tracking
+  if (bountyId) {
+    db.prepare("UPDATE bounties SET fee_collected_xrd = ? WHERE id = ?").run(feeXrd, bountyId);
+  }
+  // Update aggregate escrow wallet
+  db.prepare("UPDATE escrow_wallet SET total_released_xrd = total_released_xrd + ?, total_fees_collected_xrd = total_fees_collected_xrd + ? WHERE id = 1")
+    .run(payoutXrd + feeXrd, feeXrd);
 }
 
 function getBountyTransactions() {
@@ -842,8 +1074,126 @@ function getBountyStats() {
   const verified = db.prepare("SELECT COUNT(*) as c FROM bounties WHERE status = 'verified'").get().c;
   const paid = db.prepare("SELECT COUNT(*) as c FROM bounties WHERE status = 'paid'").get().c;
   const totalPaid = db.prepare("SELECT COALESCE(SUM(reward_xrd), 0) as t FROM bounties WHERE status = 'paid'").get().t;
+  const totalFees = db.prepare("SELECT COALESCE(SUM(fee_collected_xrd), 0) as t FROM bounties WHERE fee_collected_xrd > 0").get().t;
   const escrow = getEscrowBalance();
-  return { open, assigned, submitted, verified, paid, totalPaid, escrow };
+  return { open, assigned, submitted, verified, paid, totalPaid, totalFees, escrow };
+}
+
+// ── Milestones ──────────────────────────────────────────
+
+function addMilestone(bountyId, title, description, percentage) {
+  const bounty = getBounty(bountyId);
+  if (!bounty) return { error: "bounty_not_found" };
+  if (bounty.status !== "open") return { error: "bounty_not_open", detail: "Can only add milestones before the bounty is claimed" };
+
+  // Validate percentage
+  if (!percentage || percentage < 1 || percentage > 100) return { error: "invalid_percentage", detail: "Percentage must be 1-100" };
+  const existing = db.prepare("SELECT COALESCE(SUM(percentage), 0) as total FROM bounty_milestones WHERE bounty_id = ?").get(bountyId);
+  if (existing.total + percentage > 100) return { error: "exceeds_100", detail: "Total milestones would be " + (existing.total + percentage) + "% (max 100%)" };
+
+  const amountXrd = (percentage / 100) * bounty.reward_xrd;
+  const result = db.prepare(
+    "INSERT INTO bounty_milestones (bounty_id, title, description, percentage, amount_xrd) VALUES (?, ?, ?, ?, ?)"
+  ).run(bountyId, title, description || null, percentage, amountXrd);
+
+  return {
+    ok: true,
+    id: result.lastInsertRowid,
+    bountyId,
+    title,
+    percentage,
+    amountXrd,
+    totalAllocated: existing.total + percentage,
+    remaining: 100 - (existing.total + percentage),
+  };
+}
+
+function getMilestones(bountyId) {
+  return db.prepare("SELECT * FROM bounty_milestones WHERE bounty_id = ? ORDER BY id").all(bountyId);
+}
+
+function getMilestoneById(id) {
+  return db.prepare("SELECT * FROM bounty_milestones WHERE id = ?").get(id);
+}
+
+function submitMilestone(milestoneId, tgId) {
+  const ms = getMilestoneById(milestoneId);
+  if (!ms) return { error: "not_found" };
+  if (ms.status !== "pending") return { error: "not_pending", detail: "Milestone status is: " + ms.status };
+  const bounty = getBounty(ms.bounty_id);
+  if (!bounty) return { error: "bounty_not_found" };
+  if (bounty.assignee_tg_id !== tgId) return { error: "not_assignee", detail: "Only the assigned worker can submit milestones" };
+
+  const now = Math.floor(Date.now() / 1000);
+  db.prepare("UPDATE bounty_milestones SET status = 'submitted', submitted_at = ? WHERE id = ?").run(now, milestoneId);
+  return { ok: true, milestoneId, bountyId: ms.bounty_id, title: ms.title };
+}
+
+function verifyMilestone(milestoneId, tgId) {
+  const ms = getMilestoneById(milestoneId);
+  if (!ms) return { error: "not_found" };
+  if (ms.status !== "submitted") return { error: "not_submitted", detail: "Milestone must be submitted first" };
+  const bounty = getBounty(ms.bounty_id);
+  if (!bounty) return { error: "bounty_not_found" };
+  if (bounty.assignee_tg_id === tgId) return { error: "self_verify", detail: "Assignee cannot verify their own milestones" };
+
+  const now = Math.floor(Date.now() / 1000);
+  db.prepare("UPDATE bounty_milestones SET status = 'verified', verified_at = ? WHERE id = ?").run(now, milestoneId);
+  return { ok: true, milestoneId, bountyId: ms.bounty_id, title: ms.title, amount: ms.amount_xrd };
+}
+
+function payMilestone(milestoneId, txHash) {
+  const ms = getMilestoneById(milestoneId);
+  if (!ms) return { error: "not_found" };
+  if (ms.status !== "verified") return { error: "not_verified", detail: "Milestone must be verified before payment" };
+
+  const now = Math.floor(Date.now() / 1000);
+  db.prepare("UPDATE bounty_milestones SET status = 'paid', paid_at = ?, paid_tx = ? WHERE id = ?").run(now, txHash, milestoneId);
+
+  // Check if ALL milestones for this bounty are now paid
+  const allMs = getMilestones(ms.bounty_id);
+  const allPaid = allMs.every(m => m.id === milestoneId ? true : m.status === "paid");
+
+  if (allPaid) {
+    // Auto-complete the bounty
+    db.prepare("UPDATE bounties SET status = 'paid', paid_at = ? WHERE id = ?").run(now, ms.bounty_id);
+  }
+
+  return {
+    ok: true,
+    milestoneId,
+    bountyId: ms.bounty_id,
+    title: ms.title,
+    amount: ms.amount_xrd,
+    txHash,
+    bountyComplete: allPaid,
+  };
+}
+
+function removeMilestone(milestoneId) {
+  const ms = getMilestoneById(milestoneId);
+  if (!ms) return { error: "not_found" };
+  if (ms.status !== "pending") return { error: "not_pending", detail: "Can only remove pending milestones" };
+  db.prepare("DELETE FROM bounty_milestones WHERE id = ?").run(milestoneId);
+  return { ok: true, milestoneId, bountyId: ms.bounty_id };
+}
+
+function getMilestoneProgress(bountyId) {
+  const all = getMilestones(bountyId);
+  if (all.length === 0) return null;
+  const pending = all.filter(m => m.status === "pending").length;
+  const submitted = all.filter(m => m.status === "submitted").length;
+  const verified = all.filter(m => m.status === "verified").length;
+  const paid = all.filter(m => m.status === "paid").length;
+  const paidPct = all.filter(m => m.status === "paid").reduce((sum, m) => sum + m.percentage, 0);
+  const paidXrd = all.filter(m => m.status === "paid").reduce((sum, m) => sum + m.amount_xrd, 0);
+  const totalXrd = all.reduce((sum, m) => sum + m.amount_xrd, 0);
+  return {
+    total: all.length, pending, submitted, verified, paid,
+    totalPct: all.reduce((sum, m) => sum + m.percentage, 0),
+    paidPct, paidXrd, totalXrd,
+    remainingXrd: totalXrd - paidXrd,
+  };
 }
 
 // ── Marketplace Extensions ───────────────────────────────
@@ -873,6 +1223,10 @@ function createApplication(bountyId, tgId, address, pitch, estimatedHours) {
   return stmt.run(bountyId, tgId, address, pitch, estimatedHours).lastInsertRowid;
 }
 
+function getApplication(applicationId) {
+  return db.prepare("SELECT * FROM bounty_applications WHERE id = ?").get(applicationId);
+}
+
 function approveApplication(applicationId) {
   const app = db.prepare("SELECT * FROM bounty_applications WHERE id = ?").get(applicationId);
   if (!app) return { ok: false, error: "not_found" };
@@ -894,12 +1248,212 @@ function cancelBounty(id, reason) {
   return result.changes > 0;
 }
 
-function getFilteredBounties({ category, status, difficulty, sort, limit = 50 } = {}) {
+// ── Task Dependencies (Phase 5) ────────────────────────
+
+function detectCircularDependency(bountyId, newDependencyId) {
+  // DFS from newDependencyId following depends_on chains — if we reach bountyId, it's circular
+  const visited = new Set();
+  const stack = [newDependencyId];
+  while (stack.length > 0) {
+    const current = stack.pop();
+    if (current === bountyId) return true;
+    if (visited.has(current)) continue;
+    visited.add(current);
+    const b = db.prepare("SELECT depends_on FROM bounties WHERE id = ?").get(current);
+    if (b && b.depends_on) {
+      try {
+        const deps = JSON.parse(b.depends_on);
+        deps.forEach(d => stack.push(d));
+      } catch (e) { /* malformed JSON, skip */ }
+    }
+  }
+  return false;
+}
+
+function addDependency(bountyId, dependsOnBountyId) {
+  const bounty = getBounty(bountyId);
+  if (!bounty) return { error: "bounty_not_found" };
+  const dep = getBounty(dependsOnBountyId);
+  if (!dep) return { error: "dependency_not_found" };
+  if (bountyId === dependsOnBountyId) return { error: "self_dependency" };
+  if (bounty.status !== "open") return { error: "not_open", detail: "Can only add dependencies to open bounties" };
+
+  if (detectCircularDependency(bountyId, dependsOnBountyId)) {
+    return { error: "circular_dependency", detail: "Adding this dependency would create a cycle" };
+  }
+
+  // Update depends_on on bountyId
+  const currentDeps = JSON.parse(bounty.depends_on || "[]");
+  if (currentDeps.includes(dependsOnBountyId)) return { error: "already_exists" };
+  currentDeps.push(dependsOnBountyId);
+
+  // Update blocks on dependsOnBountyId
+  const currentBlocks = JSON.parse(dep.blocks || "[]");
+  if (!currentBlocks.includes(bountyId)) currentBlocks.push(bountyId);
+
+  // Is the dependency complete? If not, mark bounty as blocked
+  const isBlocked = !["paid", "verified"].includes(dep.status) ? 1 : 0;
+
+  db.prepare("UPDATE bounties SET depends_on = ?, is_blocked = ? WHERE id = ?")
+    .run(JSON.stringify(currentDeps), isBlocked || bounty.is_blocked ? 1 : 0, bountyId);
+  db.prepare("UPDATE bounties SET blocks = ? WHERE id = ?")
+    .run(JSON.stringify(currentBlocks), dependsOnBountyId);
+
+  return { ok: true, depends_on: currentDeps, is_blocked: isBlocked || bounty.is_blocked };
+}
+
+function removeDependency(bountyId, dependsOnBountyId) {
+  const bounty = getBounty(bountyId);
+  if (!bounty) return { error: "bounty_not_found" };
+  const dep = getBounty(dependsOnBountyId);
+  if (!dep) return { error: "dependency_not_found" };
+
+  const currentDeps = JSON.parse(bounty.depends_on || "[]").filter(id => id !== dependsOnBountyId);
+  const currentBlocks = JSON.parse(dep.blocks || "[]").filter(id => id !== bountyId);
+
+  db.prepare("UPDATE bounties SET depends_on = ? WHERE id = ?")
+    .run(JSON.stringify(currentDeps), bountyId);
+  db.prepare("UPDATE bounties SET blocks = ? WHERE id = ?")
+    .run(JSON.stringify(currentBlocks), dependsOnBountyId);
+
+  // Recompute is_blocked
+  recomputeBlocked(bountyId);
+  return { ok: true, depends_on: currentDeps };
+}
+
+function recomputeBlocked(bountyId) {
+  const bounty = getBounty(bountyId);
+  if (!bounty) return;
+  const deps = JSON.parse(bounty.depends_on || "[]");
+  if (deps.length === 0) {
+    db.prepare("UPDATE bounties SET is_blocked = 0 WHERE id = ?").run(bountyId);
+    return;
+  }
+  // Check if ALL dependencies are complete
+  const incomplete = deps.filter(depId => {
+    const d = getBounty(depId);
+    return d && !["paid", "verified"].includes(d.status);
+  });
+  db.prepare("UPDATE bounties SET is_blocked = ? WHERE id = ?")
+    .run(incomplete.length > 0 ? 1 : 0, bountyId);
+}
+
+function checkAndUnblock(completedBountyId) {
+  const completed = getBounty(completedBountyId);
+  if (!completed) return [];
+  const blocksRaw = JSON.parse(completed.blocks || "[]");
+  const unblocked = [];
+  for (const depId of blocksRaw) {
+    recomputeBlocked(depId);
+    const updated = getBounty(depId);
+    if (updated && !updated.is_blocked && updated.status === "open") {
+      unblocked.push({ id: depId, title: updated.title });
+    }
+  }
+  return unblocked;
+}
+
+function getDependencyInfo(bountyId) {
+  const bounty = getBounty(bountyId);
+  if (!bounty) return null;
+  const depsIds = JSON.parse(bounty.depends_on || "[]");
+  const blocksIds = JSON.parse(bounty.blocks || "[]");
+  const deps = depsIds.map(id => {
+    const b = getBounty(id);
+    return b ? { id: b.id, title: b.title, status: b.status } : { id, title: "?", status: "unknown" };
+  });
+  const blocks = blocksIds.map(id => {
+    const b = getBounty(id);
+    return b ? { id: b.id, title: b.title, status: b.status } : { id, title: "?", status: "unknown" };
+  });
+  return { bountyId, is_blocked: !!bounty.is_blocked, depends_on: deps, blocks };
+}
+
+function getBlockedBounties() {
+  return db.prepare("SELECT * FROM bounties WHERE is_blocked = 1 AND status = 'open' ORDER BY id").all();
+}
+
+// ── Skill Matching (Phase 5) ───────────────────────────
+
+function matchBounties(userSkills, opts = {}) {
+  const { maxReward, minReward, difficulty, excludeBlocked = true } = opts;
+  let query = "SELECT * FROM bounties WHERE status = 'open'";
+  const params = [];
+  if (excludeBlocked) query += " AND is_blocked = 0";
+  if (maxReward) { query += " AND reward_xrd <= ?"; params.push(maxReward); }
+  if (minReward) { query += " AND reward_xrd >= ?"; params.push(minReward); }
+  if (difficulty) { query += " AND difficulty = ?"; params.push(difficulty); }
+  query += " ORDER BY reward_xrd DESC";
+  const bounties = db.prepare(query).all(...params);
+
+  if (!userSkills || userSkills.length === 0) {
+    return bounties.map(b => ({ ...b, match_score: 0, matched_skills: [], missing_skills: [] }));
+  }
+
+  const userSkillSet = new Set(userSkills.map(s => s.toLowerCase().trim()));
+
+  return bounties.map(b => {
+    const required = (b.skills_required || "").split(",").map(s => s.trim().toLowerCase()).filter(Boolean);
+    if (required.length === 0) return { ...b, match_score: 0.5, matched_skills: [], missing_skills: [] };
+    const matched = required.filter(s => userSkillSet.has(s));
+    const missing = required.filter(s => !userSkillSet.has(s));
+    const score = matched.length / required.length;
+    return { ...b, match_score: Math.round(score * 100) / 100, matched_skills: matched, missing_skills: missing };
+  }).sort((a, b) => b.match_score - a.match_score || b.reward_xrd - a.reward_xrd);
+}
+
+// ── Project Progress (Phase 5) ─────────────────────────
+
+function getProjectBounties(groupId) {
+  return db.prepare("SELECT * FROM bounties WHERE group_id = ? ORDER BY id").all(groupId);
+}
+
+function getProjectProgress(groupId) {
+  const tasks = getProjectBounties(groupId);
+  if (tasks.length === 0) return null;
+  const total = tasks.length;
+  const completed = tasks.filter(t => t.status === "paid").length;
+  const inProgress = tasks.filter(t => ["assigned", "submitted", "verified"].includes(t.status)).length;
+  const blocked = tasks.filter(t => t.is_blocked && t.status === "open").length;
+  const open = tasks.filter(t => t.status === "open" && !t.is_blocked).length;
+  const cancelled = tasks.filter(t => t.status === "cancelled").length;
+  const disputed = tasks.filter(t => t.status === "disputed").length;
+  const totalBudget = tasks.reduce((sum, t) => sum + (t.reward_xrd || 0), 0);
+  const spent = tasks.filter(t => t.status === "paid").reduce((sum, t) => sum + (t.reward_xrd || 0), 0);
+  const totalInsurance = tasks.reduce((sum, t) => sum + (t.insurance_fee_xrd || 0), 0);
+  return {
+    total_tasks: total, completed, in_progress: inProgress, blocked, open, cancelled, disputed,
+    progress_pct: total > 0 ? Math.round((completed / total) * 100) : 0,
+    total_budget: totalBudget, spent, remaining: totalBudget - spent,
+    total_insurance: totalInsurance,
+  };
+}
+
+// ── Task Templates (Phase 5) ───────────────────────────
+
+function getTemplates() {
+  return db.prepare("SELECT * FROM task_templates ORDER BY name").all();
+}
+
+function getTemplate(name) {
+  return db.prepare("SELECT * FROM task_templates WHERE name = ?").get(name);
+}
+
+function getFilteredBounties({ category, status, difficulty, sort, skills, limit = 50 } = {}) {
   let query = "SELECT * FROM bounties WHERE 1=1";
   const params = [];
   if (category && category !== "all") { query += " AND category = ?"; params.push(category); }
   if (status && status !== "all") { query += " AND status = ?"; params.push(status); }
   if (difficulty && difficulty !== "all") { query += " AND difficulty = ?"; params.push(difficulty); }
+  // Skills filter: match any of the requested skills (OR logic)
+  if (skills) {
+    const skillList = skills.split(",").map(s => s.trim()).filter(Boolean);
+    if (skillList.length > 0) {
+      const skillClauses = skillList.map(() => "skills_required LIKE ?");
+      query += " AND (" + skillClauses.join(" OR ") + ")";
+      skillList.forEach(s => params.push("%" + s + "%"));
+    }
+  }
   if (sort === "reward_desc") query += " ORDER BY reward_xrd DESC";
   else if (sort === "deadline") query += " ORDER BY deadline ASC NULLS LAST";
   else if (sort === "newest") query += " ORDER BY created_at DESC";
@@ -1317,7 +1871,7 @@ module.exports = {
   getVoteCountForUser, getTotalVoters, getTotalProposals,
   getCharterParams, getCharterParam, resolveCharterParam, getCharterStatus, getReadyParams,
   createBounty, getBounty, getOpenBounties, getAllBounties, assignBounty, submitBounty, verifyBounty, payBounty,
-  fundEscrow, getEscrowBalance, getBountyTransactions, getBountyStats,
+  fundEscrow, getEscrowBalance, getBountyTransactions, getBountyStats, recordEscrowRelease,
   rollDice, recordRoll, getGameState, getGameLeaderboard, ROLL_BONUSES,
   generateGrid, createBoard, getBoard, getAvailableRolls, rollOnBoard, useWildCard, abandonBoard, getBoardStats,
   getAchievements, getAchievementSummary, GRID_MILESTONES,
@@ -1400,11 +1954,30 @@ module.exports.fundTask = fundTask;
 module.exports.getCategories = getCategories;
 module.exports.getPlatformConfig = getPlatformConfig;
 module.exports.getBountyDetail = getBountyDetail;
+module.exports.addMilestone = addMilestone;
+module.exports.getMilestones = getMilestones;
+module.exports.getMilestoneById = getMilestoneById;
+module.exports.submitMilestone = submitMilestone;
+module.exports.verifyMilestone = verifyMilestone;
+module.exports.payMilestone = payMilestone;
+module.exports.removeMilestone = removeMilestone;
+module.exports.getMilestoneProgress = getMilestoneProgress;
 module.exports.createApplication = createApplication;
+module.exports.getApplication = getApplication;
 module.exports.approveApplication = approveApplication;
 module.exports.cancelBounty = cancelBounty;
 module.exports.getFilteredBounties = getFilteredBounties;
 module.exports.checkExpiredBounties = checkExpiredBounties;
+module.exports.addDependency = addDependency;
+module.exports.removeDependency = removeDependency;
+module.exports.checkAndUnblock = checkAndUnblock;
+module.exports.getDependencyInfo = getDependencyInfo;
+module.exports.getBlockedBounties = getBlockedBounties;
+module.exports.matchBounties = matchBounties;
+module.exports.getProjectBounties = getProjectBounties;
+module.exports.getProjectProgress = getProjectProgress;
+module.exports.getTemplates = getTemplates;
+module.exports.getTemplate = getTemplate;
 module.exports.createFeedback = createFeedback;
 module.exports.getFeedbackByUser = getFeedbackByUser;
 module.exports.getFeedbackByAddress = getFeedbackByAddress;
@@ -1453,6 +2026,10 @@ function getTrustScore(tgId) {
   // Feedback submitted (community engagement)
   const feedback = db.prepare("SELECT COUNT(*) as c FROM feedback WHERE tg_id = ?").get(tgId)?.c || 0;
 
+  // Dispute reputation delta (from Phase 4 dispute outcomes)
+  const disputeDeltaRow = db.prepare("SELECT value FROM platform_config WHERE key = ?").get("trust_delta_" + tgId);
+  const disputeDelta = disputeDeltaRow ? parseFloat(disputeDeltaRow.value) : 0;
+
   // Composite score
   const score =
     Math.min(ageDays, 365) * 0.2 +    // max 73 points from age (1 year cap)
@@ -1460,9 +2037,10 @@ function getTrustScore(tgId) {
     proposals * 10 +                     // 10 points per proposal
     tasksCompleted * 25 +                // 25 points per completed task
     groups * 5 +                         // 5 points per group
-    feedback * 1;                        // 1 point per feedback
+    feedback * 1 +                       // 1 point per feedback
+    disputeDelta;                        // dispute outcomes (+/- from dispute resolution)
 
-  const roundedScore = Math.round(score);
+  const roundedScore = Math.max(0, Math.round(score));
 
   // Tier determination
   let tier = "bronze";
@@ -1487,6 +2065,7 @@ function getTrustScore(tgId) {
       group_points: groups * 5,
       feedback,
       feedback_points: feedback,
+      dispute_delta: disputeDelta,
     },
   };
 }
@@ -1641,3 +2220,6 @@ module.exports.renewCharter = function(groupId, newSunsetDate) {
 module.exports.markSunsetAlertSent = function(groupId) {
   db.prepare("UPDATE working_groups SET sunset_alert_sent = ? WHERE id = ?").run(Math.floor(Date.now() / 1000), groupId);
 };
+
+// Raw DB accessor for services that need direct SQL (insurance, disputes)
+module.exports._raw = function() { return db; };

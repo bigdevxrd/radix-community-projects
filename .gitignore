@@ -9,6 +9,8 @@ dist/
 badge-manager/build/
 *.db
 *.db-journal
+*.wasm
+*.rpd
 .next/
 next-env.d.ts
 .env.local

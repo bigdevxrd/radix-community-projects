@@ -29,6 +29,8 @@ const XP_REWARDS = {
   poll: 25,
   temp: 10,
   amend: 15,
+  bounty_complete: 50,
+  bounty_create: 10,
 };
 
 function queueXpReward(radixAddress, action) {

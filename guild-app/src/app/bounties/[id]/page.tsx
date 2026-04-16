@@ -19,6 +19,9 @@ interface BountyDetail {
   deadline: number | null; acceptance_criteria: string | null;
   tags: string | null; skills_required: string | null;
   platform_fee_pct: number; fee_collected_xrd: number;
+  insurance_fee_xrd: number | null; insurance_fee_pct: number | null; insurance_status: string | null;
+  depends_on: string | null; blocks: string | null; is_blocked: number;
+  group_id: number | null;
   creator_tg_id: number; assignee_tg_id: number | null;
   assignee_address: string | null; github_issue: string | null;
   github_pr: string | null; paid_tx: string | null;
@@ -33,10 +36,11 @@ interface BountyDetail {
 const STATUS_COLORS: Record<string, string> = {
   open: "text-primary", assigned: "text-yellow-500", submitted: "text-blue-400",
   verified: "text-blue-400", paid: "text-muted-foreground", cancelled: "text-red-400",
+  disputed: "text-orange-400",
 };
 const STATUS_VARIANT: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
   open: "default", assigned: "secondary", submitted: "outline",
-  verified: "outline", paid: "default", cancelled: "destructive",
+  verified: "outline", paid: "default", cancelled: "destructive", disputed: "destructive",
 };
 const DIFFICULTY_COLORS: Record<string, string> = {
   easy: "text-green-400", medium: "text-yellow-500", hard: "text-orange-400", expert: "text-red-400",
@@ -212,7 +216,7 @@ function BountyDetailContent() {
           <CardTitle className="text-sm uppercase tracking-wide text-muted-foreground">Payment</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-3 gap-3">
+          <div className={`grid gap-3 ${bounty.insurance_fee_xrd ? "grid-cols-4" : "grid-cols-3"}`}>
             <div className="bg-muted rounded-lg px-3 py-2">
               <div className="text-[10px] text-muted-foreground uppercase">Reward</div>
               <div className="text-lg font-bold font-mono text-primary">{bounty.reward_xrd} XRD</div>
@@ -221,11 +225,23 @@ function BountyDetailContent() {
               <div className="text-[10px] text-muted-foreground uppercase">Fee ({bounty.platform_fee_pct}%)</div>
               <div className="text-lg font-bold font-mono text-muted-foreground">{feeXrd.toFixed(1)} XRD</div>
             </div>
+            {bounty.insurance_fee_xrd != null && bounty.insurance_fee_xrd > 0 && (
+              <div className="bg-muted rounded-lg px-3 py-2">
+                <div className="text-[10px] text-muted-foreground uppercase">Insurance ({bounty.insurance_fee_pct || 0}%)</div>
+                <div className="text-lg font-bold font-mono text-muted-foreground">{bounty.insurance_fee_xrd.toFixed(1)} XRD</div>
+              </div>
+            )}
             <div className="bg-muted rounded-lg px-3 py-2">
               <div className="text-[10px] text-muted-foreground uppercase">Worker Gets</div>
               <div className="text-lg font-bold font-mono text-primary">{netReward.toFixed(1)} XRD</div>
             </div>
           </div>
+          {bounty.is_blocked === 1 && (
+            <div className="mt-3 flex items-center gap-2 text-xs text-orange-400">
+              <span className="font-semibold">Blocked</span>
+              <span className="text-muted-foreground">— waiting on dependencies to complete</span>
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -393,6 +409,26 @@ function BountyDetailContent() {
               <p className="text-[10px] text-muted-foreground mt-1">
                 {bounty.github_pr ? "PR merge watcher checks every 5 minutes." : "Admin will verify delivery."}
               </p>
+            </div>
+          )}
+
+          {/* DISPUTED → Under dispute */}
+          {bounty.status === "disputed" && (
+            <div className="text-center">
+              <Badge variant="destructive" className="text-xs">Under Dispute</Badge>
+              <p className="text-[10px] text-muted-foreground mt-1">
+                This task is being reviewed by an arbiter. Escrow is locked until resolution.
+              </p>
+            </div>
+          )}
+
+          {/* CANCELLED → Show reason */}
+          {bounty.status === "cancelled" && (
+            <div className="text-center">
+              <Badge variant="destructive" className="text-xs">Cancelled</Badge>
+              {bounty.cancel_reason && (
+                <p className="text-[10px] text-muted-foreground mt-1">Reason: {bounty.cancel_reason.replace(/_/g, " ")}</p>
+              )}
             </div>
           )}
 

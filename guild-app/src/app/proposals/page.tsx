@@ -72,7 +72,7 @@ function classifyProposal(p: Proposal): ProposalClass {
 }
 
 const CLASS_CONFIG: Record<ProposalClass, { label: string; badge: "default" | "secondary" | "outline"; cta: string; border: string; tip: string }> = {
-  charter_vote: { label: "Binding Decision", badge: "default", cta: "Vote now — this shapes the DAO", border: "border-l-4 border-l-primary", tip: "Charter votes that shape the DAO. Results are enforced on-chain." },
+  charter_vote: { label: "Charter Vote", badge: "default", cta: "Vote now — this shapes the DAO", border: "border-l-4 border-l-primary", tip: "Charter votes that shape the DAO charter. Results inform on-chain configuration once the charter is ratified." },
   community_vote: { label: "Community Vote", badge: "secondary", cta: "Have your say", border: "border-l-4 border-l-muted-foreground/30", tip: "Formal but non-binding. Signals community preference on a topic." },
   temp_check: { label: "Gauging Interest", badge: "outline", cta: "Quick pulse check — non-binding", border: "border-l-4 border-l-muted-foreground/15", tip: "24h quick pulse check. Non-binding temperature read." },
 };

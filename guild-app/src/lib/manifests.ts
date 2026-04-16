@@ -1,6 +1,6 @@
 // Sanitize string values to prevent manifest injection
 function sanitize(val: string): string {
-  return val.replace(/["\\\n\r;]/g, "");
+  return val.replace(/["`{}\\\n\r;<>]/g, "");
 }
 
 // Validate Radix address format
