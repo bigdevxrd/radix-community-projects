@@ -19,7 +19,15 @@ const agentBridge = require("./services/agent-bridge");
 const TOKEN = process.env.TG_BOT_TOKEN;
 if (!TOKEN) { console.error("Set TG_BOT_TOKEN in .env"); process.exit(1); }
 
-const ADMIN_IDS = (process.env.ADMIN_TG_IDS || "6102618406").split(",").map(Number);
+// Fail closed: if ADMIN_TG_IDS is unset, NO user is treated as admin. Prevents
+// a deploy with a missing env from defaulting privilege to a hardcoded ID.
+const ADMIN_IDS = (process.env.ADMIN_TG_IDS || "")
+  .split(",")
+  .map((s) => Number(s.trim()))
+  .filter((n) => Number.isFinite(n) && n > 0);
+if (ADMIN_IDS.length === 0) {
+  console.warn("[Bot] ADMIN_TG_IDS not set — no admin commands will be authorized until env is provided");
+}
 const BOT_USERNAME = process.env.BOT_USERNAME || "@rad_gov";
 
 const dbInstance = db.init();
@@ -30,8 +38,8 @@ try { disputeService.init(db); } catch (e) { console.error("[Init] Dispute servi
 try { projectService.init(db); } catch (e) { console.error("[Init] Project service init failed (non-fatal):", e.message); }
 try {
   txSigner.init(db, (msg) => {
-    // Admin notifier — sends TG alerts to admin
-    const adminId = parseInt(process.env.ADMIN_TG_IDS?.split(",")[0] || "0");
+    // Admin notifier — sends TG alerts to the first configured admin only
+    const adminId = ADMIN_IDS[0];
     if (adminId && bot) bot.api.sendMessage(adminId, "[Signer] " + msg).catch(() => {});
   });
 } catch (e) { console.error("[Init] TX signer init failed (non-fatal):", e.message); }
